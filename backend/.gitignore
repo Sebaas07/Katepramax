@@ -1,0 +1,33 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Variables de entorno
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Registros (Logs)
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Directorios de compilación/salida
+dist/
+build/
+coverage/
+
+# Base de datos de desarrollo (Si llegas a usar SQLite o respaldos locales)
+/prisma/dev.db
+/prisma/dev.db-journal
+
+# Archivos generados por el sistema operativo
+.DS_Store
+Thumbs.db
+/generated/prisma

@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "es2021",
+    "module": "commonjs",
+    "types": ["node"]
+  },
+  "exclude": ["node_modules", "dist"]
+}
