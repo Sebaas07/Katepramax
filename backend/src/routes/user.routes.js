@@ -1,25 +1,15 @@
-// src/routes/user.routes.js
-const { authenticate, requireRole } = require('../middlewares/auth.middleware');
-const userController = require('../controllers/user.controller');
+const { verifyAdmin } = require('../middlewares/auth.middleware');
 
 async function userRoutes(app, options) {
-  // Crear usuario (Solo permitido para administradores)
-  app.post(
-    '/api/usuarios',
-    {
-      preHandler: [authenticate, requireRole(['Admin'])]
-    },
-    userController.createUser
-  );
+  const userController = require("../controllers/user.controller");
 
-  // Obtener lista de usuarios 
-  app.get(
-    '/api/usuarios',
-    {
-      preHandler: [authenticate, requireRole(['Admin', 'Bodega'])]
-    },
-    userController.getUsers
-  );
+  // Rutas protegidas
+  app.get("/api/usuarios", { preHandler: verifyAdmin }, userController.getUsers);
+  app.post("/api/usuarios", { preHandler: verifyAdmin }, userController.createUser);
+  
+  app.put("/api/usuarios/:id", { preHandler: verifyAdmin }, userController.updateUser);
+  app.patch("/api/usuarios/:id/activar", { preHandler: verifyAdmin }, userController.activateUser);
+  app.patch("/api/usuarios/:id/inactivar", { preHandler: verifyAdmin }, userController.inactivateUser);
 }
 
 module.exports = userRoutes;

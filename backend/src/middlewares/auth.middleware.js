@@ -22,7 +22,29 @@ const requireRole = (allowedRoles) => {
   };
 };
 
+async function verifyAdmin(request, reply) {
+  try {
+    // 1. Verifica si existe un token JWT válido en la petición
+    await request.jwtVerify();
+
+    // 2. Extrae la información del usuario desde el token decodificado
+    const user = request.user;
+
+    // 3. Valida si el rol es Admin
+    if (!user || user.rol !== "Admin") {
+      return reply.code(403).send({
+        error: "Acceso denegado: se requieren permisos de administrador",
+      });
+    }
+  } catch (err) {
+    return reply.code(401).send({
+      error: "No autorizado, token inválido o faltante",
+    });
+  }
+}
+
 module.exports = {
   authenticate,
   requireRole,
+  verifyAdmin
 };
