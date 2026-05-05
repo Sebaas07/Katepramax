@@ -29,7 +29,7 @@ app.register(cors, {
 
 // 2. Configuración de JWT
 app.register(jwt, {
-  secret: process.env.JWT_SECRET || "secreto_por_defecto",
+  secret: process.env.JWT_SECRET || "WAOSPRUEBASECRET",
 });
 
 // 3. Decorar la aplicación con Prisma para usarlo en cualquier ruta o controlador
@@ -48,12 +48,15 @@ app.get("/api/salud", async (request, reply) => {
   };
 });
 
+app.register(require("./routes/user.routes"));
+app.register(require("./routes/auth.routes"));
+
 // Función para iniciar el servidor
 const start = async () => {
   try {
     const port = process.env.PORT || 3000;
     await app.listen({ port, host: "0.0.0.0" });
-    console.log(`🚀 Servidor ejecutándose en http://localhost:${port}`);
+    console.log(`Servidor ejecutándose en http://localhost:${port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
