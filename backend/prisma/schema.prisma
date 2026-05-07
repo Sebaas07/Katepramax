@@ -2,7 +2,6 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -18,15 +17,30 @@ enum Rol {
   Entregador
 }
 
+model Sede {
+  id        Int       @id @default(autoincrement())
+  nombre    String    @db.VarChar(100)
+  activo    Boolean   @default(true)
+  creadoEn  DateTime  @default(now()) @map("creado_en")
+  
+  usuarios  Usuario[] // Relación 1:N
+
+  @@map("sedes") // Nombre real de la tabla en MySQL
+}
+
 model Usuario {
-  id              Int      @id @default(autoincrement())
-  nombre_completo String
-  usuario         String   @unique
-  clave           String
-  correo          String   @unique
-  telefono        String
-  rol             Rol
-  activo          Boolean  @default(true)
-  creado_en       DateTime @default(now())
-  ultimo_acceso   DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  nombreCompleto String   @map("nombre_completo") @db.VarChar(255)
+  usuario        String   @unique @db.VarChar(50)
+  clave          String   @db.VarChar(255) 
+  correo         String   @unique @db.VarChar(150)
+  telefono       String   @db.VarChar(20)
+  rol            Rol     
+  activo         Boolean  @default(true)
+  creadoEn       DateTime @default(now()) @map("creado_en")
+  ultimoAcceso   DateTime @default(now()) @map("ultimo_acceso")
+  sedeId         Int      @map("sede_id")
+  sede           Sede     @relation(fields: [sedeId], references: [id])
+
+  @@map("usuarios") // Nombre real de la tabla en MySQL
 }

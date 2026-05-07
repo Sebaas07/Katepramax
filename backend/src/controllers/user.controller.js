@@ -32,12 +32,13 @@ const createUser = async (request, reply) => {
     // 4. Crear el nuevo usuario
     const newUser = await app.prisma.usuario.create({
       data: {
-        nombre_completo,
+        nombreCompleto,
         usuario,
         correo,
         clave: hashedPassword,
         rol, // "Admin", "Bodega" o "Entregador"
         telefono,
+        sedeId: parseInt(sedeId),
       },
     });
 
@@ -45,9 +46,10 @@ const createUser = async (request, reply) => {
       message: "Usuario creado exitosamente",
       user: {
         id: newUser.id,
-        nombre_completo: newUser.nombre_completo,
+        nombre_completo: newUser.nombreCompleto,
         usuario: newUser.usuario,
         rol: newUser.rol,
+        sedeId: newUser.sedeId,
       },
     });
   } catch (error) {
@@ -62,10 +64,13 @@ const getUsers = async (request, reply) => {
     const users = await app.prisma.usuario.findMany({
       select: {
         id: true,
-        nombre_completo: true,
+        nombreCompleto: true,
         usuario: true,
         correo: true,
         rol: true,
+        sede: { // Traemos datos de la tabla relacionada [cite: 2]
+          select: { nombre: true }
+        },
         activo: true,
         telefono: true,
         creado_en: true, // Actualizado según tu modelo actual
