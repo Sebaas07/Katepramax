@@ -42,6 +42,14 @@ const createUser = async (request, reply) => {
       },
     });
 
+    const quienCreaId = request.user.id;
+    await registrarAccion(
+      app,
+      quienCreaId,
+      "CREAR_USUARIO",
+      `Se creó al usuario: ${newUser.usuario}`,
+    );
+
     return reply.code(201).send({
       message: "Usuario creado exitosamente",
       user: {
@@ -68,8 +76,9 @@ const getUsers = async (request, reply) => {
         usuario: true,
         correo: true,
         rol: true,
-        sede: { // Traemos datos de la tabla relacionada [cite: 2]
-          select: { nombre: true }
+        sede: {
+          // Traemos datos de la tabla relacionada [cite: 2]
+          select: { nombre: true },
         },
         activo: true,
         telefono: true,
@@ -148,6 +157,15 @@ const activateUser = async (request, reply) => {
       where: { id: parseInt(id) },
       data: { activo: true },
     });
+
+    const quienActivaId = request.user.id;
+    await registrarAccion(
+      app,
+      quienActivaId,
+      "ACTIVAR_USUARIO",
+      `Se activó al usuario: ${updatedUser.usuario}`,
+    );
+
     return reply.code(200).send({
       message: "Usuario activado exitosamente",
       user: {
@@ -171,6 +189,15 @@ const inactivateUser = async (request, reply) => {
       where: { id: parseInt(id) },
       data: { activo: false },
     });
+    
+    const quienInactivaId = request.user.id;
+    await registrarAccion(
+      app,
+      quienInactivaId,
+      "INACTIVAR_USUARIO",
+      `Se inactivó al usuario: ${updatedUser.usuario}`,
+    );
+
     return reply.code(200).send({
       message: "Usuario inactivado exitosamente",
       user: {

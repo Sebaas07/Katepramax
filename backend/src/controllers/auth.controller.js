@@ -1,4 +1,5 @@
 const bcrypt = require("bcrypt");
+const { registrarAccion } = require("../utils/logger");
 
 const login = async (request, reply) => {
   const { usuario, contrasena } = request.body;
@@ -31,6 +32,9 @@ const login = async (request, reply) => {
       },
       { expiresIn: "1d" },
     );
+
+    // Registrar la acción de inicio de sesión en el log
+    await registrarAccion(app, user.id, "LOGIN", `El usuario ${user.usuario} inició sesión`);
 
     // 4. Retornar respuesta exitosa
     return {
