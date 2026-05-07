@@ -6,7 +6,6 @@ const login = async (request, reply) => {
   const app = request.server;
 
   try {
-    // 1. Buscar al usuario en la base de datos
     const user = await app.prisma.usuario.findUnique({
       where: { usuario },
     });
@@ -17,32 +16,35 @@ const login = async (request, reply) => {
         .send({ error: "Usuario no encontrado o inactivo" });
     }
 
-    // 2. Comparar contraseñas
     const isValid = await bcrypt.compare(contrasena, user.clave);
     if (!isValid) {
       return reply.code(401).send({ error: "Contraseña incorrecta" });
     }
 
-    // 3. Generar token JWT con la información del usuario
     const token = app.jwt.sign(
       {
         id: user.id,
         usuario: user.usuario,
         rol: user.rol,
+        sedeId: user.sedeId,
       },
       { expiresIn: "1d" },
     );
 
-    // Registrar la acción de inicio de sesión en el log
+    // Actualizar ultimoAcceso
+    await app.prisma.usuario.update({
+      where: { id: user.id },
+      data: { ultimoAcceso: new Date() },
+    });
+
     await registrarAccion(app, user.id, "LOGIN", `El usuario ${user.usuario} inició sesión`);
 
-    // 4. Retornar respuesta exitosa
     return {
       message: "Inicio de sesión exitoso",
       token,
       user: {
         id: user.id,
-        nombre_completo: user.nombre_completo,
+        nombreCompleto: user.nombreCompleto, 
         usuario: user.usuario,
         rol: user.rol,
         sedeId: user.sedeId,

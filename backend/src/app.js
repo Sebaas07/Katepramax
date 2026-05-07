@@ -1,4 +1,3 @@
-// Cargar variables de entorno
 require("dotenv").config();
 
 const Fastify = require("fastify");
@@ -6,10 +5,8 @@ const cors = require("@fastify/cors");
 const jwt = require("@fastify/jwt");
 const { PrismaClient } = require("@prisma/client");
 
-// Instanciar Prisma
 const prisma = new PrismaClient();
 
-// Crear la instancia de Fastify con logger
 const app = Fastify({
   logger: {
     transport: {
@@ -22,25 +19,29 @@ const app = Fastify({
   },
 });
 
-// 1. Configuración de CORS
+// 1. CORS
 app.register(cors, {
   origin: process.env.CORS_ORIGIN || "*",
 });
 
-// 2. Configuración de JWT
+// 2. Si no hay secret, el servidor falla con mensaje claro
+if (!process.env.JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET no está definido en el archivo .env");
+  process.exit(1);
+}
+
 app.register(jwt, {
-  secret: process.env.JWT_SECRET || "WAOSPRUEBASECRET",
+  secret: process.env.JWT_SECRET,
 });
 
-// 3. Decorar la aplicación con Prisma para usarlo en cualquier ruta o controlador
+// 3. Prisma decorado en la instancia
 app.decorate("prisma", prisma);
 
-// Cerrar la conexión de la base de datos al detener la aplicación
 app.addHook("onClose", async (instance) => {
   await instance.prisma.$disconnect();
 });
 
-// Ruta de prueba/salud para verificar que el servidor funciona
+// Ruta de salud
 app.get("/api/salud", async (request, reply) => {
   return {
     status: "ok",
@@ -51,7 +52,6 @@ app.get("/api/salud", async (request, reply) => {
 app.register(require("./routes/user.routes"));
 app.register(require("./routes/auth.routes"));
 
-// Función para iniciar el servidor
 const start = async () => {
   try {
     const port = process.env.PORT || 3000;

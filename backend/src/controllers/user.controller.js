@@ -1,12 +1,13 @@
 const bcrypt = require("bcrypt");
+const { registrarAccion } = require("../utils/logger"); 
 
 const createUser = async (request, reply) => {
-  const { nombre_completo, usuario, correo, contrasena, rol, telefono } =
+  
+  const { nombreCompleto, usuario, correo, contrasena, rol, telefono, sedeId } =
     request.body;
   const app = request.server;
 
   try {
-    // 1. Validar si el usuario ya existe
     const existingUser = await app.prisma.usuario.findUnique({
       where: { usuario },
     });
@@ -17,7 +18,6 @@ const createUser = async (request, reply) => {
         .send({ error: "El nombre de usuario ya está en uso" });
     }
 
-    // 2. Validar si el correo ya existe
     const existingEmail = await app.prisma.usuario.findUnique({
       where: { correo },
     });
@@ -26,19 +26,17 @@ const createUser = async (request, reply) => {
       return reply.code(400).send({ error: "El correo ya está registrado" });
     }
 
-    // 3. Hashear la contraseña
     const hashedPassword = await bcrypt.hash(contrasena, 10);
 
-    // 4. Crear el nuevo usuario
     const newUser = await app.prisma.usuario.create({
       data: {
-        nombreCompleto,
+        nombreCompleto, 
         usuario,
         correo,
         clave: hashedPassword,
-        rol, // "Admin", "Bodega" o "Entregador"
+        rol,
         telefono,
-        sedeId: parseInt(sedeId),
+        sedeId: parseInt(sedeId), 
       },
     });
 
@@ -54,7 +52,7 @@ const createUser = async (request, reply) => {
       message: "Usuario creado exitosamente",
       user: {
         id: newUser.id,
-        nombre_completo: newUser.nombreCompleto,
+        nombreCompleto: newUser.nombreCompleto, 
         usuario: newUser.usuario,
         rol: newUser.rol,
         sedeId: newUser.sedeId,
@@ -77,12 +75,11 @@ const getUsers = async (request, reply) => {
         correo: true,
         rol: true,
         sede: {
-          // Traemos datos de la tabla relacionada [cite: 2]
           select: { nombre: true },
         },
         activo: true,
         telefono: true,
-        creado_en: true, // Actualizado según tu modelo actual
+        creadoEn: true,
       },
     });
     return users;
@@ -95,7 +92,7 @@ const getUsers = async (request, reply) => {
 const updateUser = async (request, reply) => {
   const { id } = request.params;
   const {
-    nombre_completo,
+    nombreCompleto, 
     usuario,
     correo,
     contrasena,
@@ -115,7 +112,7 @@ const updateUser = async (request, reply) => {
     }
 
     const dataToUpdate = {
-      nombre_completo,
+      nombreCompleto,
       usuario,
       correo,
       telefono,
@@ -132,11 +129,19 @@ const updateUser = async (request, reply) => {
       data: dataToUpdate,
     });
 
+    const quienActualizaId = request.user.id;
+    await registrarAccion(
+      app,
+      quienActualizaId,
+      "ACTUALIZAR_USUARIO",
+      `Se actualizó al usuario: ${updatedUser.usuario}`,
+    );
+
     return reply.code(200).send({
       message: "Usuario actualizado exitosamente",
       user: {
         id: updatedUser.id,
-        nombre_completo: updatedUser.nombre_completo,
+        nombreCompleto: updatedUser.nombreCompleto, 
         usuario: updatedUser.usuario,
         rol: updatedUser.rol,
         activo: updatedUser.activo,
@@ -170,7 +175,7 @@ const activateUser = async (request, reply) => {
       message: "Usuario activado exitosamente",
       user: {
         id: updatedUser.id,
-        nombre_completo: updatedUser.nombre_completo,
+        nombreCompleto: updatedUser.nombreCompleto, 
         activo: updatedUser.activo,
       },
     });
@@ -189,7 +194,7 @@ const inactivateUser = async (request, reply) => {
       where: { id: parseInt(id) },
       data: { activo: false },
     });
-    
+
     const quienInactivaId = request.user.id;
     await registrarAccion(
       app,
@@ -202,7 +207,7 @@ const inactivateUser = async (request, reply) => {
       message: "Usuario inactivado exitosamente",
       user: {
         id: updatedUser.id,
-        nombre_completo: updatedUser.nombre_completo,
+        nombreCompleto: updatedUser.nombreCompleto, 
         activo: updatedUser.activo,
       },
     });
