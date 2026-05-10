@@ -1,0 +1,233 @@
+/* ─── Variables ──────────────────────────────────────────────────────────────*/
+:root {
+  --login-brand-bg: #0f1b2d;
+  --login-brand-accent: #22c55e;
+  --login-brand-text: #e2e8f0;
+  --login-brand-muted: #94a3b8;
+}
+
+/* ─── Wrapper ────────────────────────────────────────────────────────────────*/
+.login-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f1f5f9;
+}
+
+/* ─── Panel izquierdo — Branding ─────────────────────────────────────────────*/
+.login-brand {
+  flex: 1;
+  background-color: var(--login-brand-bg);
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgba(34, 197, 94, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Cuadrícula decorativa de fondo */
+.login-brand::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.login-brand__content {
+  position: relative;
+  z-index: 1;
+  max-width: 380px;
+}
+
+.login-brand__logo {
+  width: 64px;
+  height: 64px;
+  background: var(--login-brand-accent);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
+}
+
+.login-brand__logo .bi {
+  font-size: 2rem;
+  color: #fff;
+}
+
+.login-brand__title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.login-brand__subtitle {
+  font-size: 1rem;
+  color: var(--login-brand-muted);
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+
+.login-brand__features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.login-brand__feature {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  color: var(--login-brand-text);
+  font-size: 0.9375rem;
+}
+
+.login-brand__feature .bi {
+  font-size: 1.125rem;
+  color: var(--login-brand-accent);
+  width: 20px;
+  flex-shrink: 0;
+}
+
+/* ─── Panel derecho — Formulario ─────────────────────────────────────────────*/
+.login-form-panel {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: #ffffff;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.06);
+}
+
+@media (max-width: 991.98px) {
+  .login-form-panel {
+    max-width: 100%;
+    box-shadow: none;
+  }
+}
+
+.login-form-panel__inner {
+  width: 100%;
+  max-width: 380px;
+}
+
+/* Logo mobile */
+.login-logo-mobile {
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 2rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--login-brand-bg);
+}
+
+.login-logo-mobile .bi {
+  font-size: 1.625rem;
+  color: var(--login-brand-accent);
+}
+
+/* Header */
+.login-form-panel__header {
+  margin-bottom: 1.75rem;
+}
+
+.login-form-panel__header h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--login-brand-bg);
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.02em;
+}
+
+.login-form-panel__header p {
+  color: #64748b;
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+/* Inputs */
+.form-control,
+.input-group-text {
+  border-color: #e2e8f0;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus {
+  border-color: var(--login-brand-accent);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.input-group-text {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+/* Botón mostrar/ocultar contraseña */
+.btn-toggle-clave {
+  cursor: pointer;
+  border-left: 0;
+  transition: color 0.15s ease;
+}
+
+.btn-toggle-clave:hover {
+  color: var(--login-brand-bg);
+  background: #f1f5f9;
+}
+
+/* Botón submit */
+.btn-login {
+  background-color: var(--login-brand-bg);
+  border-color: var(--login-brand-bg);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.btn-login:hover:not(:disabled) {
+  background-color: #1e2d42;
+  border-color: #1e2d42;
+  box-shadow: 0 4px 14px rgba(15, 27, 45, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-login:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-login:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+/* Alert error */
+.alert-danger {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+/* Footer */
+.login-form-panel__footer {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  margin-top: 1.75rem;
+  margin-bottom: 0;
+}
