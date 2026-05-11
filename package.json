@@ -1,6 +1,14 @@
 {
-  "devDependencies": {
-    "dotenv": "^17.4.2",
-    "prisma": "^7.8.0"
+  "name": "katepramax-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w api",
+    "dev:web": "npm run dev -w web",
+    "dev": "concurrently -n \"API,WEB\" -c \"magenta,cyan\" \"npm run dev:api\" \"npm run dev:web\"",
+    "install-all": "npm install"
   }
 }
