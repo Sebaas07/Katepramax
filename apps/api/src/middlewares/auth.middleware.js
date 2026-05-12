@@ -1,50 +1,28 @@
-// Middleware para verificar si el token es válido
-const authenticate = async (request, reply) => {
+/**
+ * verifyToken — verifica JWT y adjunta el usuario a request.user
+ */
+const verifyToken = async (request, reply) => {
   try {
     await request.jwtVerify();
-  } catch (err) {
-    return reply
-      .code(401)
-      .send({ error: "No autorizado. Token inválido o expirado." });
+  } catch {
+    return reply.code(401).send({ error: "No autorizado. Token inválido o expirado." });
   }
 };
 
-// Middleware para verificar si el rol del usuario está permitido
-const requireRole = (allowedRoles) => {
-  return async (request, reply) => {
-    const user = request.user; // El usuario se guarda en request.user tras el jwtVerify
-
-    if (!user || !allowedRoles.includes(user.rol)) {
-      return reply.code(403).send({
-        error: "Acceso denegado. No tienes permisos para esta acción.",
-      });
-    }
-  };
-};
-
-async function verifyAdmin(request, reply) {
-  try {
-    // 1. Verifica si existe un token JWT válido en la petición
-    await request.jwtVerify();
-
-    // 2. Extrae la información del usuario desde el token decodificado
-    const user = request.user;
-
-    // 3. Valida si el rol es Admin
-    if (!user || user.rol !== "Admin") {
-      return reply.code(403).send({
-        error: "Acceso denegado: se requieren permisos de administrador",
-      });
-    }
-  } catch (err) {
-    return reply.code(401).send({
-      error: "No autorizado, token inválido o faltante",
-    });
+/**
+ * requireRole(roles[]) — factory que devuelve un preHandler de rol.
+ * Siempre se usa DESPUÉS de verifyToken.
+ * Uso: preHandler: [verifyToken, requireRole(["Admin", "Bodega"])]
+ */
+const requireRole = (roles) => async (request, reply) => {
+  if (!roles.includes(request.user?.rol)) {
+    return reply.code(403).send({ error: `Acceso denegado. Se requiere rol: ${roles.join(" o ")}.` });
   }
-}
-
-module.exports = {
-  authenticate,
-  requireRole,
-  verifyAdmin
 };
+
+// Atajos semánticos
+const soloAdmin          = [verifyToken, requireRole(["Admin"])];
+const adminOBodega       = [verifyToken, requireRole(["Admin", "Bodega"])];
+const todosLosRoles      = [verifyToken];
+
+module.exports = { verifyToken, requireRole, soloAdmin, adminOBodega, todosLosRoles };

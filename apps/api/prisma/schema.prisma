@@ -58,3 +58,15 @@ model Usuario {
 
   @@map("usuarios") // Nombre real de la tabla en MySQL
 }
+
+model ErrorLog {
+  id        Int      @id @default(autoincrement())
+  mensaje   String   @db.Text
+  stack     String?  @db.Text
+  metodo    String?  @db.VarChar(10) // GET, POST, etc.
+  url       String?  @db.VarChar(255)
+  usuarioId Int?     @map("usuario_id")
+  creadoEn  DateTime @default(now()) @map("creado_en")
+
+  @@map("error_logs")
+}
