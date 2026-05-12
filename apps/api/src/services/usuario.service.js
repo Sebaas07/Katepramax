@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const usuarioRepo = require("../repositories/usuario.repository");
 const { registrarAccion } = require("../utils/logger");
+const { AppError } = require("../errors/AppError");
 
 const usuarioService = (app) => {
   const repo = usuarioRepo(app.prisma);
@@ -10,40 +11,20 @@ const usuarioService = (app) => {
 
     getById: async (id) => {
       const user = await repo.findById(id);
-      if (!user) {
-        const err = new Error("Usuario no encontrado");
-        err.statusCode = 404;
-        throw err;
-      }
+      if (!user) throw new AppError("Usuario no encontrado", 404);
       return user;
     },
 
     create: async (data, creadoPorId) => {
-      const {
-        nombreCompleto,
-        usuario,
-        correo,
-        contrasena,
-        rol,
-        telefono,
-        sedeId,
-      } = data;
+      const { nombreCompleto, usuario, correo, contrasena, rol, telefono, sedeId } = data;
 
       const [existeUsuario, existeCorreo] = await Promise.all([
         repo.findByUsuario(usuario),
         repo.findByCorreo(correo),
       ]);
 
-      if (existeUsuario) {
-        const err = new Error("El nombre de usuario ya está en uso");
-        err.statusCode = 400;
-        throw err;
-      }
-      if (existeCorreo) {
-        const err = new Error("El correo ya está registrado");
-        err.statusCode = 400;
-        throw err;
-      }
+      if (existeUsuario) throw new AppError("El nombre de usuario ya está en uso", 400);
+      if (existeCorreo) throw new AppError("El correo ya está registrado", 400);
 
       const clave = await bcrypt.hash(contrasena, 10);
       const nuevo = await repo.create({
@@ -73,11 +54,7 @@ const usuarioService = (app) => {
 
     update: async (id, data, actualizadoPorId) => {
       const existe = await repo.findById(id);
-      if (!existe) {
-        const err = new Error("Usuario no encontrado");
-        err.statusCode = 404;
-        throw err;
-      }
+      if (!existe) throw new AppError("Usuario no encontrado", 404);
 
       const campos = {};
       const permitidos = ["nombreCompleto", "correo", "telefono", "rol"];
@@ -101,11 +78,7 @@ const usuarioService = (app) => {
 
     setActivo: async (id, activo, accionadoPorId) => {
       const existe = await repo.findById(id);
-      if (!existe) {
-        const err = new Error("Usuario no encontrado");
-        err.statusCode = 404;
-        throw err;
-      }
+      if (!existe) throw new AppError("Usuario no encontrado", 404);
       const resultado = await repo.setActivo(id, activo);
       const accion = activo ? "ACTIVAR_USUARIO" : "DESACTIVAR_USUARIO";
       await registrarAccion(

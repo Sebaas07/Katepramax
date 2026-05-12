@@ -1,7 +1,6 @@
-require("dotenv").config();
 const Fastify = require("fastify");
 const cors = require("@fastify/cors");
-const { registrarError } = require("./utils/registrarError"); // Importa la función desde utils
+const { registrarError } = require("./utils/registrarError");
 
 const app = Fastify({
   logger: {
@@ -13,9 +12,15 @@ const app = Fastify({
 });
 
 // ── Plugins ───────────────────────────────────────────────────────────────────
+// env debe registrarse primero — valida las variables antes de que cualquier
+// otro plugin intente usarlas.
+app.register(require("./plugins/env.plugin"));
 app.register(cors, { origin: process.env.CORS_ORIGIN || "*" });
 app.register(require("./plugins/prisma.plugin"));
 app.register(require("./plugins/jwt.plugin"));
+
+// Swagger — comentar en producción si no se quiere exponer la documentación
+app.register(require("./plugins/swagger.plugin"));
 
 // ── Error handler global ──────────────────────────────────────────────────────
 app.setErrorHandler(async (error, request, reply) => {

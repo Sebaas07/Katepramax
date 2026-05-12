@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const usuarioRepo = require("../repositories/usuario.repository");
 const { registrarAccion } = require("../utils/logger");
+const { AppError } = require("../errors/AppError");
 
 const authService = (app) => {
   const repo = usuarioRepo(app.prisma);
@@ -9,18 +10,11 @@ const authService = (app) => {
     login: async (usuario, contrasena) => {
       const user = await repo.findByUsuario(usuario);
 
-      if (!user || !user.activo) {
-        const err = new Error("Usuario no encontrado o inactivo");
-        err.statusCode = 401;
-        throw err;
-      }
+      if (!user || !user.activo)
+        throw new AppError("Usuario no encontrado o inactivo", 401);
 
       const valida = await bcrypt.compare(contrasena, user.clave);
-      if (!valida) {
-        const err = new Error("Contraseña incorrecta");
-        err.statusCode = 401;
-        throw err;
-      }
+      if (!valida) throw new AppError("Contraseña incorrecta", 401);
 
       const token = app.jwt.sign(
         { id: user.id, usuario: user.usuario, rol: user.rol, sedeId: user.sedeId },
@@ -46,28 +40,16 @@ const authService = (app) => {
 
     me: async (id) => {
       const user = await repo.findById(id);
-      if (!user) {
-        const err = new Error("Usuario no encontrado");
-        err.statusCode = 404;
-        throw err;
-      }
+      if (!user) throw new AppError("Usuario no encontrado", 404);
       return user;
     },
 
     cambiarClave: async (id, claveActual, claveNueva) => {
       const user = await app.prisma.usuario.findUnique({ where: { id } });
-      if (!user) {
-        const err = new Error("Usuario no encontrado");
-        err.statusCode = 404;
-        throw err;
-      }
+      if (!user) throw new AppError("Usuario no encontrado", 404);
 
       const valida = await bcrypt.compare(claveActual, user.clave);
-      if (!valida) {
-        const err = new Error("La clave actual es incorrecta");
-        err.statusCode = 400;
-        throw err;
-      }
+      if (!valida) throw new AppError("La clave actual es incorrecta", 400);
 
       const hash = await bcrypt.hash(claveNueva, 10);
       await repo.update(id, { clave: hash });
