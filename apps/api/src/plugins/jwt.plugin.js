@@ -6,12 +6,28 @@ const fastifyJwt = require("@fastify/jwt");
  * si JWT_SECRET no está en el entorno — nunca un fallback hardcodeado.
  */
 async function jwtPlugin(app) {
-  if (!process.env.JWT_SECRET) {
-    throw new Error("FATAL: JWT_SECRET no está definido en el archivo .env");
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    app.log.fatal("JWT_SECRET no configurado en el entorno.");
+    throw new Error("FATAL: JWT_SECRET no definido.");
   }
 
   app.register(fastifyJwt, {
-    secret: process.env.JWT_SECRET,
+    secret: secret,
+    // Configuración recomendada:
+    messages: {
+      badRequestErrorMessage: "Formato de token incorrecto.",
+      noAuthorizationInHeaderMessage:
+        "No se proporcionó cabecera de autorización.",
+      authorizationTokenExpiredMessage: "El token ha expirado.",
+      authorizationTokenInvalid: "El token de autorización es inválido.",
+    },
+  });
+
+  // Decorador útil para usar en otras partes de la app
+  app.decorate("signToken", (payload, options = {}) => {
+    return app.jwt.sign(payload, options);
   });
 }
 

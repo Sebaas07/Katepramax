@@ -1,6 +1,7 @@
 const Fastify = require("fastify");
 const cors = require("@fastify/cors");
 const { registrarError } = require("./utils/registrarError");
+const { initCronJobs } = require("./tasks/cron");
 
 const app = Fastify({
   logger: {
@@ -48,12 +49,21 @@ app.register(require("./routes/user.routes"), routePrefix);
 // ── Arranque ──────────────────────────────────────────────────────────────────
 const start = async () => {
   try {
+    // 1. Escuchamos en el puerto
     await app.listen({
       port: parseInt(process.env.PORT) || 3000,
       host: "0.0.0.0",
     });
+
+    // 2. Hook onReady: se dispara cuando Fastify terminó de cargar TODO
+    await app.ready();
+
+    // 3. Iniciamos el Cron de forma segura
+    initCronJobs(app);
+
   } catch (err) {
-    app.log.error(err);
+    console.error("DETALLE DEL ERROR:", err);
+    app.log.error("Error crítico en el arranque:", err);
     process.exit(1);
   }
 };

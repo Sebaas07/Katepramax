@@ -1,10 +1,6 @@
-const { login, me, cambiarClave } = require("../controllers/auth.controller");
+const { login, refresh, logout, me, cambiarClave } = require("../controllers/auth.controller");
 const { verifyToken } = require("../middlewares/auth.middleware");
-const {
-  loginBody,
-  cambiarClaveBody,
-  loginResponse,
-} = require("../schemas/auth.schema");
+const { loginBody, refreshBody, cambiarClaveBody, tokenPair } = require("../schemas/auth.schema");
 
 async function authRoutes(app) {
   // POST /api/auth/login
@@ -13,15 +9,36 @@ async function authRoutes(app) {
       summary: "Iniciar sesión",
       tags: ["Auth"],
       body: loginBody,
-      response: loginResponse,
+      response: { 200: tokenPair },
     },
     handler: login,
+  });
+
+  // POST /api/auth/refresh
+  app.post("/auth/refresh", {
+    schema: {
+      summary: "Renovar access token usando el refresh token",
+      tags: ["Auth"],
+      body: refreshBody,
+      response: { 200: tokenPair },
+    },
+    handler: refresh,
+  });
+
+  // POST /api/auth/logout  (requiere access token válido)
+  app.post("/auth/logout", {
+    schema: {
+      summary: "Cerrar sesión (revoca la sesión en BD)",
+      tags: ["Auth"],
+    },
+    preHandler: [verifyToken],
+    handler: logout,
   });
 
   // GET /api/auth/me
   app.get("/auth/me", {
     schema: {
-      summary: "Obtener usuario autenticado",
+      summary: "Obtener datos del usuario autenticado",
       tags: ["Auth"],
     },
     preHandler: [verifyToken],
@@ -31,7 +48,7 @@ async function authRoutes(app) {
   // PATCH /api/auth/clave
   app.patch("/auth/clave", {
     schema: {
-      summary: "Cambiar contraseña",
+      summary: "Cambiar contraseña (cierra todas las sesiones activas)",
       tags: ["Auth"],
       body: cambiarClaveBody,
     },

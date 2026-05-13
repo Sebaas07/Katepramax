@@ -15,6 +15,9 @@ const {
 } = require("../schemas/usuario.schema");
 
 async function userRoutes(app) {
+  
+  const preSoloAdmin = soloAdmin.preHandler;
+
   // GET /api/usuarios
   app.get("/usuarios", {
     schema: {
@@ -22,7 +25,7 @@ async function userRoutes(app) {
       tags: ["Usuarios"],
       response: { 200: { type: "array", items: usuarioResponse } },
     },
-    preHandler: soloAdmin,
+    preHandler: preSoloAdmin,
     handler: getAll,
   });
 
@@ -34,7 +37,7 @@ async function userRoutes(app) {
       params: idParam,
       response: { 200: usuarioResponse },
     },
-    preHandler: soloAdmin,
+    preHandler: preSoloAdmin,
     handler: getById,
   });
 
@@ -45,7 +48,7 @@ async function userRoutes(app) {
       tags: ["Usuarios"],
       body: createUsuarioBody,
     },
-    preHandler: soloAdmin,
+    preHandler: preSoloAdmin,
     handler: create,
   });
 
@@ -57,7 +60,7 @@ async function userRoutes(app) {
       params: idParam,
       body: updateUsuarioBody,
     },
-    preHandler: soloAdmin,
+    preHandler: preSoloAdmin,
     handler: update,
   });
 
@@ -68,7 +71,7 @@ async function userRoutes(app) {
       tags: ["Usuarios"],
       params: idParam,
     },
-    preHandler: soloAdmin,
+    preHandler: preSoloAdmin,
     handler: desactivar,
   });
 
@@ -79,7 +82,7 @@ async function userRoutes(app) {
       tags: ["Usuarios"],
       params: idParam,
     },
-    preHandler: soloAdmin,
+    preHandler: preSoloAdmin,
     handler: activar,
   });
 }

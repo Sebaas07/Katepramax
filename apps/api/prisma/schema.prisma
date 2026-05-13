@@ -55,8 +55,25 @@ model Usuario {
   sedeId         Int      @map("sede_id")
   sede           Sede     @relation(fields: [sedeId], references: [id])
   logs           Log[]
+  sesions        Sesion[]
 
   @@map("usuarios") // Nombre real de la tabla en MySQL
+}
+
+model Sesion {
+  id          Int      @id @default(autoincrement())
+  refreshHash String   @map("refresh_hash") @db.VarChar(255)
+  activa      Boolean  @default(true)
+  ip          String?  @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.VarChar(500)
+  creadoEn    DateTime @default(now()) @map("creado_en")
+  expiraEn    DateTime @map("expira_en")
+
+  usuarioId Int     @map("usuario_id")
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@map("sesiones")
 }
 
 model ErrorLog {
