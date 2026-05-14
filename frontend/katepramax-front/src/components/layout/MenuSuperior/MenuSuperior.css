@@ -1,0 +1,213 @@
+/* ============================================================
+   MenuSuperior.css — Katepramax
+   Topbar sticky con brand, selector de sede y acciones
+   ============================================================ */
+
+.menu-superior {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  background: rgba(31, 31, 34, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+/* ── Izquierda ── */
+.menu-superior__izquierda {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Hamburguesa */
+.menu-superior__hamburger {
+  background: none;
+  border: none;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-fast),
+              background var(--transition-fast);
+}
+
+.menu-superior__hamburger:hover {
+  color: var(--secondary);
+  background: rgba(233, 195, 73, 0.08);
+}
+
+.menu-superior__hamburger .material-symbols-outlined {
+  font-size: 26px;
+}
+
+/* Brand */
+.menu-superior__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.menu-superior__brand-icon {
+  font-size: 22px;
+  color: var(--secondary);
+}
+
+.menu-superior__brand-name {
+  font-family: var(--font-headline);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--secondary);
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.menu-superior__brand-sub {
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  padding: 2px 8px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-full);
+  line-height: 1.6;
+}
+
+/* ── Centro — Selector de sedes ── */
+.menu-superior__sedes {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.menu-superior__sede-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.menu-superior__sede-btn:hover {
+  color: var(--on-surface);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.menu-superior__sede-btn--activa {
+  color: var(--secondary);
+  font-weight: 700;
+  border-bottom: 2px solid var(--secondary);
+  border-radius: 0;
+  padding-bottom: 0.25rem;
+}
+
+/* ── Derecha — Acciones ── */
+.menu-superior__acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.menu-superior__icon-btn {
+  background: none;
+  border: none;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-fast),
+              background var(--transition-fast);
+}
+
+.menu-superior__icon-btn:hover {
+  color: var(--primary);
+  background: rgba(221, 183, 255, 0.08);
+}
+
+.menu-superior__icon-btn .material-symbols-outlined {
+  font-size: 22px;
+}
+
+/* Usuario */
+.menu-superior__usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(76, 68, 81, 0.4);
+}
+
+.menu-superior__usuario-info {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.menu-superior__usuario-rol {
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--secondary);
+  line-height: 1;
+}
+
+.menu-superior__usuario-nombre {
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-surface);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.menu-superior__avatar {
+  width: 36px;
+  height: 36px;
+  background: var(--primary-container);
+  border: 1px solid rgba(221, 183, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-headline);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 767.98px) {
+  .menu-superior {
+    padding: 0 1rem;
+  }
+
+  .menu-superior__brand-sub {
+    display: none;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .menu-superior__brand-name {
+    font-size: 1rem;
+  }
+}

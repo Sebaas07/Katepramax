@@ -1,0 +1,210 @@
+/* ============================================================
+   DashboardPage.css — Katepramax
+   Estilos del dashboard — fuerza paleta oscura sobre Bootstrap
+   ============================================================ */
+
+/* ─── Tabla ──────────────────────────────────────────────────*/
+.dashboard-tabla {
+  background-color: var(--surface-container) !important;
+  border: 1px solid rgba(233, 195, 73, 0.12);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.dashboard-tabla__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(233, 195, 73, 0.1);
+}
+
+.dashboard-tabla__titulo {
+  font-family: var(--font-headline);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--on-surface);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.dashboard-tabla__titulo .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--secondary);
+}
+
+.dashboard-tabla__badge {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.03em;
+}
+
+/* Forzar fondo oscuro en toda la tabla */
+.dashboard-tabla .table {
+  margin: 0;
+  color: var(--on-surface) !important;
+}
+
+.dashboard-tabla .table > :not(caption) > * > * {
+  background-color: transparent !important;
+  border-color: rgba(80, 67, 77, 0.25) !important;
+  color: var(--on-surface) !important;
+  padding: 0.875rem 1.5rem;
+}
+
+.dashboard-tabla thead tr {
+  background-color: var(--surface-container-high) !important;
+}
+
+.dashboard-tabla thead th {
+  font-family: var(--font-label) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: var(--on-surface-variant) !important;
+  background-color: var(--surface-container-high) !important;
+}
+
+.dashboard-tabla tbody tr {
+  background-color: var(--surface-container) !important;
+  transition: background-color var(--transition-fast);
+}
+
+.dashboard-tabla tbody tr:hover {
+  background-color: var(--surface-container-high) !important;
+}
+
+.dashboard-tabla tbody td {
+  font-family: var(--font-label);
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.dashboard-tabla__num {
+  color: var(--on-surface-variant) !important;
+  font-size: 12px !important;
+}
+
+.dashboard-tabla__cliente {
+  font-weight: 600 !important;
+  color: var(--on-surface) !important;
+}
+
+.dashboard-tabla__sede {
+  color: var(--on-surface-variant) !important;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.dashboard-tabla__sede .material-symbols-outlined {
+  font-size: 14px;
+  color: var(--secondary);
+}
+
+.dashboard-tabla__total {
+  font-weight: 600 !important;
+  color: var(--secondary) !important;
+}
+
+/* ─── KPIs ───────────────────────────────────────────────────*/
+.kpi-card {
+  background: var(--surface-container) !important;
+  border: 1px solid rgba(233, 195, 73, 0.12) !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 1.25rem !important;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: border-color var(--transition-fast),
+              transform var(--transition-fast);
+  height: 100%;
+}
+
+.kpi-card:hover {
+  border-color: rgba(233, 195, 73, 0.3) !important;
+  transform: translateY(-2px);
+}
+
+.kpi-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpi-card__icon .material-symbols-outlined {
+  font-size: 24px;
+}
+
+.kpi-card__valor {
+  font-family: var(--font-headline);
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  line-height: 1.1;
+}
+
+.kpi-card__label {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  margin-top: 2px;
+}
+
+/* ─── Encabezado ─────────────────────────────────────────────*/
+.dashboard-header__saludo {
+  font-family: var(--font-headline);
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-header__sede {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+}
+
+.dashboard-header__sede .material-symbols-outlined {
+  font-size: 15px;
+  color: var(--secondary);
+}
+
+.dashboard-header__fecha {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  text-align: right;
+  text-transform: capitalize;
+}
+
+/* ─── Badge de estado ────────────────────────────────────────*/
+.estado-badge {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  letter-spacing: 0.03em;
+  display: inline-block;
+  white-space: nowrap;
+}

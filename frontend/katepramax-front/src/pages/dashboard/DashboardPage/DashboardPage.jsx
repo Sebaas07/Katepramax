@@ -1,191 +1,191 @@
 import { obtenerSesion, esBodegaBogota } from "@/utils/sessionHelper";
+import {
+  KPI_MOCK,
+  PEDIDOS_MOCK,
+  CONFIG_ESTADO,
+  formatearPesos,
+} from "@/mocks/datos.mock";
+import "./DashboardPage.css";
 
-// Datos placeholder — se reemplazarán con llamadas a la API
-const KPI_PLACEHOLDER = [
+const KPI_CONFIG = [
   {
+    key: "pedidosPendientes",
     label: "Pedidos activos",
-    valor: 12,
-    icon: "bi-clipboard2-check",
-    color: "#2563eb",
-    bg: "#eff6ff",
+    icon: "shopping_cart",
+    iconColor: "#ddb7ff",
+    iconBg: "rgba(221,183,255,0.12)",
   },
   {
-    label: "Entregas pendientes",
-    valor: 5,
-    icon: "bi-truck",
-    color: "#16a34a",
-    bg: "#f0fdf4",
+    key: "entregasEnRuta",
+    label: "Entregas en ruta",
+    icon: "local_shipping",
+    iconColor: "#4ade80",
+    iconBg: "rgba(74,222,128,0.12)",
   },
   {
+    key: "ventasHoy",
     label: "Ingresos del día",
-    valor: "$1.250.000",
-    icon: "bi-cash-stack",
-    color: "#ca8a04",
-    bg: "#fefce8",
+    icon: "payments",
+    iconColor: "#e9c349",
+    iconBg: "rgba(233,195,73,0.12)",
+    esPeso: true,
   },
   {
-    label: "Productos stock bajo",
-    valor: 3,
-    icon: "bi-exclamation-triangle",
-    color: "#dc2626",
-    bg: "#fef2f2",
+    key: "alertasInventario",
+    label: "Stock bajo",
+    icon: "warning",
+    iconColor: "#ffb4ab",
+    iconBg: "rgba(255,180,171,0.12)",
   },
 ];
-
-const PEDIDOS_PLACEHOLDER = [
-  { id: 1, cliente: "Carlos Pérez",    sede: "Bogotá",         estado: "En ruta",  total: "$85.000"  },
-  { id: 2, cliente: "Ana Gómez",       sede: "Cartagena",      estado: "Pendiente", total: "$120.000" },
-  { id: 3, cliente: "Luis Martínez",   sede: "Villavicencio",  estado: "Entregado", total: "$45.000"  },
-  { id: 4, cliente: "María Torres",    sede: "Bogotá",         estado: "Pendiente", total: "$200.000" },
-  { id: 5, cliente: "Jorge Ramírez",   sede: "Cartagena",      estado: "En ruta",  total: "$67.000"  },
-];
-
-// Color del badge según el estado del pedido
-const ESTADO_BADGE = {
-  "Pendiente": { color: "#92400e", bg: "#fef3c7" },
-  "En ruta":   { color: "#1e40af", bg: "#dbeafe" },
-  "Entregado": { color: "#166534", bg: "#dcfce7" },
-  "Fallido":   { color: "#991b1b", bg: "#fee2e2" },
-};
 
 const DashboardPage = () => {
-  const usuario = obtenerSesion();
+  const usuario  = obtenerSesion();
   const esBogota = esBodegaBogota();
 
-  // Saludo según la hora del día
-  const hora = new Date().getHours();
-  const saludo =
-    hora < 12 ? "Buenos días" :
-    hora < 18 ? "Buenas tardes" :
-                "Buenas noches";
+  const hora    = new Date().getHours();
+  const saludo  = hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
+  const nombre  = usuario?.nombreCompleto?.split(" ")[0] || "Usuario";
+
+  const fecha = new Date().toLocaleDateString("es-CO", {
+    weekday: "long",
+    year:    "numeric",
+    month:   "long",
+    day:     "numeric",
+  });
+
+  // Mostrar solo los últimos 5 pedidos
+  const pedidos = PEDIDOS_MOCK.slice(0, 5);
 
   return (
     <div>
 
-      {/* ── Encabezado ───────────────────────────────────────────────────── */}
-      <div className="d-flex align-items-start justify-content-between mb-4 flex-wrap gap-3">
+      {/* ── Encabezado ── */}
+      <div className="d-flex align-items-start justify-content-between mb-4 flex-wrap gap-2">
         <div>
-          <h4 className="fw-bold mb-1" style={{ color: "#0f1b2d" }}>
-            {saludo}, {usuario?.nombreCompleto?.split(" ")[0]} 👋
+          <h4 className="dashboard-header__saludo">
+            {saludo}, {nombre}
           </h4>
-          <p className="text-muted mb-0" style={{ fontSize: "0.9rem" }}>
-            {usuario?.sede && (
-              <>
-                <i className="bi bi-geo-alt-fill me-1" style={{ color: "#22c55e" }}></i>
-                Sede {usuario.sede}
-              </>
-            )}
+          <div className="dashboard-header__sede">
+            <span className="material-symbols-outlined">location_on</span>
+            <span>Sede {usuario?.sede}</span>
             {esBogota && (
               <span
-                className="ms-2 badge"
-                style={{ backgroundColor: "#f0fdf4", color: "#166534", fontSize: "0.7rem" }}
+                style={{
+                  marginLeft: "0.5rem",
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: "var(--secondary)",
+                  background: "rgba(233,195,73,0.1)",
+                  border: "1px solid rgba(233,195,73,0.25)",
+                  padding: "2px 8px",
+                  borderRadius: "999px",
+                }}
               >
-                <i className="bi bi-star-fill me-1"></i>
                 Bodega principal
               </span>
             )}
-          </p>
+          </div>
         </div>
-        <span className="text-muted" style={{ fontSize: "0.85rem" }}>
-          {new Date().toLocaleDateString("es-CO", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </span>
+        <span className="dashboard-header__fecha">{fecha}</span>
       </div>
 
-      {/* ── Tarjetas KPI ─────────────────────────────────────────────────── */}
+      {/* ── KPIs ── */}
       <div className="row g-3 mb-4">
-        {KPI_PLACEHOLDER.map((kpi) => (
-          <div className="col-12 col-sm-6 col-xl-3" key={kpi.label}>
-            <div
-              className="p-3 rounded-3 h-100 d-flex align-items-center gap-3"
-              style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0" }}
-            >
+        {KPI_CONFIG.map((kpi) => (
+          <div className="col-12 col-sm-6 col-xl-3" key={kpi.key}>
+            <div className="kpi-card">
               <div
-                className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                style={{
-                  width: 48,
-                  height: 48,
-                  backgroundColor: kpi.bg,
-                }}
+                className="kpi-card__icon"
+                style={{ backgroundColor: kpi.iconBg }}
               >
-                <i className={`bi ${kpi.icon}`} style={{ fontSize: "1.375rem", color: kpi.color }}></i>
+                <span
+                  className="material-symbols-outlined"
+                  style={{ color: kpi.iconColor }}
+                >
+                  {kpi.icon}
+                </span>
               </div>
               <div>
-                <div className="fw-bold" style={{ fontSize: "1.375rem", color: "#0f1b2d", lineHeight: 1.2 }}>
-                  {kpi.valor}
+                <div className="kpi-card__valor">
+                  {kpi.esPeso
+                    ? formatearPesos(KPI_MOCK[kpi.key])
+                    : KPI_MOCK[kpi.key]}
                 </div>
-                <div className="text-muted" style={{ fontSize: "0.8125rem" }}>
-                  {kpi.label}
-                </div>
+                <div className="kpi-card__label">{kpi.label}</div>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Últimos pedidos ───────────────────────────────────────────────── */}
-      <div
-        className="rounded-3 overflow-hidden"
-        style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0" }}
-      >
-        {/* Encabezado de la tabla */}
-        <div
-          className="d-flex align-items-center justify-content-between px-4 py-3"
-          style={{ borderBottom: "1px solid #e2e8f0" }}
-        >
-          <h6 className="fw-bold mb-0" style={{ color: "#0f1b2d" }}>
-            <i className="bi bi-clock-history me-2" style={{ color: "#22c55e" }}></i>
+      {/* ── Tabla de últimos pedidos ── */}
+      <div className="dashboard-tabla">
+        <div className="dashboard-tabla__header">
+          <h6 className="dashboard-tabla__titulo">
+            <span className="material-symbols-outlined">history</span>
             Últimos pedidos
           </h6>
-          <span className="badge rounded-pill" style={{ backgroundColor: "#f1f5f9", color: "#64748b", fontSize: "0.75rem" }}>
-            Datos de hoy
-          </span>
+          <span className="dashboard-tabla__badge">Datos de hoy</span>
         </div>
 
-        {/* Tabla */}
         <div className="table-responsive">
-          <table className="table table-hover mb-0" style={{ fontSize: "0.875rem" }}>
-            <thead style={{ backgroundColor: "#f8fafc" }}>
+          <table className="table table-hover mb-0">
+            <thead>
               <tr>
-                <th className="px-4 py-3 fw-semibold text-muted border-0">#</th>
-                <th className="px-4 py-3 fw-semibold text-muted border-0">Cliente</th>
-                <th className="px-4 py-3 fw-semibold text-muted border-0">Sede</th>
-                <th className="px-4 py-3 fw-semibold text-muted border-0">Estado</th>
-                <th className="px-4 py-3 fw-semibold text-muted border-0">Total</th>
+                <th>#</th>
+                <th>Código</th>
+                <th>Cliente</th>
+                <th>Sede</th>
+                <th>Estado</th>
+                <th>Total</th>
               </tr>
             </thead>
             <tbody>
-              {PEDIDOS_PLACEHOLDER.map((pedido) => {
-                const badge = ESTADO_BADGE[pedido.estado] || ESTADO_BADGE["Pendiente"];
+              {pedidos.map((pedido) => {
+                const est = CONFIG_ESTADO[pedido.estado];
                 return (
                   <tr key={pedido.id}>
-                    <td className="px-4 py-3 text-muted">#{pedido.id}</td>
-                    <td className="px-4 py-3 fw-medium" style={{ color: "#0f1b2d" }}>
-                      {pedido.cliente}
+                    <td className="dashboard-tabla__num">
+                      #{pedido.id}
                     </td>
-                    <td className="px-4 py-3 text-muted">
-                      <i className="bi bi-geo-alt me-1"></i>
-                      {pedido.sede}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="badge rounded-pill px-3 py-1"
-                        style={{
-                          backgroundColor: badge.bg,
-                          color: badge.color,
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {pedido.estado}
+                    <td>
+                      <span style={{
+                        fontFamily: "var(--font-label)",
+                        fontSize: "12px",
+                        color: "var(--secondary)",
+                        fontWeight: 600,
+                      }}>
+                        {pedido.codigo}
                       </span>
                     </td>
-                    <td className="px-4 py-3 fw-semibold" style={{ color: "#0f1b2d" }}>
-                      {pedido.total}
+                    <td className="dashboard-tabla__cliente">
+                      {pedido.cliente}
+                    </td>
+                    <td>
+                      <span className="dashboard-tabla__sede">
+                        <span className="material-symbols-outlined">
+                          location_on
+                        </span>
+                        {pedido.sede}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className="estado-badge"
+                        style={{
+                          color:           est.color,
+                          backgroundColor: est.bg,
+                          borderColor:     est.border,
+                        }}
+                      >
+                        {est.label}
+                      </span>
+                    </td>
+                    <td className="dashboard-tabla__total">
+                      {formatearPesos(pedido.total)}
                     </td>
                   </tr>
                 );

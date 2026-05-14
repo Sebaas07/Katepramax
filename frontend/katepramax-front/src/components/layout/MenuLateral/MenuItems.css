@@ -1,0 +1,26 @@
+/* ============================================================
+   MenuItems.css — Katepramax
+   Badge de bodega principal
+   ============================================================ */
+
+.menu-items__bogota-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0.5rem 0;
+  padding: 0.5rem 0.875rem;
+  background: rgba(233, 195, 73, 0.08);
+  border: 1px solid rgba(233, 195, 73, 0.2);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+.menu-items__bogota-badge .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--secondary);
+}
