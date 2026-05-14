@@ -1,10 +1,22 @@
-const { login, refresh, logout, me, cambiarClave } = require("../controllers/auth.controller");
+const {
+  login,
+  refresh,
+  logout,
+  me,
+  cambiarClave,
+} = require("../controllers/auth.controller");
 const { verifyToken } = require("../middlewares/auth.middleware");
-const { loginBody, refreshBody, cambiarClaveBody, tokenPair } = require("../schemas/auth.schema");
+const {
+  loginBody,
+  refreshBody,
+  cambiarClaveBody,
+  tokenPair,
+} = require("../schemas/auth.schema");
 
 async function authRoutes(app) {
   // POST /api/auth/login
   app.post("/auth/login", {
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
     schema: {
       summary: "Iniciar sesión",
       tags: ["Auth"],
@@ -16,6 +28,7 @@ async function authRoutes(app) {
 
   // POST /api/auth/refresh
   app.post("/auth/refresh", {
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
     schema: {
       summary: "Renovar access token usando el refresh token",
       tags: ["Auth"],

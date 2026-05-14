@@ -23,7 +23,9 @@ model Sede {
   activo   Boolean  @default(true)
   creadoEn DateTime @default(now()) @map("creado_en")
 
-  usuarios Usuario[] // Relación 1:N
+  usuarios    Usuario[] // Relación 1:N
+  ingresos    Ingreso[]
+  inventarios Inventario[]
 
   @@map("sedes") // Nombre real de la tabla en MySQL
 }
@@ -86,4 +88,38 @@ model ErrorLog {
   creadoEn  DateTime @default(now()) @map("creado_en")
 
   @@map("error_logs")
+}
+
+model Inventario {
+  id       Int      @id @default(autoincrement())
+  fecha    DateTime @db.Date
+  semana   Int
+  sedeId   Int      @map("sede_id")
+  cantidad Int
+  costo    Decimal  @db.Decimal(15, 2)
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  sede Sede @relation(fields: [sedeId], references: [id])
+
+  @@index([fecha, semana])
+  @@index([sedeId])
+  @@map("inventario")
+}
+
+model Ingreso {
+  id          Int      @id @default(autoincrement())
+  fecha       DateTime
+  semana      Int
+  sedeId      Int
+  efectivo    Decimal  @db.Decimal(15, 2)
+  cuentas     Decimal  @db.Decimal(15, 2)
+  total       Decimal  @db.Decimal(15, 2)
+  observacion String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  sede Sede @relation(fields: [sedeId], references: [id])
+
+  @@index([fecha, semana])
+  @@index([sedeId])
+  @@map("ingresos")
 }

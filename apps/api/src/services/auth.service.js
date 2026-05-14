@@ -5,7 +5,7 @@ const { registrarAccion } = require("../utils/logger");
 const { AppError } = require("../errors/AppError");
 
 // Tiempo de vida del access token
-const ACCESS_TOKEN_TTL = "15m";
+const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL ?? '15m'
 
 const authService = (app) => {
   const usuRepo = usuarioRepo(app.prisma);

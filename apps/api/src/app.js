@@ -23,6 +23,12 @@ app.register(require("./plugins/jwt.plugin"));
 // Swagger — comentar en producción si no se quiere exponer la documentación
 app.register(require("./plugins/swagger.plugin"));
 
+app.register(require("@fastify/rate-limit"), {
+  global: false, // solo donde indiquemos, no en todas las rutas
+});
+
+app.register(require("@fastify/helmet"));
+
 // ── Error handler global ──────────────────────────────────────────────────────
 app.setErrorHandler(async (error, request, reply) => {
   const status = error.statusCode || 500;
@@ -45,22 +51,22 @@ app.get("/salud", async () => ({ status: "ok", timestamp: new Date() }));
 const routePrefix = { prefix: "/api" };
 app.register(require("./routes/auth.routes"), routePrefix);
 app.register(require("./routes/user.routes"), routePrefix);
+app.register(require("./routes/inventario.routes"), routePrefix);
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
 const start = async () => {
   try {
-    // 1. Escuchamos en el puerto
+    // 1. Hook onReady: se dispara cuando Fastify terminó de cargar TODO
+    await app.ready();
+
+    // 2. Escuchamos en el puerto
     await app.listen({
       port: parseInt(process.env.PORT) || 3000,
       host: "0.0.0.0",
     });
 
-    // 2. Hook onReady: se dispara cuando Fastify terminó de cargar TODO
-    await app.ready();
-
     // 3. Iniciamos el Cron de forma segura
     initCronJobs(app);
-
   } catch (err) {
     console.error("DETALLE DEL ERROR:", err);
     app.log.error("Error crítico en el arranque:", err);

@@ -42,7 +42,6 @@ const cambiarClave = async (request, reply) => {
   const svc = authService(request.server);
   await svc.cambiarClave(
     request.user.id,
-    request.user.sesionId,
     request.body.claveActual,
     request.body.claveNueva,
   );
