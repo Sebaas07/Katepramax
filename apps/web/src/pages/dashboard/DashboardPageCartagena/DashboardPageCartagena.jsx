@@ -4,7 +4,7 @@ import {
   PEDIDOS_MOCK,
   CONFIG_ESTADO,
   formatearPesos,
-} from "@/mocks/datos.mock";
+} from "@/mocks/datosCartagena.mock";
 import "./DashboardPage.css";
 
 const KPI_CONFIG = [
@@ -39,7 +39,7 @@ const KPI_CONFIG = [
   },
 ];
 
-const DashboardPage = () => {
+const DashboardPageCartagena = () => {
   const usuario  = obtenerSesion();
   const esBogota = esBodegaBogota();
 
@@ -74,7 +74,7 @@ const DashboardPage = () => {
                 style={{
                   marginLeft: "0.5rem",
                   fontSize: "10px",
-                  fontWeight: 600,
+                  fontWeight: "600",
                   letterSpacing: "0.04em",
                   textTransform: "uppercase",
                   color: "var(--secondary)",
@@ -198,4 +198,4 @@ const DashboardPage = () => {
   );
 };
 
-export default DashboardPage;
+export default DashboardPageCartagena;

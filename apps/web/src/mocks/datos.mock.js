@@ -82,7 +82,7 @@ export const PRODUCTOS_MOCK = [
     id: 1,
     codigo: "ARR-001",
     nombre: "Arroz Diana x 500g",
-    departamento: "Granos",
+    departamento: "Granos", 
     precioLlegada: 1800,
     precioDetal: 2800,
     precioMayoreo: 2400,
