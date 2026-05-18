@@ -70,7 +70,7 @@ export const tieneRol = (...roles) => {
  */
 export const esBodegaBogota = () => {
   const sesion = obtenerSesion();
-  return sesion?.rol === "Bodega" && sesion?.esBogota === true;
+  return sesion?.rol === "AdminBogota";
 };
 
 /**

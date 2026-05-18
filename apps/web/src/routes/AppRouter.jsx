@@ -9,6 +9,8 @@ import MainLayout from "@/components/layout/MainLayout";
 // Las importamos comentadas para no generar errores.
 import LoginPage from "@/pages/auth/LoginPage/LoginPage";
 import DashboardPage from "@/pages/dashboard/DashboardPage/DashboardPage";
+import InventarioPage from "@/pages/inventario/InventarioPage/InventarioPage";
+import PedidosPage from "@/pages/pedidos/PedidosPage/PedidosPage";
 import Error404Page from "@/pages/common/Error404Page/Error404Page";
 import AccesoDenegadoPage from "@/pages/common/AccesoDenegadoPage/AccesoDenegadoPage";
 
@@ -82,17 +84,17 @@ const AppRouter = () => {
         {/* <Route path="/entregas" element={<EntregasPage />} /> */}
 
         {/* Solo Admin y Bodega */}
-        {/* <Route path="/pedidos" element={
-          <RutaPorRol roles={["Admin", "Bodega"]}>
+        <Route path="/pedidos" element={
+          <RutaPorRol roles={["AdminBogota", "Admin", "Bodega"]}>
             <PedidosPage />
           </RutaPorRol>
-        } /> */}
+        } />
 
-        {/* <Route path="/inventario" element={
+        <Route path="/inventario" element={
           <RutaPorRol roles={["Admin", "Bodega"]}>
             <InventarioPage />
           </RutaPorRol>
-        } /> */}
+        } />
 
         {/* <Route path="/productos" element={
           <RutaPorRol roles={["Admin", "Bodega"]}>

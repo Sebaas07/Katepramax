@@ -1,0 +1,13 @@
+.estado-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-width: 1px;
+  border-style: solid;
+  display: inline-block;
+  min-width: 60px;
+  text-align: center;
+}

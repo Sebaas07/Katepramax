@@ -11,7 +11,7 @@ const MENU = [
     path: "/dashboard",
     label: "Dashboard",
     icon: "dashboard",
-    roles: ["Admin", "Bodega"],
+    roles: ["AdminBogota", "Admin", "Bodega"],
   },
   {
     path: "/entregas",
@@ -35,13 +35,13 @@ const MENU = [
     path: "/inventario",
     label: "Inventario",
     icon: "inventory_2",
-    roles: ["Admin", "Bodega"],
+    roles: ["AdminBogota", "Admin", "Bodega"],
   },
   {
     path: "/productos",
     label: "Productos",
     icon: "upc_scan",
-    roles: ["Admin", "Bodega"],
+    roles: ["AdminBogota", "Admin", "Bodega"],
   },
   {
     path: "/distribucion",
@@ -59,7 +59,7 @@ const MENU = [
     path: "/contabilidad",
     label: "Contabilidad",
     icon: "account_balance",
-    roles: ["Admin", "Bodega"],
+    roles: ["AdminBogota", "Admin", "Bodega"],
   },
   {
     path: "/reportes",

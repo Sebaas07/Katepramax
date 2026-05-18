@@ -1,6 +1,8 @@
 import { obtenerSesion, esBodegaBogota } from "@/utils/sessionHelper";
 import * as bogotaMocks from "@/mocks/datos.mock";
 import * as cartagenaMocks from "@/mocks/datosCartagena.mock";
+import * as villavicencioMocks from "@/mocks/datosVillavicencio.mock";
+import { useSearchParams } from "react-router-dom";
 import "./DashboardPage.css";
 
 const KPI_CONFIG = [
@@ -38,7 +40,22 @@ const KPI_CONFIG = [
 const DashboardPage = () => {
   const usuario  = obtenerSesion();
   const esBogota = esBodegaBogota();
-  const mocks = usuario?.sede === "Cartagena" ? cartagenaMocks : bogotaMocks;
+  const [searchParams] = useSearchParams();
+  const sedeDesdeURL = searchParams.get('sede');
+  
+  // Determinar la sede a mostrar: primero URL, luego sesión, luego Bogotá por defecto
+  const sedeAMostrar = sedeDesdeURL || usuario?.sede || "Bogotá";
+  
+  // Seleccionar los mocks apropiados según la sede a mostrar
+  let mocks;
+  if (sedeAMostrar === "Cartagena") {
+    mocks = cartagenaMocks;
+  } else if (sedeAMostrar === "Villavicencio") {
+    mocks = villavicencioMocks;
+  } else {
+    // Por defecto, usar Bogotá
+    mocks = bogotaMocks;
+  }
 
   const hora    = new Date().getHours();
   const saludo  = hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
@@ -51,12 +68,12 @@ const DashboardPage = () => {
     day:     "numeric",
   });
 
-  // Mostrar solo los últimos 5 pedidos
-  const pedidos = mocks.PEDIDOS_MOCK.slice(0, 5);
+  // Mostrar solo los últimos 5 pedidos de la sede a mostrar
+  const pedidosFiltrados = mocks.PEDIDOS_MOCK.filter(pedido => pedido.sede === sedeAMostrar);
+  const pedidos = pedidosFiltrados.slice(0, 5);
 
   return (
     <div>
-
       {/* ── Encabezado ── */}
       <div className="d-flex align-items-start justify-content-between mb-4 flex-wrap gap-2">
         <div>
@@ -65,8 +82,8 @@ const DashboardPage = () => {
           </h4>
           <div className="dashboard-header__sede">
             <span className="material-symbols-outlined">location_on</span>
-            <span>Sede {usuario?.sede}</span>
-            {esBogota && (
+            <span>Sede {sedeAMostrar}</span>
+            {esBogota && sedeAMostrar === "Bogotá" && (
               <span
                 style={{
                   marginLeft: "0.5rem",
@@ -139,59 +156,59 @@ const DashboardPage = () => {
                 <th>Estado</th>
                 <th>Total</th>
               </tr>
-            </thead>
-            <tbody>
-              {pedidos.map((pedido) => {
-                const est = mocks.CONFIG_ESTADO[pedido.estado];
-                return (
-                  <tr key={pedido.id}>
-                    <td className="dashboard-tabla__num">
-                      #{pedido.id}
-                    </td>
-                    <td>
-                      <span style={{
-                        fontFamily: "var(--font-label)",
-                        fontSize: "12px",
-                        color: "var(--secondary)",
-                        fontWeight: 600,
-                      }}>
+              </thead>
+              <tbody>
+                {pedidos.map((pedido) => {
+                  const est = mocks.CONFIG_ESTADO[pedido.estado];
+                  return (
+                    <tr key={pedido.id}>
+                      <td className="dashboard-tabla__num">
+                        #{pedido.id}
+                      </td>
+                      <td>
+                        <span style={{
+                          fontFamily: "var(--font-label)",
+                          fontSize: "12px",
+                          color: "var(--secondary)",
+                          fontWeight: 600,
+                        }}>
                         {pedido.codigo}
-                      </span>
-                    </td>
-                    <td className="dashboard-tabla__cliente">
-                      {pedido.cliente}
-                    </td>
-                    <td>
-                      <span className="dashboard-tabla__sede">
-                        <span className="material-symbols-outlined">
-                          location_on
                         </span>
-                        {pedido.sede}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className="estado-badge"
-                        style={{
-                          color:           est.color,
-                          backgroundColor: est.bg,
-                          borderColor:     est.border,
-                        }}
-                      >
-                        {est.label}
-                      </span>
-                    </td>
-                    <td className="dashboard-tabla__total">
-                      {mocks.formatearPesos(pedido.total)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="dashboard-tabla__cliente">
+                        {pedido.cliente}
+                      </td>
+                      <td>
+                        <span className="dashboard-tabla__sede">
+                          <span className="material-symbols-outlined">
+                            location_on
+                          </span>
+                          {pedido.sede}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className="estado-badge"
+                          style={{
+                            color:           est.color,
+                            backgroundColor: est.bg,
+                            borderColor:     est.border,
+                          }}
+                        >
+                          {est.label}
+                        </span>
+                      </td>
+                      <td className="dashboard-tabla__total">
+                        {mocks.formatearPesos(pedido.total)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
   );
 };
 

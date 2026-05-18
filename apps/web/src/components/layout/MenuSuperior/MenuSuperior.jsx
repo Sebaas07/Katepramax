@@ -1,5 +1,5 @@
 import { useReducer } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { obtenerSesion, cerrarSesion } from "@/utils/sessionHelper";
 import MenuLateral from "@/components/layout/MenuLateral/MenuLateral";
 import "./MenuSuperior.css";
@@ -20,6 +20,8 @@ export default function MenuSuperior() {
   const [state, dispatch] = useReducer(menuReducer, initialState);
   const { mostrarSidebar } = state;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sedeDesdeURL = searchParams.get('sede') || '';
   const usuario = obtenerSesion();
 
   const abrirSidebar  = () => dispatch({ type: "ABRIR_SIDEBAR"  });
@@ -58,15 +60,19 @@ export default function MenuSuperior() {
           </div>
         </div>
 
-        {/* Selector de sede (solo Admin ve todas) */}
+          {/* Selector de sede (solo Admin ve todas) */}
         <nav className="menu-superior__sedes d-none d-md-flex">
           {["Bogotá", "Cartagena", "Villavicencio"].map((sede) => (
             <button
               key={sede}
               className={`menu-superior__sede-btn ${
-                usuario?.sede === sede ? "menu-superior__sede-btn--activa" : ""
+                sedeDesdeURL === sede ? "menu-superior__sede-btn--activa" : ""
               }`}
               type="button"
+              onClick={() => {
+                // Navegar al dashboard con el parámetro de sede en la URL
+                navigate(`/dashboard?sede=${sede}`, { replace: true });
+              }}
             >
               {sede}
             </button>

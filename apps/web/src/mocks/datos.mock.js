@@ -380,7 +380,7 @@ export const AUDIT_LOG_MOCK = [
   {
     id: 1,
     usuario: "Laura Jiménez",
-    rol: "Bodega",
+    rol: "AdminBogota",
     sede: "Bogotá",
     accion: "Creó pedido KP-0042",
     modulo: "Pedidos",
