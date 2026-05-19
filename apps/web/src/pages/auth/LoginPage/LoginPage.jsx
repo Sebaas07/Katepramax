@@ -5,7 +5,7 @@ import "./LoginPage.css";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [form, setForm]                 = useState({ usuario: "", clave: "" });
+  const [form, setForm]                 = useState({ usuario: "", contrasena: "" });
   const [error, setError]               = useState("");
   const [cargando, setCargando]         = useState(false);
   const [mostrarClave, setMostrarClave] = useState(false);
@@ -18,13 +18,13 @@ const LoginPage = () => {
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
-    if (!form.usuario.trim() || !form.clave.trim()) {
+    if (!form.usuario.trim() || !form.contrasena.trim()) {
       setError("Por favor ingresa tu usuario y contraseña.");
       return;
     }
     setCargando(true);
     setError("");
-    const resultado = await iniciarSesion(form.usuario.trim(), form.clave);
+    const resultado = await iniciarSesion(form.usuario.trim(), form.contrasena);
     if (resultado.exitoso) {
       navigate(
         resultado.datos.rol === "Entregador" ? "/entregas" : "/dashboard",
@@ -189,7 +189,7 @@ const LoginPage = () => {
 
               {/* Contraseña */}
               <div className="login__field">
-                <label className="login__field-label" htmlFor="clave">
+                <label className="login__field-label" htmlFor="contrasena">
                   Contraseña
                 </label>
                 <div className="login__field-wrap">
@@ -197,12 +197,12 @@ const LoginPage = () => {
                     lock
                   </span>
                   <input
-                    id="clave"
-                    name="clave"
+                    id="contrasena"
+                    name="contrasena"
                     type={mostrarClave ? "text" : "password"}
                     className="login__field-input"
                     placeholder="••••••••"
-                    value={form.clave}
+                    value={form.contrasena}
                     onChange={manejarCambio}
                     autoComplete="current-password"
                     disabled={cargando}

@@ -1,6 +1,6 @@
 import { postLogin, getMe } from "../api/authApi";
 import { USUARIOS_MOCK } from "../mocks/datos.mock";
-import { guardarTokens, guardarSesion } from "@/utils/sessionHelper";
+import { guardarTokens, guardarSesion, cerrarSesion } from "@/utils/sessionHelper";
 
 const generarTokenMock = (usuario) => {
   const header    = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
@@ -15,12 +15,11 @@ const generarTokenMock = (usuario) => {
   return `${header}.${payload}.${signature}`;
 };
 
-export const iniciarSesion = async (usuario, clave) => {
+export const iniciarSesion = async (usuario, contrasena) => {
   try {
-    const response = await postLogin({ usuario, clave });
+    const response = await postLogin({ usuario, contrasena });
     const datos    = response.data;
 
-    // El backend devuelve accessToken y user (no token y usuario)
     guardarTokens(datos.accessToken, datos.refreshToken);
     guardarSesion(datos.user);
 
@@ -30,7 +29,7 @@ export const iniciarSesion = async (usuario, clave) => {
     console.warn("Backend no disponible, intentando login mock:", error.message);
 
     const usuarioMock = USUARIOS_MOCK.find(
-      (u) => u.usuario === usuario && u.clave === clave
+      (u) => u.usuario === usuario && u.contrasena === contrasena
     );
 
     if (usuarioMock) {
@@ -64,4 +63,9 @@ export const obtenerUsuarioActual = async () => {
       mensaje: error.response?.data?.mensaje || "Error al obtener usuario",
     };
   }
+};
+export const cerrarSesionUsuario = () => {
+  cerrarSesion();
+  return { exitoso: true, mensaje: "Sesión cerrada correctamente" };
+
 };

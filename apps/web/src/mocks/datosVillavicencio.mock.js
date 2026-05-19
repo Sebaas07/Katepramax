@@ -10,8 +10,8 @@ export const USUARIOS_MOCK = [
      {
        id: 4,
        nombreCompleto: "Sofía Ramírez",
-       usuario: "bodega_vll",
-       clave: "bodega123",
+        usuario: "bodega_vll",
+        contrasena: "bodega123",
        rol: "Bodega",
        sedeId: 3,
        sede: "Villavicencio",
@@ -20,8 +20,8 @@ export const USUARIOS_MOCK = [
      {
        id: 7,
        nombreCompleto: "Diego Castro",
-       usuario: "entregador3",
-       clave: "entrega123",
+        usuario: "entregador3",
+        contrasena: "entrega123",
        rol: "Entregador",
        sedeId: 3,
        sede: "Villavicencio",

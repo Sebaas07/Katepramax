@@ -10,5 +10,8 @@
     "dev:web": "npm run dev -w web",
     "dev": "concurrently -n \"API,WEB\" -c \"magenta,cyan\" \"npm run dev:api\" \"npm run dev:web\"",
     "install-all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
