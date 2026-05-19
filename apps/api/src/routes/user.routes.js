@@ -1,15 +1,90 @@
-const { verifyAdmin } = require('../middlewares/auth.middleware');
+const {
+  getAll,
+  getById,
+  create,
+  update,
+  desactivar,
+  activar,
+} = require("../controllers/user.controller");
+const { soloAdmin } = require("../middlewares/auth.middleware");
+const {
+  createUsuarioBody,
+  updateUsuarioBody,
+  usuarioResponse,
+  idParam,
+} = require("../schemas/usuario.schema");
 
-async function userRoutes(app, options) {
-  const userController = require("../controllers/user.controller");
-
-  // Rutas protegidas
-  app.get("/api/usuarios", { preHandler: verifyAdmin }, userController.getUsers);
-  app.post("/api/usuarios", { preHandler: verifyAdmin }, userController.createUser);
+async function userRoutes(app) {
   
-  app.put("/api/usuarios/:id", { preHandler: verifyAdmin }, userController.updateUser);
-  app.patch("/api/usuarios/:id/activar", { preHandler: verifyAdmin }, userController.activateUser);
-  app.patch("/api/usuarios/:id/inactivar", { preHandler: verifyAdmin }, userController.inactivateUser);
+  const preSoloAdmin = soloAdmin.preHandler;
+
+  // GET /api/usuarios
+  app.get("/usuarios", {
+    schema: {
+      summary: "Listar todos los usuarios",
+      tags: ["Usuarios"],
+      response: { 200: { type: "array", items: usuarioResponse } },
+    },
+    preHandler: preSoloAdmin,
+    handler: getAll,
+  });
+
+  // GET /api/usuarios/:id
+  app.get("/usuarios/:id", {
+    schema: {
+      summary: "Obtener usuario por ID",
+      tags: ["Usuarios"],
+      params: idParam,
+      response: { 200: usuarioResponse },
+    },
+    preHandler: preSoloAdmin,
+    handler: getById,
+  });
+
+  // POST /api/usuarios
+  app.post("/usuarios", {
+    schema: {
+      summary: "Crear usuario",
+      tags: ["Usuarios"],
+      body: createUsuarioBody,
+    },
+    preHandler: preSoloAdmin,
+    handler: create,
+  });
+
+  // PUT /api/usuarios/:id
+  app.put("/usuarios/:id", {
+    schema: {
+      summary: "Actualizar usuario",
+      tags: ["Usuarios"],
+      params: idParam,
+      body: updateUsuarioBody,
+    },
+    preHandler: preSoloAdmin,
+    handler: update,
+  });
+
+  // PATCH /api/usuarios/:id — desactivar
+  app.patch("/usuarios/:id", {
+    schema: {
+      summary: "Desactivar usuario",
+      tags: ["Usuarios"],
+      params: idParam,
+    },
+    preHandler: preSoloAdmin,
+    handler: desactivar,
+  });
+
+  // PATCH /api/usuarios/:id/activar
+  app.patch("/usuarios/:id/activar", {
+    schema: {
+      summary: "Activar usuario",
+      tags: ["Usuarios"],
+      params: idParam,
+    },
+    preHandler: preSoloAdmin,
+    handler: activar,
+  });
 }
 
 module.exports = userRoutes;
