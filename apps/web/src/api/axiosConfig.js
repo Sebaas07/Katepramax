@@ -6,7 +6,7 @@ import {
   cerrarSesion,
 } from "@/utils/sessionHelper";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 /**
  * Instancia principal de Axios.

@@ -10,4 +10,4 @@ export const postRefresh = (refreshToken) =>
   clienteApi.post("/auth/refresh", { refreshToken });
 
 export const putCambiarClave = (body) =>
-  clienteApi.put("/auth/cambiar-clave", body);
+  clienteApi.patch("/auth/clave", body);

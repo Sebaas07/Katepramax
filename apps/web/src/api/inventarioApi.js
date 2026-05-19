@@ -6,7 +6,7 @@ import {
   MOVIMIENTOS_INVENTARIO_MOCK 
 } from "@/mocks/datosInventario.mock";
 
-const API_BASE_URL = import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:8000/api";
+const API_BASE_URL = import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:8000/api/v1";
 
 const inventarioApi = {
   obtenerProductos: async () => {

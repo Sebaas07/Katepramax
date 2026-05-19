@@ -6,7 +6,7 @@ import {
   ENTREGADORES_MOCK 
 } from "@/mocks/datosPedidos.mock";
 
-const API_BASE_URL = import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:8000/api";
+const API_BASE_URL = import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:8000/api/v1";
 
 const pedidosApi = {
   obtenerPedidos: async (filtros = {}) => {
