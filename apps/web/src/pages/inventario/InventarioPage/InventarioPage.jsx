@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { obtenerSesion, esBodegaBogota, obtenerRol } from "@/utils/sessionHelper";
+import { obtenerRol } from "@/utils/sessionHelper";
 import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import "./InventarioPage.css";
 
 const InventarioPage = () => {
-  const usuario = obtenerSesion();
+//  const usuario = obtenerSesion();
   const rol = obtenerRol();
   const esAdminOGerente = rol === "AdminBogota" || rol === "Admin";
 
@@ -132,13 +132,13 @@ const InventarioPage = () => {
         <h1>Gestión de Inventario</h1>
         <div className="tabs">
           <button 
-            className={`${activeTab === "productos" ? "tab-active" : ""}`}
+            className={`${activeTab === "productos" ? "tab-active" : "tab-btn"}`}
             onClick={() => setActiveTab("productos")}
           >
             Productos
           </button>
           <button 
-            className={`${activeTab === "movimientos" ? "tab-active" : ""}`}
+            className={`${activeTab === "movimientos" ? "tab-active" : "tab-btn"}`}
             onClick={() => setActiveTab("movimientos")}
           >
             Movimientos

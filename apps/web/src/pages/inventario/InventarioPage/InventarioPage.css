@@ -1,172 +1,254 @@
+/* ============================================================
+   InventarioPage.css — Katepramax
+   Paleta oscura con variables del sistema de diseño global
+   ============================================================ */
+
 .inventario-page {
-  padding: 20px;
   min-height: 100vh;
-  background-color: #f8fafc;
 }
 
+/* ─── Header ─────────────────────────────────────────────────*/
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 1.75rem;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .page-header h1 {
+  font-family: var(--font-headline);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
   margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #1e293b;
 }
 
+/* ─── Tabs ───────────────────────────────────────────────────*/
 .tabs {
   display: flex;
-  gap: 8px;
-  background-color: #f1f5f9;
-  border-radius: 8px;
+  gap: 4px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
   padding: 4px;
 }
 
-.tab-btn, .tab-active {
-  padding: 8px 16px;
+.tab-btn,
+.tab-active {
+  padding: 0.5rem 1.25rem;
   border: none;
   background: transparent;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-label);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  color: var(--on-surface-variant);
+  transition: all var(--transition-fast);
+  letter-spacing: 0.02em;
 }
 
 .tab-btn:hover {
-  background-color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--on-surface);
 }
 
 .tab-active {
-  background-color: white;
-  color: #3b82f6;
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--surface-container-highest) !important;
+  color: var(--secondary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
+.tab-active:hover {
+  background: var(--surface-container-highest) !important;
+  color: var(--secondary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+/* ─── Tab content ────────────────────────────────────────────*/
 .tab-content {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--surface-container);
+  border: 1px solid rgba(233, 195, 73, 0.12);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
+/* ─── Page actions ───────────────────────────────────────────*/
 .page-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(233, 195, 73, 0.08);
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .page-actions h2 {
-  margin: 0;
-  font-size: 20px;
+  font-family: var(--font-headline);
+  font-size: 0.9375rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--on-surface);
+  margin: 0;
+  letter-spacing: -0.01em;
 }
 
+.action-buttons {
+  display: flex;
+  gap: 0.625rem;
+}
+
+/* ─── Botones ────────────────────────────────────────────────*/
 .btn-primary {
-  background-color: #3b82f6;
-  color: white;
+  background: var(--secondary);
+  color: var(--surface-container-lowest);
   border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(233, 195, 73, 0.2);
+  letter-spacing: 0.02em;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #2563eb;
+  background: #d4ae3f;
+  box-shadow: 0 4px 14px rgba(233, 195, 73, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn-primary:disabled {
-  background-color: #93c5fd;
+  opacity: 0.45;
   cursor: not-allowed;
+  transform: none;
 }
 
 .btn-secondary {
-  background-color: #10b981;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 14px;
+  background: rgba(221, 183, 255, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(221, 183, 255, 0.25);
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-label);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.02em;
 }
 
-.btn-secondary:hover {
-  background-color: #059669;
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(221, 183, 255, 0.18);
+  border-color: rgba(221, 183, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .btn-outline {
-  background-color: transparent;
-  border: 2px solid #64748b;
-  color: #64748b;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 600;
+  background: transparent;
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline-variant);
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.02em;
 }
 
 .btn-outline:hover {
-  background-color: #f1f5f9;
-  border-color: #475569;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--outline);
+  color: var(--on-surface);
 }
 
+/* ─── Modal form ─────────────────────────────────────────────*/
 .modal-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.25rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.375rem;
 }
 
 .form-group label {
-  font-weight: 600;
-  font-size: 14px;
-  color: #374151;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary);
 }
 
 .form-control {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
+  padding: 0.625rem 0.875rem;
+  background: var(--surface-container-lowest);
+  border: none;
+  border-bottom: 2px solid var(--outline-variant);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  font-family: var(--font-headline);
   font-size: 14px;
+  color: var(--on-surface);
   width: 100%;
   box-sizing: border-box;
-  transition: border-color 0.2s;
+  transition: border-color var(--transition-fast),
+              box-shadow var(--transition-fast);
+  outline: none;
 }
 
 .form-control:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  border-bottom-color: var(--secondary);
+  box-shadow: 0 2px 0 0 rgba(233, 195, 73, 0.15);
 }
 
-.form-control.select {
+.form-control::placeholder {
+  color: rgba(151, 141, 157, 0.4);
+}
+
+.form-control.select,
+select.form-control {
   cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23978d9d' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;
 }
 
-.form-control.textarea {
+select.form-control option {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
+.form-control.textarea,
+textarea.form-control {
   resize: vertical;
   min-height: 80px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }

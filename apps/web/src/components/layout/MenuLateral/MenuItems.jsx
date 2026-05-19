@@ -40,7 +40,7 @@ const MENU = [
   {
     path: "/productos",
     label: "Productos",
-    icon: "upc_scan",
+    icon: "category",
     roles: ["AdminBogota", "Admin", "Bodega"],
   },
   {

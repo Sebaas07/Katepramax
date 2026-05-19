@@ -1,13 +1,19 @@
+/* ============================================================
+   EstadoBadge.css — Katepramax
+   Badge de estado reutilizable
+   ============================================================ */
+
 .estado-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-width: 1px;
-  border-style: solid;
   display: inline-block;
-  min-width: 60px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid;
+  white-space: nowrap;
   text-align: center;
+  min-width: 80px;
 }

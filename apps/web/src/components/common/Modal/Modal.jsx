@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./Modal.css";
 
 const Modal = ({ 
@@ -25,6 +25,15 @@ const Modal = ({
     setIsConfirmed(false);
     onClose();
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -69,13 +78,6 @@ const Modal = ({
           </div>
         </div>
       </div>
-      
-      {/* Previene el scroll del fondo cuando el modal está abierto */}
-      <style jsx>{`
-        body {
-          overflow: ${isOpen ? 'hidden' : 'auto'} !important;
-        }
-      `}</style>
     </>
   );
 };

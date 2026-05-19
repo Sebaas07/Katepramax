@@ -1,30 +1,41 @@
 import { useMemo } from "react";
 import "./EstadoBadge.css";
 
-// CONFIG_ESTADO debe coincidir con la definición en los mocks
 const CONFIG_ESTADO = {
-  pendiente: { label: "Pendiente", color: "#fbbf24", bg: "rgba(251,191,36,0.1)", border: "#fbbf24" },
-  confirmado: { label: "Confirmado", color: "#3b82f6", bg: "rgba(59,130,246,0.1)", border: "#3b82f6" },
-  en_camino: { label: "En camino", color: "#8b5cf6", bg: "rgba(139,92,246,0.1)", border: "#8b5cf6" },
-  entregado: { label: "Entregado", color: "#10b981", bg: "rgba(16,185,129,0.1)", border: "#10b981" },
-  fallido: { label: "Fallido", color: "#ef4444", bg: "rgba(236,68,64,0.1)", border: "#ef4444" },
+  pendiente:  { label: "Pendiente",  color: "#e9c349", bg: "rgba(233,195,73,0.12)",  border: "rgba(233,195,73,0.3)"  },
+  confirmado: { label: "Confirmado", color: "#60a5fa", bg: "rgba(96,165,250,0.12)",  border: "rgba(96,165,250,0.3)"  },
+  en_ruta:    { label: "En ruta",    color: "#ddb7ff", bg: "rgba(221,183,255,0.12)", border: "rgba(221,183,255,0.3)" },
+  en_camino:  { label: "En camino",  color: "#ddb7ff", bg: "rgba(221,183,255,0.12)", border: "rgba(221,183,255,0.3)" },
+  entregado:  { label: "Entregado",  color: "#4ade80", bg: "rgba(74,222,128,0.12)",  border: "rgba(74,222,128,0.3)"  },
+  fallido:    { label: "Fallido",    color: "#ffb4ab", bg: "rgba(255,180,171,0.12)", border: "rgba(255,180,171,0.3)" },
+  asignado:   { label: "Asignado",   color: "#60a5fa", bg: "rgba(96,165,250,0.12)",  border: "rgba(96,165,250,0.3)"  },
+  recibido:   { label: "Recibido",   color: "#4ade80", bg: "rgba(74,222,128,0.12)",  border: "rgba(74,222,128,0.3)"  },
+  incompleto: { label: "Incompleto", color: "#e9c349", bg: "rgba(233,195,73,0.12)",  border: "rgba(233,195,73,0.3)"  },
+  entrada:    { label: "Entrada",    color: "#4ade80", bg: "rgba(74,222,128,0.12)",  border: "rgba(74,222,128,0.3)"  },
+  salida:     { label: "Salida",     color: "#ffb4ab", bg: "rgba(255,180,171,0.12)", border: "rgba(255,180,171,0.3)" },
+  ajuste:     { label: "Ajuste",     color: "#e9c349", bg: "rgba(233,195,73,0.12)",  border: "rgba(233,195,73,0.3)"  },
 };
 
 const EstadoBadge = ({ estado }) => {
-  const estadoConfig = useMemo(() => {
-    return CONFIG_ESTADO[estado] || CONFIG_ESTADO.pendiente; // Default to pendiente
+  const config = useMemo(() => {
+    return CONFIG_ESTADO[estado] || {
+      label: estado || "—",
+      color: "var(--on-surface-variant)",
+      bg: "rgba(255,255,255,0.05)",
+      border: "var(--outline-variant)",
+    };
   }, [estado]);
 
   return (
     <span
       className="estado-badge"
       style={{
-        color: estadoConfig.color,
-        backgroundColor: estadoConfig.bg,
-        borderColor: estadoConfig.border,
+        color:           config.color,
+        backgroundColor: config.bg,
+        borderColor:     config.border,
       }}
     >
-      {estadoConfig.label}
+      {config.label}
     </span>
   );
 };
