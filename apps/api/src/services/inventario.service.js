@@ -1,4 +1,4 @@
-const repo  = require("../repositories/inventario.repository");
+const repo     = require("../repositories/inventario.repository");
 const AppError = require("../errors/AppError");
 
 /**
@@ -8,27 +8,40 @@ const AppError = require("../errors/AppError");
  */
 
 async function registrar(app, body) {
-  // Verificar que la sede exista
   const sede = await app.prisma.sede.findUnique({ where: { id: body.sedeId } });
   if (!sede) throw new AppError(`Sede ${body.sedeId} no encontrada`, 404);
 
-  return repo.crear(app.prisma, {
-    fecha:    new Date(body.fecha),
-    semana:   body.semana,
-    sedeId:   body.sedeId,
-    cantidad: body.cantidad,
-    costo:    body.costo,
+  const producto = await app.prisma.producto.findUnique({ where: { codigo: body.productoId } });
+  if (!producto) throw new AppError(`Producto ${body.productoId} no encontrado`, 404);
+
+  const registro = await repo.crear(app.prisma, {
+    fecha:             new Date(body.fecha),
+    semana:            body.semana,
+    sedeId:            body.sedeId,
+    productoId:        body.productoId,
+    cantidadIngresada: body.cantidadIngresada,
+    costo:             body.costo,
   });
+
+  // Actualizar stock acumulado
+  await app.prisma.stockSede.upsert({
+    where:  { sedeId_productoId: { sedeId: body.sedeId, productoId: body.productoId } },
+    update: { stockActual: { increment: body.cantidadIngresada } },
+    create: { sedeId: body.sedeId, productoId: body.productoId, stockActual: body.cantidadIngresada },
+  });
+
+  return registro;
 }
 
 async function obtenerLista(app, query) {
   const filtros = {
-    skip:  Number(query.skip  ?? 0),
-    take:  Number(query.take  ?? 50),
+    skip: Number(query.skip ?? 0),
+    take: Number(query.take ?? 50),
   };
-  if (query.fecha)  filtros.fecha  = new Date(query.fecha);
-  if (query.semana) filtros.semana = Number(query.semana);
-  if (query.sedeId) filtros.sedeId = Number(query.sedeId);
+  if (query.fecha)      filtros.fecha      = new Date(query.fecha);
+  if (query.semana)     filtros.semana     = Number(query.semana);
+  if (query.sedeId)     filtros.sedeId     = Number(query.sedeId);
+  if (query.productoId) filtros.productoId = query.productoId;
   return repo.listar(app.prisma, filtros);
 }
 
@@ -39,26 +52,44 @@ async function obtenerPorId(app, id) {
 }
 
 async function editar(app, id, body) {
-  await obtenerPorId(app, id); // valida existencia
-  return repo.actualizar(app.prisma, id, body);
+  const registroAnterior = await obtenerPorId(app, id);
+
+  const actualizado = await repo.actualizar(app.prisma, id, body);
+
+  // Si cambió cantidadIngresada, recalcular el delta en StockSede
+  if (body.cantidadIngresada !== undefined) {
+    const delta = body.cantidadIngresada - registroAnterior.cantidadIngresada;
+    await app.prisma.stockSede.upsert({
+      where:  { sedeId_productoId: { sedeId: registroAnterior.sedeId, productoId: registroAnterior.productoId } },
+      update: { stockActual: { increment: delta } },
+      create: { sedeId: registroAnterior.sedeId, productoId: registroAnterior.productoId, stockActual: delta },
+    });
+  }
+
+  return actualizado;
 }
 
 async function borrar(app, id) {
-  await obtenerPorId(app, id);
-  return repo.eliminar(app.prisma, id);
+  const registro = await obtenerPorId(app, id);
+  await repo.eliminar(app.prisma, id);
+
+  // Revertir el stock al eliminar el registro
+  await app.prisma.stockSede.update({
+    where: { sedeId_productoId: { sedeId: registro.sedeId, productoId: registro.productoId } },
+    data:  { stockActual: { decrement: registro.cantidadIngresada } },
+  });
 }
 
 async function resumenSemanal(app, semana) {
   const filas = await repo.resumenSemanal(app.prisma, semana);
-  // Enriquecer con nombre de sede
   const sedes = await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapaS = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
 
   return filas.map((f) => ({
-    sede:     mapaS[f.sedeId] ?? `Sede ${f.sedeId}`,
-    sedeId:   f.sedeId,
-    cantidad: f._sum.cantidad,
-    costo:    f._sum.costo,
+    sede:        mapaS[f.sedeId] ?? `Sede ${f.sedeId}`,
+    sedeId:      f.sedeId,
+    cantidad:    f._sum.cantidadIngresada,
+    costo:       f._sum.costo,
     ultimaFecha: f._max.fecha,
   }));
 }

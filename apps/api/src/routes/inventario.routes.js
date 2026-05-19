@@ -1,6 +1,6 @@
 const ctrl = require("../controllers/inventario.controller");
 const schemas = require("../schemas/inventario.schema");
-const { verifyToken } = require("../middlewares/auth.middleware"); // ← agrega
+const { verifyToken } = require("../middlewares/auth.middleware");
 
 async function inventarioRoutes(app) {
   app.addHook("preHandler", verifyToken); 
