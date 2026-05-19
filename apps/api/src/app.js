@@ -48,10 +48,12 @@ app.setErrorHandler(async (error, request, reply) => {
 app.get("/salud", async () => ({ status: "ok", timestamp: new Date() }));
 
 // ── Rutas ─────────────────────────────────────────────────────────────────────
-const routePrefix = { prefix: "/api" };
+const routePrefix = { prefix: "/api/v1" };
 app.register(require("./routes/auth.routes"), routePrefix);
 app.register(require("./routes/user.routes"), routePrefix);
 app.register(require("./routes/inventario.routes"), routePrefix);
+app.register(require("./routes/pedido.routes"), routePrefix);
+app.register(require("./routes/producto.routes"), routePrefix);
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
 const start = async () => {

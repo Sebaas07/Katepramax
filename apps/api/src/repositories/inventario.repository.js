@@ -5,7 +5,7 @@
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
- * @param {{ fecha: Date, semana: number, sedeId: number, cantidad: number, costo: number }} data
+ * @param {{ fecha: Date, semana: number, sedeId: number, productoId: string, cantidadIngresada: number, costo: number }} data
  */
 async function crear(prisma, data) {
   return prisma.inventario.create({ data });
@@ -13,17 +13,21 @@ async function crear(prisma, data) {
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
- * @param {{ fecha?: Date, semana?: number, sedeId?: number, skip?: number, take?: number }} filtros
+ * @param {{ fecha?: Date, semana?: number, sedeId?: number, productoId?: string, skip?: number, take?: number }} filtros
  */
-async function listar(prisma, { fecha, semana, sedeId, skip = 0, take = 50 } = {}) {
+async function listar(prisma, { fecha, semana, sedeId, productoId, skip = 0, take = 50 } = {}) {
   const where = {};
-  if (fecha)   where.fecha  = fecha;
-  if (semana)  where.semana = semana;
-  if (sedeId)  where.sedeId = sedeId;
+  if (fecha)      where.fecha      = fecha;
+  if (semana)     where.semana     = semana;
+  if (sedeId)     where.sedeId     = sedeId;
+  if (productoId) where.productoId = productoId;
 
   return prisma.inventario.findMany({
     where,
-    include: { sede: { select: { id: true, nombre: true } } },
+    include: {
+      sede:    { select: { id: true, nombre: true } },
+      producto: { select: { codigo: true, descripcion: true } },
+    },
     orderBy: [{ fecha: "desc" }, { sedeId: "asc" }],
     skip,
     take,
@@ -37,14 +41,17 @@ async function listar(prisma, { fecha, semana, sedeId, skip = 0, take = 50 } = {
 async function buscarPorId(prisma, id) {
   return prisma.inventario.findUnique({
     where: { id },
-    include: { sede: { select: { id: true, nombre: true } } },
+    include: {
+      sede:    { select: { id: true, nombre: true } },
+      producto: { select: { codigo: true, descripcion: true } },
+    },
   });
 }
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
  * @param {number} id
- * @param {{ cantidad?: number, costo?: number }} data
+ * @param {{ cantidadIngresada?: number, costo?: number }} data
  */
 async function actualizar(prisma, id, data) {
   return prisma.inventario.update({ where: { id }, data });
@@ -59,7 +66,7 @@ async function eliminar(prisma, id) {
 }
 
 /**
- * Resumen consolidado de la última semana por sede.
+ * Resumen consolidado de una semana por sede.
  * @param {import('@prisma/client').PrismaClient} prisma
  * @param {number} semana
  */
@@ -67,7 +74,7 @@ async function resumenSemanal(prisma, semana) {
   return prisma.inventario.groupBy({
     by: ["sedeId"],
     where: { semana },
-    _sum:  { cantidad: true, costo: true },
+    _sum:  { cantidadIngresada: true, costo: true },
     _max:  { fecha: true },
     orderBy: { sedeId: "asc" },
   });

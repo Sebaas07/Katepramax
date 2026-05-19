@@ -1,17 +1,19 @@
 /**
+ * inventario.schema.js
  * Esquemas de validación para las rutas de inventario.
- * 
  */
+
 const inventarioBase = {
   type: "object",
   properties: {
-    id:       { type: "integer" },
-    fecha:    { type: "string", format: "date" },
-    semana:   { type: "integer", minimum: 1, maximum: 53 },
-    sedeId:   { type: "integer" },
-    cantidad: { type: "integer", minimum: 0 },
-    costo:    { type: "number",  minimum: 0 },
-    creadoEn: { type: "string", format: "date-time" },
+    id:                { type: "integer" },
+    fecha:             { type: "string", format: "date-time" },
+    semana:            { type: "integer", minimum: 1, maximum: 53 },
+    sedeId:            { type: "integer" },
+    productoId:        { type: "string" },
+    cantidadIngresada: { type: "integer", minimum: 0 },
+    costo:             { type: "number",  minimum: 0 },
+    creadoEn:          { type: "string", format: "date-time" },
     sede: {
       type: "object",
       properties: {
@@ -19,23 +21,31 @@ const inventarioBase = {
         nombre: { type: "string" },
       },
     },
+    producto: {
+      type: "object",
+      properties: {
+        codigo:      { type: "string" },
+        descripcion: { type: "string" },
+      },
+    },
   },
 };
 
 // POST /api/inventario
 const crearInventario = {
-  summary: "Registrar inventario diario de una sede",
+  summary: "Registrar entrada de inventario para un producto en una sede",
   tags: ["Inventario"],
   security: [{ bearerAuth: [] }],
   body: {
     type: "object",
-    required: ["fecha", "semana", "sedeId", "cantidad", "costo"],
+    required: ["fecha", "semana", "sedeId", "productoId", "cantidadIngresada", "costo"],
     properties: {
-      fecha:    { type: "string", format: "date", description: "Ej: 2026-04-18" },
-      semana:   { type: "integer", minimum: 1, maximum: 53 },
-      sedeId:   { type: "integer" },
-      cantidad: { type: "integer", minimum: 0 },
-      costo:    { type: "number",  minimum: 0 },
+      fecha:             { type: "string", format: "date", description: "Ej: 2026-04-18" },
+      semana:            { type: "integer", minimum: 1, maximum: 53 },
+      sedeId:            { type: "integer" },
+      productoId:        { type: "string", description: "Código del producto" },
+      cantidadIngresada: { type: "integer", minimum: 0 },
+      costo:             { type: "number",  minimum: 0 },
     },
     additionalProperties: false,
   },
@@ -53,11 +63,12 @@ const listarInventario = {
   querystring: {
     type: "object",
     properties: {
-      fecha:  { type: "string", format: "date" },
-      semana: { type: "integer" },
-      sedeId: { type: "integer" },
-      skip:   { type: "integer", minimum: 0, default: 0 },
-      take:   { type: "integer", minimum: 1, maximum: 200, default: 50 },
+      fecha:      { type: "string", format: "date" },
+      semana:     { type: "integer" },
+      sedeId:     { type: "integer" },
+      productoId: { type: "string" },
+      skip:       { type: "integer", minimum: 0, default: 0 },
+      take:       { type: "integer", minimum: 1, maximum: 200, default: 50 },
     },
     additionalProperties: false,
   },
@@ -84,7 +95,7 @@ const obtenerInventario = {
 
 // PATCH /api/inventario/:id
 const editarInventario = {
-  summary: "Actualizar cantidad o costo de un registro",
+  summary: "Actualizar cantidad ingresada o costo de un registro",
   tags: ["Inventario"],
   security: [{ bearerAuth: [] }],
   params: {
@@ -95,8 +106,8 @@ const editarInventario = {
   body: {
     type: "object",
     properties: {
-      cantidad: { type: "integer", minimum: 0 },
-      costo:    { type: "number",  minimum: 0 },
+      cantidadIngresada: { type: "integer", minimum: 0 },
+      costo:             { type: "number",  minimum: 0 },
     },
     minProperties: 1,
     additionalProperties: false,
@@ -125,7 +136,7 @@ const eliminarInventario = {
 
 // GET /api/inventario/resumen-semanal
 const resumenSemanal = {
-  summary: "Resumen de inventario consolidado por sede para una semana",
+  summary: "Resumen consolidado de entradas por sede para una semana",
   tags: ["Inventario"],
   security: [{ bearerAuth: [] }],
   querystring: {
