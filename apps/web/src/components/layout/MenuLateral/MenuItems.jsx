@@ -62,6 +62,12 @@ const MENU = [
     roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
+    path: "/clientes",
+    label: "Clientes",
+    icon: "people",
+    roles: ["Admin", "AdminBogota", "Bodega"],
+  },
+  {
     path: "/admin/usuarios",
     label: "Usuarios",
     icon: "group",

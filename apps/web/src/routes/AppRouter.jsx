@@ -10,6 +10,7 @@ import DashboardPage from "@/pages/dashboard/DashboardPage/DashboardPage";
 import InventarioPage from "@/pages/inventario/InventarioPage/InventarioPage";
 import PedidosPage from "@/pages/pedidos/PedidosPage/PedidosPage";
 import EntregasPage from "@/pages/entregas/EntregasPage/EntregasPage";
+import ClientesPage from "@/pages/clientes/ClientePage/ClientePage";
 import Error404Page from "@/pages/common/Error404Page/Error404Page";
 import AccesoDenegadoPage from "@/pages/common/AccesoDenegadoPage/AccesoDenegadoPage";
 import { useAuth } from "@/hooks/useAuth";
@@ -65,11 +66,12 @@ const AppRouter = () => {
             <Route path="/entregas" element={<EntregasPage />} />
           </Route>
 
-          {/* Admin + Bodega (incluye AdminBogota) */}
-          <Route element={<RequireRole roles={ROLES.BODEGA} />}>
-            <Route path="/pedidos" element={<PedidosPage />} />
-            <Route path="/inventario" element={<InventarioPage />} />
-          </Route>
+           {/* Admin + Bodega (incluye AdminBogota) */}
+           <Route element={<RequireRole roles={ROLES.BODEGA} />}>
+             <Route path="/pedidos" element={<PedidosPage />} />
+             <Route path="/inventario" element={<InventarioPage />} />
+             <Route path="/clientes" element={<ClientesPage />} />
+           </Route>
 
           {/* Solo Admin (global) */}
           <Route element={<RequireRole roles={ROLES.ADMIN} />}>
