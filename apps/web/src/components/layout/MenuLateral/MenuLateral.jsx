@@ -1,12 +1,10 @@
+// src/components/layout/MenuLateral/MenuLateral.jsx
 import { Offcanvas } from "react-bootstrap";
-import { obtenerSesion } from "@/utils/sessionHelper";
 import MenuItems from "./MenuItems";
 import SidebarPerfil from "./SidebarPerfil";
 import "./MenuLateral.css";
 
 export default function MenuLateral({ mostrar, cerrar, cerrarSesion }) {
-  const usuario = obtenerSesion();
-
   return (
     <Offcanvas
       show={mostrar}
@@ -16,7 +14,6 @@ export default function MenuLateral({ mostrar, cerrar, cerrarSesion }) {
       backdrop={true}
       keyboard={true}
     >
-      {/* Header del sidebar */}
       <Offcanvas.Header className="menu-lateral__header">
         <div className="menu-lateral__brand">
           <span className="material-symbols-outlined menu-lateral__brand-icon">
@@ -39,14 +36,11 @@ export default function MenuLateral({ mostrar, cerrar, cerrarSesion }) {
 
       <Offcanvas.Body className="menu-lateral__body">
         <nav className="menu-lateral__nav">
-          {/* Items de navegación filtrados por rol */}
           <div className="menu-lateral__items">
             <MenuItems cerrar={cerrar} />
           </div>
-
-          {/* Perfil + logout al fondo */}
           <div className="menu-lateral__footer">
-            <SidebarPerfil usuario={usuario} cerrarSesion={cerrarSesion} />
+            <SidebarPerfil cerrarSesion={cerrarSesion} />
           </div>
         </nav>
       </Offcanvas.Body>

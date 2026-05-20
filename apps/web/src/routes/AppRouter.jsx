@@ -1,142 +1,102 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { estaLogueado, tieneRol } from "@/utils/sessionHelper";
+import { RequireAuth, RequireRole, PublicRoute } from "./ProtectedRoutes";
 
 // Layout
 import MainLayout from "@/components/layout/MainLayout";
 
-// Páginas — por ahora solo existen Login y Dashboard,
-// las demás las iremos creando en los próximos sprints.
-// Las importamos comentadas para no generar errores.
+// Páginas
 import LoginPage from "@/pages/auth/LoginPage/LoginPage";
 import DashboardPage from "@/pages/dashboard/DashboardPage/DashboardPage";
 import InventarioPage from "@/pages/inventario/InventarioPage/InventarioPage";
 import PedidosPage from "@/pages/pedidos/PedidosPage/PedidosPage";
+import EntregasPage from "@/pages/entregas/EntregasPage/EntregasPage";
 import Error404Page from "@/pages/common/Error404Page/Error404Page";
 import AccesoDenegadoPage from "@/pages/common/AccesoDenegadoPage/AccesoDenegadoPage";
+import { useAuth } from "@/hooks/useAuth";
 
-// Próximamente (descomentar cuando se creen):
-// import PedidosPage from "@/pages/pedidos/PedidosPage/PedidosPage";
-// import EntregasPage from "@/pages/entregas/EntregasPage/EntregasPage";
-// import InventarioPage from "@/pages/inventario/InventarioPage/InventarioPage";
-// import ProductosPage from "@/pages/productos/ProductosPage/ProductosPage";
-// import ProveedoresPage from "@/pages/proveedores/ProveedoresPage/ProveedoresPage";
-// import ContabilidadPage from "@/pages/contabilidad/ContabilidadPage/ContabilidadPage";
-// import ReportesPage from "@/pages/reportes/ReportesPage/ReportesPage";
-// import UsuariosPage from "@/pages/admin/UsuariosPage/UsuariosPage";
-// import DistribucionPage from "@/pages/distribucion/DistribucionPage/DistribucionPage";
-
-// ─── Guardas ──────────────────────────────────────────────────────────────────
-
-const RutaPublica = ({ children }) => {
-  if (estaLogueado()) return <Navigate to="/dashboard" replace />;
-  return children;
+// Definición de roles por módulo
+const ROLES = {
+  ADMIN: ["Admin"],
+  ADMIN_BOGOTA: ["Admin"], // Admin Bogotá es solo Admin con sede Bogotá
+  BODEGA: ["Admin", "Bodega"], // Admin (cualquier sede) + Bodega
+  ENTREGADOR: ["Entregador"],
+  ALL: ["Admin", "Bodega", "Entregador"],
 };
 
-const RutaProtegida = ({ children }) => {
-  if (!estaLogueado()) return <Navigate to="/login" replace />;
-  return children;
-};
+// Componente para redirigir desde la raíz
+const RootRedirect = () => {
+  const { isAuthenticated, usuario, isLoading } = useAuth();
 
-// eslint-disable-next-line no-unused-vars
-const RutaPorRol = ({ roles, children }) => {
-  if (!estaLogueado()) return <Navigate to="/login" replace />;
-  if (!tieneRol(...roles)) return <Navigate to="/acceso-denegado" replace />;
-  return children;
-};
+  if (isLoading) {
+    return <div>Cargando...</div>;
+  }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirigir según el rol
+  if (usuario?.rol === "Entregador") {
+    return <Navigate to="/entregas" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+};
 
 const AppRouter = () => {
   return (
     <Routes>
-      {/* Raíz: redirige según sesión */}
-      <Route
-        path="/"
-        element={
-          estaLogueado()
-            ? <Navigate to="/dashboard" replace />
-            : <Navigate to="/login" replace />
-        }
-      />
+      {/* Ruta raíz - redirige según autenticación */}
+      <Route path="/" element={<RootRedirect />} />
 
-      {/* Ruta pública */}
-      <Route
-        path="/login"
-        element={
-          <RutaPublica>
-            <LoginPage />
-          </RutaPublica>
-        }
-      />
-
-      {/* Rutas protegidas — dentro del layout con sidebar */}
-      <Route
-        element={
-          <RutaProtegida>
-            <MainLayout />
-          </RutaProtegida>
-        }
-      >
-        {/* Todos los roles logueados */}
-        <Route path="/dashboard" element={<DashboardPage />} />
-
-        {/* Entregas — todos los roles, la página filtra internamente */}
-        {/* <Route path="/entregas" element={<EntregasPage />} /> */}
-
-        {/* Solo Admin y Bodega */}
-        <Route path="/pedidos" element={
-          <RutaPorRol roles={["AdminBogota", "Admin", "Bodega"]}>
-            <PedidosPage />
-          </RutaPorRol>
-        } />
-
-        <Route path="/inventario" element={
-          <RutaPorRol roles={["Admin", "Bodega"]}>
-            <InventarioPage />
-          </RutaPorRol>
-        } />
-
-        {/* <Route path="/productos" element={
-          <RutaPorRol roles={["Admin", "Bodega"]}>
-            <ProductosPage />
-          </RutaPorRol>
-        } /> */}
-
-        {/* <Route path="/distribucion" element={
-          <RutaPorRol roles={["Admin", "Bodega"]}>
-            <DistribucionPage />
-          </RutaPorRol>
-        } /> */}
-
-        {/* <Route path="/proveedores" element={
-          <RutaPorRol roles={["Admin", "Bodega"]}>
-            <ProveedoresPage />
-          </RutaPorRol>
-        } /> */}
-
-        {/* <Route path="/contabilidad" element={
-          <RutaPorRol roles={["Admin", "Bodega"]}>
-            <ContabilidadPage />
-          </RutaPorRol>
-        } /> */}
-
-        {/* <Route path="/reportes" element={
-          <RutaPorRol roles={["Admin", "Bodega"]}>
-            <ReportesPage />
-          </RutaPorRol>
-        } /> */}
-
-        {/* Solo Admin */}
-        {/* <Route path="/admin/usuarios" element={
-          <RutaPorRol roles={["Admin"]}>
-            <UsuariosPage />
-          </RutaPorRol>
-        } /> */}
-
-        <Route path="/acceso-denegado" element={<AccesoDenegadoPage />} />
+      {/* Rutas Públicas */}
+      <Route element={<PublicRoute />}>
+        <Route path="/login" element={<LoginPage />} />
       </Route>
 
-      {/* 404 */}
+      {/* Rutas Protegidas (requieren autenticación) */}
+      <Route element={<RequireAuth />}>
+        <Route element={<MainLayout />}>
+          {/* Todos los autenticados */}
+          <Route path="/dashboard" element={<DashboardPage />} />
+
+          {/* Solo Entregador */}
+          <Route element={<RequireRole roles={ROLES.ENTREGADOR} />}>
+            <Route path="/entregas" element={<EntregasPage />} />
+          </Route>
+
+          {/* Admin + Bodega (incluye AdminBogota) */}
+          <Route element={<RequireRole roles={ROLES.BODEGA} />}>
+            <Route path="/pedidos" element={<PedidosPage />} />
+            <Route path="/inventario" element={<InventarioPage />} />
+          </Route>
+
+          {/* Solo Admin (global) */}
+          <Route element={<RequireRole roles={ROLES.ADMIN} />}>
+            <Route path="/admin/usuarios" element={<div>Usuarios Page</div>} />
+            <Route
+              path="/contabilidad"
+              element={<div>Contabilidad Page</div>}
+            />
+          </Route>
+
+          {/* Admin + AdminBogota (bodega central) */}
+          <Route element={<RequireRole roles={ROLES.ADMIN_BODEGA} />}>
+            <Route
+              path="/distribucion"
+              element={<div>Distribución Page</div>}
+            />
+            <Route path="/productos" element={<div>Productos Page</div>} />
+            <Route path="/proveedores" element={<div>Proveedores Page</div>} />
+            <Route path="/reportes" element={<div>Reportes Page</div>} />
+          </Route>
+
+          {/* Acceso denegado */}
+          <Route path="/acceso-denegado" element={<AccesoDenegadoPage />} />
+        </Route>
+      </Route>
+
+      {/* 404 - fuera del layout */}
       <Route path="*" element={<Error404Page />} />
     </Routes>
   );

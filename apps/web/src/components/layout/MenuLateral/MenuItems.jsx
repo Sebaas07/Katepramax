@@ -1,17 +1,17 @@
 import { useLocation } from "react-router-dom";
-import { obtenerSesion, esBodegaBogota } from "@/utils/sessionHelper";
+import { useAuth } from "@/hooks/useAuth";
 import SidebarLink from "./SidebarLink";
 import "./MenuItems.css";
 
 // ─── Definición del menú ──────────────────────────────────────
 // Cada ítem tiene: ruta, label, icono Material Symbols y roles
-// que lo pueden ver. Si roles es null = todos los logueados.
+// que lo pueden ver.
 const MENU = [
   {
     path: "/dashboard",
     label: "Dashboard",
     icon: "dashboard",
-    roles: ["AdminBogota", "Admin", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega", "Entregador"],
   },
   {
     path: "/entregas",
@@ -23,49 +23,43 @@ const MENU = [
     path: "/pedidos",
     label: "Pedidos",
     icon: "shopping_cart",
-    roles: ["Admin", "Bodega"],
-  },
-  {
-    path: "/entregas",
-    label: "Entregas",
-    icon: "local_shipping",
-    roles: ["Admin", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
     path: "/inventario",
     label: "Inventario",
     icon: "inventory_2",
-    roles: ["AdminBogota", "Admin", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
     path: "/productos",
     label: "Productos",
     icon: "category",
-    roles: ["AdminBogota", "Admin", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
     path: "/distribucion",
     label: "Distribución",
     icon: "sync_alt",
-    roles: ["Admin", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
     path: "/proveedores",
     label: "Proveedores",
     icon: "conveyor_belt",
-    roles: ["Admin", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
     path: "/contabilidad",
     label: "Contabilidad",
     icon: "account_balance",
-    roles: ["AdminBogota", "Admin", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
     path: "/reportes",
     label: "Reportes",
     icon: "assessment",
-    roles: ["Admin", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
     path: "/admin/usuarios",
@@ -82,17 +76,14 @@ const MENU = [
 ];
 
 export default function MenuItems({ cerrar }) {
-  const location  = useLocation();
-  const usuario   = obtenerSesion();
-  const esBogota  = esBodegaBogota();
-  const rol       = usuario?.rol || "";
+  const location = useLocation();
+  const { usuario, esBodegaBogota } = useAuth();
+  const rol = usuario?.rol || "";
 
-  const esActivo  = (ruta) => location.pathname === ruta;
+  const esActivo = (ruta) => location.pathname === ruta;
 
-  // Filtrar según rol
-  const menuFiltrado = MENU.filter((item) =>
-    item.roles.includes(rol)
-  );
+  // Filtrar según rol del usuario
+  const menuFiltrado = MENU.filter((item) => item.roles.includes(rol));
 
   return (
     <>
@@ -108,10 +99,10 @@ export default function MenuItems({ cerrar }) {
       ))}
 
       {/* Badge especial para Bodega Bogotá */}
-      {esBogota && (
+      {esBodegaBogota && (
         <div className="menu-items__bogota-badge">
           <span className="material-symbols-outlined">verified</span>
-          <span>Bodega Principal</span>
+          <span>Bodega Principal (Bogotá)</span>
         </div>
       )}
     </>

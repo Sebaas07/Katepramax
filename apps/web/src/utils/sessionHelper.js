@@ -6,7 +6,6 @@ const COOKIE_OPTIONS = {
 };
 
 // ─── Tokens (cookies) ─────────────────────────────────────────────────────────
-
 export const guardarTokens = (token, refreshToken) => {
   Cookies.set("token", token, COOKIE_OPTIONS);
   Cookies.set("refreshToken", refreshToken, COOKIE_OPTIONS);
@@ -21,17 +20,45 @@ const eliminarTokens = () => {
 };
 
 // ─── Sesión del usuario (localStorage) ───────────────────────────────────────
-// Guarda: { id, nombreCompleto, usuario, rol, sedeId, sede, esBogota }
-// esBogota viene del backend en el JWT — indica si es Bodega de Bogotá
+const normalizarUsuario = (usuario) => {
+  if (!usuario) return null;
+
+  return {
+    ...usuario,
+    // Asegurar que sede sea string
+    sede:
+      typeof usuario.sede === "object" && usuario.sede !== null
+        ? usuario.sede.nombre || usuario.sede.name || "Bogotá"
+        : usuario.sede || "Bogotá",
+    nombreCompleto: usuario.nombreCompleto || usuario.nombre || "Usuario",
+  };
+};
 
 export const guardarSesion = (usuario) => {
+  const sedeNormalizada = usuario?.sede
+    ? typeof usuario.sede === "object"
+      ? usuario.sede.nombre || usuario.sede.name || "Bogotá"
+      : usuario.sede
+    : "Bogotá";
+
+  const usuarioNormalizado = {
+    ...usuario,
+    sede: sedeNormalizada,
+  };
+
   localStorage.setItem("logueado", "true");
-  localStorage.setItem("usuario", JSON.stringify(usuario));
+  localStorage.setItem("usuario", JSON.stringify(usuarioNormalizado));
 };
 
 export const obtenerSesion = () => {
   const usuario = localStorage.getItem("usuario");
-  return usuario ? JSON.parse(usuario) : null;
+  if (!usuario) return null;
+  try {
+    const parsed = JSON.parse(usuario);
+    return normalizarUsuario(parsed);
+  } catch {
+    return null;
+  }
 };
 
 export const estaLogueado = () =>
@@ -42,7 +69,7 @@ export const actualizarSesion = (datosNuevos) => {
   if (actual) {
     localStorage.setItem(
       "usuario",
-      JSON.stringify({ ...actual, ...datosNuevos })
+      JSON.stringify({ ...actual, ...datosNuevos }),
     );
   }
 };
@@ -52,30 +79,24 @@ export const obtenerRol = () => {
   return sesion ? sesion.rol : null;
 };
 
-/**
- * Verifica si el usuario tiene alguno de los roles indicados.
- * Uso: tieneRol("Admin", "Bodega")
- */
 export const tieneRol = (...roles) => {
   const rol = obtenerRol();
   return roles.includes(rol);
 };
 
 /**
- * Verifica si el usuario es Bodega de la sede Bogotá.
- * Este es el único perfil que puede:
- *  - Modificar precios (llegada, detal, mayoreo)
- *  - Crear envíos de distribución a otras sedes
- * El campo esBogota lo incluye el backend en el JWT.
+ * Verifica si el usuario es Bodega de la sede Bogotá (Admin Bogotá).
+ * Condición: rol === "Admin" Y sede === "Bogotá"
  */
 export const esBodegaBogota = () => {
   const sesion = obtenerSesion();
-  return sesion?.rol === "AdminBogota";
+  if (!sesion) return false;
+
+  return sesion.rol === "Admin" && sesion.sede === "Bogotá";
 };
 
 /**
  * Cierra la sesión completamente.
- * Elimina tokens y datos del usuario.
  */
 export const cerrarSesion = () => {
   localStorage.removeItem("logueado");
