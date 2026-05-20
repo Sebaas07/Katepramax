@@ -103,7 +103,7 @@ async function crear(app, body, usuarioId) {
   return pedido;
 }
 
-async function obtenerLista(app, query) {
+async function obtenerLista(app, query, usuario) {
   const filtros = {
     skip: Number(query.skip ?? 0),
     take: Number(query.take ?? 50),
@@ -111,6 +111,10 @@ async function obtenerLista(app, query) {
   if (query.clienteId)   filtros.clienteId   = Number(query.clienteId);
   if (query.estado)      filtros.estado      = query.estado;
   if (query.creadoPorId) filtros.creadoPorId = Number(query.creadoPorId);
+
+  // Bodega solo ve los pedidos de su propia sede; Admin los ve todos
+  if (usuario.rol === "Bodega") filtros.sedeId = usuario.sedeId;
+
   return repo.listar(app.prisma, filtros);
 }
 
@@ -124,9 +128,10 @@ async function cambiarEstado(app, id, nuevoEstado) {
   const pedido = await obtenerPorId(app, id);
 
   // Reglas de transición de estado
+  // "Asignado" y "Entregado" NO se permiten aquí: los maneja el módulo de asignaciones
   const transicionesValidas = {
-    Pendiente: ["Asignado", "Cancelado"],
-    Asignado:  ["Entregado", "Cancelado"],
+    Pendiente: ["Cancelado"],
+    Asignado:  ["Cancelado"],
     Entregado: [],
     Cancelado: [],
   };

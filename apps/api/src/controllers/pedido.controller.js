@@ -1,7 +1,6 @@
 const svc = require("../services/pedido.service");
 
 /**
- * pedido.controller.js
  * Delega en el servicio; sólo traduce request/reply.
  */
 
@@ -12,7 +11,7 @@ async function crear(request, reply) {
 }
 
 async function listar(request, reply) {
-  const lista = await svc.obtenerLista(request.server, request.query);
+  const lista = await svc.obtenerLista(request.server, request.query, request.user);
   return reply.send(lista);
 }
 

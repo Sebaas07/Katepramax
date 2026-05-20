@@ -10,4 +10,8 @@ class AppError extends Error {
   }
 }
 
-module.exports = { AppError };
+// Soporta ambas formas de importar:
+//   const AppError = require("../errors/AppError")          ← default
+//   const { AppError } = require("../errors/AppError")      ← named
+module.exports = AppError;
+module.exports.AppError = AppError;

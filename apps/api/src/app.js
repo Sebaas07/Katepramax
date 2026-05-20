@@ -54,6 +54,9 @@ app.register(require("./routes/user.routes"), routePrefix);
 app.register(require("./routes/inventario.routes"), routePrefix);
 app.register(require("./routes/pedido.routes"), routePrefix);
 app.register(require("./routes/producto.routes"), routePrefix);
+app.register(require("./routes/cliente.routes"), routePrefix);
+app.register(require("./routes/asignacion.routes"), routePrefix);
+app.register(require("./routes/proveedor.routes"), routePrefix);
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
 const start = async () => {
