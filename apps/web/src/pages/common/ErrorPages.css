@@ -1,0 +1,113 @@
+/* ============================================================
+   ErrorPages.css — Katepramax
+   Páginas 403 y 404 — tema oscuro del sistema
+   ============================================================ */
+
+.error-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-container-lowest, #121014);
+  padding: 2rem;
+}
+
+.error-page__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 400px;
+  gap: 1rem;
+}
+
+/* Ícono */
+.error-page__icono-wrap {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-xl, 20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.error-page__icono-wrap--danger {
+  background: rgba(255, 180, 171, 0.1);
+  border: 1px solid rgba(255, 180, 171, 0.25);
+}
+
+.error-page__icono-wrap--info {
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.error-page__icono-wrap--danger .material-symbols-outlined {
+  font-size: 38px;
+  color: var(--error, #ffb4ab);
+}
+
+.error-page__icono-wrap--info .material-symbols-outlined {
+  font-size: 38px;
+  color: #60a5fa;
+}
+
+/* Número */
+.error-page__codigo {
+  font-family: var(--font-headline, "Inter", sans-serif);
+  font-size: 5rem;
+  font-weight: 800;
+  color: var(--on-surface, #ede7f1);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+
+/* Título */
+.error-page__titulo {
+  font-family: var(--font-headline, "Inter", sans-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--on-surface, #ede7f1);
+  margin: 0;
+}
+
+/* Descripción */
+.error-page__descripcion {
+  font-family: var(--font-label, "Inter", sans-serif);
+  font-size: 14px;
+  color: var(--on-surface-variant, #978d9d);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 340px;
+}
+
+/* Botón */
+.error-page__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  background: var(--secondary, #e9c349);
+  color: var(--surface-container-lowest, #121014);
+  border: none;
+  padding: 0.625rem 1.5rem;
+  border-radius: var(--radius-lg, 12px);
+  font-family: var(--font-label, "Inter", sans-serif);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  box-shadow: 0 2px 8px rgba(233, 195, 73, 0.25);
+  letter-spacing: 0.02em;
+}
+
+.error-page__btn:hover {
+  background: #d4ae3f;
+  box-shadow: 0 4px 14px rgba(233, 195, 73, 0.4);
+  transform: translateY(-1px);
+}
+
+.error-page__btn .material-symbols-outlined {
+  font-size: 18px;
+}

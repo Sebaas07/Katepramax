@@ -1,224 +1,215 @@
-import { useState, useEffect } from "react";
-import { obtenerRol } from "@/utils/sessionHelper";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "react-hot-toast";
+import { useAuth } from "@/hooks/useAuth";
 import clientesService from "@/services/clientes.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import "./ClientePage.css";
-import { toast } from "react-hot-toast";
+
+// ─── Spinner inline ──────────────────────────────────────────
+const Spinner = () => (
+  <div className="cli-spinner-wrap">
+    <div className="cli-spinner" />
+    <span>Cargando clientes...</span>
+  </div>
+);
+
+// ─── Form inicial alineado con schema Prisma ──────────────────
+// Schema real: nombre, telefono, limiteCredito, saldoDeuda, activo
+const FORM_INICIAL = {
+  nombre: "",
+  telefono: "",
+  limiteCredito: "10000000",
+  saldoDeuda: "0",
+  activo: true,
+};
 
 const ClientePage = () => {
-  const rol = obtenerRol();
-  const esAdmin = rol === "AdminBogota" || rol === "Admin";
-  const esBodega = rol === "Bodega" || esAdmin; // Bodega y Admin pueden ver y editar
+  const { esAdmin, esBodega } = useAuth();
+  const puedeEditar = esAdmin || esBodega;
+  const puedeCrear  = esAdmin || esBodega;
+  const puedeDesactivar = esAdmin;
 
+  // ── Estado ────────────────────────────────────────────────
   const [clientes, setClientes] = useState([]);
-  const [filtros, setFiltros] = useState({
-    activo: "", // Filtrar por activos/inactivos (true/false o vacío para todos)
-  });
+  const [cargando, setCargando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+
+  const [filtros, setFiltros] = useState({ activo: "" });
+
   const [modalClienteAbierto, setModalClienteAbierto] = useState(false);
-  const [modalEliminarAbierto, setModalEliminarAbierto] = useState(false);
+  const [modalConfirmAbierto, setModalConfirmAbierto] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
-  const [formCliente, setFormCliente] = useState({
-    nombre: "",
-    telefono: "",
-    direccion: "",
-    email: "",
-    activo: true,
-  });
+  const [formCliente, setFormCliente] = useState(FORM_INICIAL);
 
-  useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const clientesData = await clientesService.obtenerClientes(filtros);
-        setClientes(clientesData);
-      } catch (error) {
-        toast.error("Error al cargar los datos de clientes: " + error.message);
-      }
-    };
-
-    cargarDatos();
+  // ── Carga de datos ────────────────────────────────────────
+  const cargarClientes = useCallback(async () => {
+    setCargando(true);
+    try {
+      const data = await clientesService.obtenerClientes(filtros);
+      setClientes(data);
+    } catch (err) {
+      toast.error("Error al cargar clientes: " + err.message);
+    } finally {
+      setCargando(false);
+    }
   }, [filtros]);
 
+  useEffect(() => {
+    cargarClientes();
+  }, [cargarClientes]);
+
+  // ── Handlers ──────────────────────────────────────────────
   const handleCambioFiltro = (e) => {
     const { name, value } = e.target;
-    setFiltros((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFiltros((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCambioFormCliente = (e) => {
+  const handleCambioForm = (e) => {
     const { name, value, type, checked } = e.target;
-    const valor = type === "checkbox" ? checked : value;
     setFormCliente((prev) => ({
       ...prev,
-      [name]: valor,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
+  const abrirModalNuevo = () => {
+    setClienteSeleccionado(null);
+    setFormCliente(FORM_INICIAL);
+    setModalClienteAbierto(true);
+  };
+
+  const abrirModalEditar = (cliente) => {
+    setClienteSeleccionado(cliente);
+    setFormCliente({
+      nombre:        cliente.nombre        ?? "",
+      telefono:      cliente.telefono      ?? "",
+      limiteCredito: String(cliente.limiteCredito ?? "10000000"),
+      saldoDeuda:    String(cliente.saldoDeuda    ?? "0"),
+      activo:        cliente.activo        ?? true,
+    });
+    setModalClienteAbierto(true);
+  };
+
+  const abrirModalConfirm = (cliente) => {
+    setClienteSeleccionado(cliente);
+    setModalConfirmAbierto(true);
+  };
+
+  // ── Guardar (crear / editar) ──────────────────────────────
   const handleGuardarCliente = async () => {
+    if (!formCliente.nombre.trim()) {
+      toast("El nombre del cliente es obligatorio.", { icon: "⚠️" });
+      return;
+    }
+
+    const payload = {
+      nombre:        formCliente.nombre.trim(),
+      telefono:      formCliente.telefono.trim() || null,
+      limiteCredito: parseFloat(formCliente.limiteCredito) || 10000000,
+      saldoDeuda:    parseFloat(formCliente.saldoDeuda)    || 0,
+      activo:        formCliente.activo,
+    };
+
+    setGuardando(true);
     try {
-      if (!formCliente.nombre) {
-        toast("Por favor ingrese el nombre del cliente", {
-          icon: "⚠️",
-          style: { borderRadius: "10px", background: "#333", color: "#fff" },
-        });
-        return;
-      }
-
-      if (!formCliente.identificacion) {
-        toast("Por favor ingrese la identificación", {
-          icon: "⚠️",
-          style: { borderRadius: "10px", background: "#333", color: "#fff" },
-        });
-        return;
-      }
-
-      // Preparar datos para enviar al backend
-      const clienteData = {
-        nombre: formCliente.nombre,
-        telefono: formCliente.telefono,
-        direccion: formCliente.direccion,
-        email: formCliente.email,
-        activo: formCliente.activo,
-      };
-
       if (clienteSeleccionado) {
-        // Actualizar cliente existente
-        await clientesService.actualizarCliente(
-          clienteSeleccionado.id,
-          clienteData,
-        );
-        toast.success("Cliente actualizado exitosamente", { style: { borderRadius: "10px", background: "#333", color: "#fff" } });
+        await clientesService.actualizarCliente(clienteSeleccionado.id, payload);
+        toast.success("Cliente actualizado correctamente.");
       } else {
-        // Crear nuevo cliente
-        await clientesService.crearCliente(clienteData);
-        toast.success("Cliente creado exitosamente", { style: { borderRadius: "10px", background: "#333", color: "#fff" } });
+        await clientesService.crearCliente(payload);
+        toast.success("Cliente creado correctamente.");
       }
-
-      // Cerrar modal, resetear formulario y refrescar datos
       setModalClienteAbierto(false);
-      setFormCliente({
-        nombre: "",
-        telefono: "",
-        direccion: "",
-        email: "",
-        activo: true,
-      });
-
-      const clientesData = await clientesService.obtenerClientes(filtros);
-      setClientes(clientesData);
-    } catch (error) {
-      console.error("Error saving cliente:", error);
-      toast.error("Error al guardar el cliente: " + error.message, { style: { borderRadius: "10px", background: "#333", color: "#fff" } });
+      setFormCliente(FORM_INICIAL);
+      await cargarClientes();
+    } catch (err) {
+      toast.error("Error al guardar cliente: " + err.message);
+    } finally {
+      setGuardando(false);
     }
   };
 
-  // Handle eliminar (desactivar) cliente
-  const handleEliminarCliente = async () => {
+  // ── Desactivar / reactivar ────────────────────────────────
+  const handleDesactivar = async () => {
+    if (!clienteSeleccionado) return;
+    setGuardando(true);
     try {
-      if (!clienteSeleccionado) {
-        toast("No hay cliente seleccionado", {
-          icon: "⚠️",
-          style: { borderRadius: "10px", background: "#333", color: "#fff" },
-        });
-        return;
-      }
-
-      // Desactivar cliente vía service
       await clientesService.desactivarCliente(clienteSeleccionado.id);
-
-      // Cerrar modal y refrescar datos
-      setModalEliminarAbierto(false);
-      const clientesData = await clientesService.obtenerClientes(filtros);
-      setClientes(clientesData);
-
-      toast.success("Cliente desactivado exitosamente", { style: { borderRadius: "10px", background: "#333", color: "#fff" } });
-    } catch (error) {
-      console.error("Error desactivando cliente:", error);
-      toast.error("Error al desactivar el cliente: " + error.message, { style: { borderRadius: "10px", background: "#333", color: "#fff" } });
+      toast.success("Cliente desactivado.");
+      setModalConfirmAbierto(false);
+      await cargarClientes();
+    } catch (err) {
+      toast.error("Error al desactivar cliente: " + err.message);
+    } finally {
+      setGuardando(false);
     }
   };
 
-  // Define columnas para la tabla de clientes
-  const columnasClientes = [
-    { campo: "nombre", label: "Nombre", tipo: "texto" },
-    { campo: "telefono", label: "Teléfono", tipo: "texto" },
-    { campo: "email", label: "Email", tipo: "texto" },
-    { campo: "direccion", label: "Dirección", tipo: "texto" },
-    { campo: "activo", label: "Estado", tipo: "estado" }, // Asumimos que tenemos un componente EstadoBadge
+  const handleReactivar = async (cliente) => {
+    try {
+      await clientesService.actualizarCliente(cliente.id, { activo: true });
+      toast.success("Cliente reactivado.");
+      await cargarClientes();
+    } catch (err) {
+      toast.error("Error al reactivar cliente: " + err.message);
+    }
+  };
+
+  // ── Columnas ──────────────────────────────────────────────
+  const columnas = [
+    { campo: "nombre",        label: "Nombre",         tipo: "texto"   },
+    { campo: "telefono",      label: "Teléfono",       tipo: "texto"   },
+    { campo: "saldoDeuda",    label: "Saldo deuda",    tipo: "moneda"  },
+    { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda"  },
+    { campo: "activo",        label: "Estado",         tipo: "booleano"},
+    { campo: "creadoEn",      label: "Registro",       tipo: "fecha"   },
   ];
 
-  // Definir acciones para cada cliente en la tabla
-  const getAccionesCliente = (cliente) => {
+  const accionesCliente = (cliente) => {
     const acciones = [];
-
-    // Only Admin/Bodega can edit
-    if (esBodega) {
+    if (puedeEditar) {
       acciones.push({
         label: "Editar",
-        onClick: () => {
-          setClienteSeleccionado(cliente);
-          setFormCliente({
-            nombre: cliente.nombre,
-            telefono: cliente.telefono,
-            direccion: cliente.direccion,
-            email: cliente.email,
-            activo: cliente.activo,
-          });
-          setModalClienteAbierto(true);
-        },
+        icon: "edit",
+        onClick: () => abrirModalEditar(cliente),
       });
     }
-
-    // Only Admin can desactivar (delete)
-    if (esAdmin && cliente.activo) {
-      // Solo desactivar si está activo
+    if (puedeDesactivar && cliente.activo) {
       acciones.push({
         label: "Desactivar",
-        onClick: () => {
-          setClienteSeleccionado(cliente);
-          setModalEliminarAbierto(true);
-        },
+        icon: "person_off",
+        variante: "danger",
+        onClick: () => abrirModalConfirm(cliente),
       });
     }
-
-    // Reactivar solo para admin si está inactivo
-    if (esAdmin && !cliente.activo) {
+    if (puedeDesactivar && !cliente.activo) {
       acciones.push({
         label: "Reactivar",
-        onClick: async () => {
-          try {
-            // Para reactivar, vamos a actualizar el cliente con activo: true
-            await clientesService.actualizarCliente(cliente.id, {
-              activo: true,
-            });
-            const clientesData = await clientesService.obtenerClientes(filtros);
-            setClientes(clientesData);
-            toast.success("Cliente reactivado exitosamente", { style: { borderRadius: "10px", background: "#333", color: "#fff" } });
-          } catch (error) {
-            console.error("Error reactivando cliente:", error);
-            toast.error("Error al reactivar el cliente: " + error.message, { style: { borderRadius: "10px", background: "#333", color: "#fff" } });
-          }
-        },
+        icon: "person",
+        variante: "success",
+        onClick: () => handleReactivar(cliente),
       });
     }
-
     return acciones;
   };
 
+  // ── Render ────────────────────────────────────────────────
   return (
     <div className="clientes-page">
+      {/* Header */}
       <div className="page-header">
         <h1>Gestión de Clientes</h1>
+
         <div className="filters">
+          {/* Filtro estado */}
           <div className="filter-group">
-            <label htmlFor="activo-filter">Estado:</label>
+            <label htmlFor="cli-filtro-activo">Estado</label>
             <select
-              id="activo-filter"
+              id="cli-filtro-activo"
+              name="activo"
               value={filtros.activo}
               onChange={handleCambioFiltro}
-              name="activo"
               className="filter-select"
             >
               <option value="">Todos</option>
@@ -227,155 +218,145 @@ const ClientePage = () => {
             </select>
           </div>
 
-          {/* Botón para crear nuevo cliente (solo Admin/Bodega) */}
-          {esBodega && (
+          {/* Botón crear */}
+          {puedeCrear && (
             <button
               className="btn-primary"
-              onClick={() => {
-                setClienteSeleccionado(null);
-                setFormCliente({
-                  nombre: "",
-                  telefono: "",
-                  direccion: "",
-                  email: "",
-                  activo: true,
-                });
-                setModalClienteAbierto(true);
-              }}
+              onClick={abrirModalNuevo}
+              type="button"
             >
-              Nuevo Cliente
+              <span className="material-symbols-outlined">person_add</span>
+              Nuevo cliente
             </button>
           )}
         </div>
       </div>
 
-      <TablaGenerica
-        columnas={columnasClientes}
-        datos={clientes}
-        filasPorPagina={10}
-        mostrarBuscador={true}
-        buscarEnCampos={[
-          "nombre",
-          "telefono",
-          "email",
-          "direccion",
-        ]}
-        paginacion={true}
-        renderAcciones={getAccionesCliente}
-      />
+      {/* Tabla */}
+      <div className="tab-content">
+        {cargando ? (
+          <Spinner />
+        ) : (
+          <TablaGenerica
+            columnas={columnas}
+            datos={clientes}
+            filasPorPagina={10}
+            mostrarBuscador
+            buscarEnCampos={["nombre", "telefono"]}
+            paginacion
+            renderAcciones={accionesCliente}
+          />
+        )}
+      </div>
 
-      {/* Modal para crear/editar cliente */}
+      {/* Modal — Crear / Editar */}
       <Modal
         isOpen={modalClienteAbierto}
         onClose={() => setModalClienteAbierto(false)}
         titulo={clienteSeleccionado ? "Editar Cliente" : "Nuevo Cliente"}
+        textoBotonConfirmar={guardando ? "Guardando..." : "Guardar"}
         onConfirmar={handleGuardarCliente}
-        mostrarCancelar={true}
+        mostrarCancelar
       >
         <div className="modal-form">
+          {/* Nombre */}
           <div className="form-group">
-            <label htmlFor="nombre-input">Nombre:</label>
+            <label htmlFor="cli-nombre">Nombre *</label>
             <input
-              id="nombre-input"
+              id="cli-nombre"
               type="text"
               name="nombre"
               value={formCliente.nombre}
-              onChange={handleCambioFormCliente}
+              onChange={handleCambioForm}
               className="form-control"
-              required
+              placeholder="Nombre del cliente o empresa"
             />
           </div>
 
+          {/* Teléfono */}
           <div className="form-group">
-            <label htmlFor="identificacion-input">Identificación:</label>
+            <label htmlFor="cli-telefono">Teléfono</label>
             <input
-              id="identificacion-input"
-              type="text"
-              name="identificacion"
-              value={formCliente.identificacion}
-              onChange={handleCambioFormCliente}
-              className="form-control"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="telefono-input">Teléfono:</label>
-            <input
-              id="telefono-input"
+              id="cli-telefono"
               type="tel"
               name="telefono"
               value={formCliente.telefono}
-              onChange={handleCambioFormCliente}
+              onChange={handleCambioForm}
               className="form-control"
+              placeholder="3XX XXX XXXX"
             />
           </div>
 
+          {/* Límite de crédito */}
           <div className="form-group">
-            <label htmlFor="email-input">Email:</label>
+            <label htmlFor="cli-limite">Límite de crédito (COP)</label>
             <input
-              id="email-input"
-              type="email"
-              name="email"
-              value={formCliente.email}
-              onChange={handleCambioFormCliente}
+              id="cli-limite"
+              type="number"
+              name="limiteCredito"
+              value={formCliente.limiteCredito}
+              onChange={handleCambioForm}
               className="form-control"
+              min="0"
+              step="1000"
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="direccion-input">Dirección:</label>
-            <input
-              id="direccion-input"
-              type="text"
-              name="direccion"
-              value={formCliente.direccion}
-              onChange={handleCambioFormCliente}
-              className="form-control"
-            />
-          </div>
+          {/* Saldo deuda (solo edición) */}
+          {clienteSeleccionado && (
+            <div className="form-group">
+              <label htmlFor="cli-deuda">Saldo de deuda (COP)</label>
+              <input
+                id="cli-deuda"
+                type="number"
+                name="saldoDeuda"
+                value={formCliente.saldoDeuda}
+                onChange={handleCambioForm}
+                className="form-control"
+                min="0"
+                step="1000"
+              />
+            </div>
+          )}
 
-          <div className="form-group">
-            <label htmlFor="activo-checkbox">Activo:</label>
-            <input
-              id="activo-checkbox"
-              type="checkbox"
-              name="activo"
-              checked={formCliente.activo}
-              onChange={handleCambioFormCliente}
-              className="form-control"
-            />
+          {/* Activo */}
+          <div className="form-group form-group--check">
+            <label htmlFor="cli-activo" className="cli-check-label">
+              <input
+                id="cli-activo"
+                type="checkbox"
+                name="activo"
+                checked={formCliente.activo}
+                onChange={handleCambioForm}
+                className="cli-checkbox"
+              />
+              Cliente activo
+            </label>
           </div>
         </div>
       </Modal>
 
-      {/* Modal para eliminar o desactivar cliente */}
+      {/* Modal — Confirmar desactivar */}
       <Modal
-        isOpen={modalEliminarAbierto}
-        onClose={() => setModalEliminarAbierto(false)}
+        isOpen={modalConfirmAbierto}
+        onClose={() => setModalConfirmAbierto(false)}
         titulo="Desactivar Cliente"
-        onConfirmar={handleEliminarCliente}
-        mostrarCancelar={true}
+        textoBotonConfirmar={guardando ? "Desactivando..." : "Sí, desactivar"}
+        onConfirmar={handleDesactivar}
+        mostrarCancelar
       >
-        <div className="modal-form">
-          {clienteSeleccionado && (
-            <>
-              <div className="form-group">
-                <label>Cliente:</label>
-                <p className="cliente-info">
-                  <strong>{clienteSeleccionado.nombre}</strong> -
-                  {clienteSeleccionado.identificacion}
-                </p>
-              </div>
-
-              <div className="form-group">
-                <p>
-                  ¿Está seguro de que desea desactivar este cliente? Esta acción
-                  no se puede deshacer.
-                </p>
-              </div>
-            </>
-          )}
+        <div className="cli-confirm-body">
+          <span className="material-symbols-outlined cli-confirm-icon">
+            warning
+          </span>
+          <p>
+            ¿Estás seguro de que quieres desactivar a{" "}
+            <strong>{clienteSeleccionado?.nombre}</strong>?
+          </p>
+          <p className="cli-confirm-sub">
+            El cliente no aparecerá en nuevos pedidos pero su historial se
+            conserva.
+          </p>
         </div>
       </Modal>
     </div>

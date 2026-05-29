@@ -1,42 +1,59 @@
 import { clienteApi } from "./axiosConfig";
 
+/**
+ * inventarioApi.js — Katepramax
+ * Alineado con los endpoints reales del backend.
+ */
 const inventarioApi = {
-  obtenerProductos: async () => {
-    const response = await clienteApi.get("/productos");
-    return response.data;
-  },
-  
-  obtenerProductoPorId: async (id) => {
-    const response = await clienteApi.get(`/productos/${id}`);
-    return response.data;
-  },
-  
-  obtenerMovimientos: async (filtros = {}) => {
+  obtenerProductos: async (filtros = {}) => {
     const params = new URLSearchParams();
-    Object.entries(filtros).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        params.append(key, value);
-      }
+    Object.entries(filtros).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") params.append(k, v);
     });
-    
-    const queryString = params.toString();
-    const url = queryString ? `/inventario/movimientos?${queryString}` : "/inventario/movimientos";
-    
-    const response = await clienteApi.get(url);
+    const qs = params.toString();
+    const response = await clienteApi.get(qs ? `/productos?${qs}` : "/productos");
     return response.data;
   },
-  
-  crearMovimiento: async (movimientoData) => {
-    const response = await clienteApi.post("/inventario/movimientos", movimientoData);
+
+  obtenerProductoPorCodigo: async (codigo) => {
+    const response = await clienteApi.get(`/productos/${codigo}`);
     return response.data;
   },
-  
-  obtenerStock: async (productoId, sedeId) => {
-    const response = await clienteApi.get(`/inventario/stock`, {
-      params: { productoId, sedeId }
-    });
+
+  crearEntrada: async (datos) => {
+    const response = await clienteApi.post("/inventario", datos);
     return response.data;
-  }
+  },
+
+  listarEntradas: async (filtros = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filtros).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") params.append(k, v);
+    });
+    const qs = params.toString();
+    const response = await clienteApi.get(qs ? `/inventario?${qs}` : "/inventario");
+    return response.data;
+  },
+
+  obtenerEntradaPorId: async (id) => {
+    const response = await clienteApi.get(`/inventario/${id}`);
+    return response.data;
+  },
+
+  editarEntrada: async (id, datos) => {
+    const response = await clienteApi.patch(`/inventario/${id}`, datos);
+    return response.data;
+  },
+
+  eliminarEntrada: async (id) => {
+    const response = await clienteApi.delete(`/inventario/${id}`);
+    return response.data;
+  },
+
+  resumenSemanal: async (semana) => {
+    const response = await clienteApi.get(`/inventario/resumen-semanal?semana=${semana}`);
+    return response.data;
+  },
 };
 
 export default inventarioApi;

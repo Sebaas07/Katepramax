@@ -228,3 +228,116 @@
     align-items: flex-start;
   }
 }
+/* ─── Acciones por fila ──────────────────────────────────────*/
+.tabla-acciones {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.tabla-accion-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tabla-accion-btn .material-symbols-outlined {
+  font-size: 14px;
+}
+
+.tabla-accion-btn:hover {
+  background: var(--surface-container-highest);
+  border-color: var(--outline);
+  color: var(--on-surface);
+}
+
+.tabla-accion-btn--danger {
+  background: rgba(255, 180, 171, 0.08);
+  border-color: rgba(255, 180, 171, 0.25);
+  color: var(--error);
+}
+
+.tabla-accion-btn--danger:hover {
+  background: rgba(255, 180, 171, 0.16);
+  border-color: var(--error);
+}
+
+.tabla-accion-btn--success {
+  background: rgba(74, 222, 128, 0.08);
+  border-color: rgba(74, 222, 128, 0.25);
+  color: #4ade80;
+}
+
+.tabla-accion-btn--success:hover {
+  background: rgba(74, 222, 128, 0.16);
+  border-color: #4ade80;
+}
+
+/* ─── Badge de stock bajo ────────────────────────────────────*/
+.stock-bajo {
+  color: var(--error);
+  font-weight: 700;
+}
+
+.stock-normal {
+  color: var(--on-surface);
+}
+
+/* ─── Acciones por fila ──────────────────────────────────────*/
+.tabla-acciones {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.tabla-accion-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+.tabla-accion-btn .material-symbols-outlined { font-size: 14px; }
+.tabla-accion-btn:hover {
+  background: var(--surface-container-highest);
+  border-color: var(--outline);
+  color: var(--on-surface);
+}
+.tabla-accion-btn--danger {
+  background: rgba(255,180,171,0.08);
+  border-color: rgba(255,180,171,0.25);
+  color: var(--error);
+}
+.tabla-accion-btn--danger:hover {
+  background: rgba(255,180,171,0.16);
+  border-color: var(--error);
+}
+.tabla-accion-btn--success {
+  background: rgba(74,222,128,0.08);
+  border-color: rgba(74,222,128,0.25);
+  color: #4ade80;
+}
+.tabla-accion-btn--success:hover {
+  background: rgba(74,222,128,0.16);
+  border-color: #4ade80;
+}

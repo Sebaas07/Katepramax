@@ -2,204 +2,132 @@ import { useState, useMemo, useCallback } from "react";
 import "./TablaGenerica.css";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 
+/**
+ * TablaGenerica — Katepramax
+ * Tabla reutilizable con buscador, paginación y soporte de acciones por fila.
+ *
+ * Props:
+ *  columnas          Array<{ campo, label, tipo }>  — define las columnas
+ *  datos             Array<object>                  — filas a mostrar
+ *  filasPorPagina    number  (default 10)
+ *  mostrarBuscador   boolean (default true)
+ *  buscarEnCampos    Array<string>  — si vacío busca en todos los campos
+ *  paginacion        boolean (default true)
+ *  mostrarIndicadorFilas boolean (default true)
+ *  renderAcciones    (fila) => Array<{ label, onClick, variante? }>
+ *                    variante: "danger" | "success" | undefined
+ */
 const TablaGenerica = ({
-  columnas,           // Array de objetos con { campo, label, tipo }
-  datos,              // Array de objetos con los datos
-  filasPorPagina = 10, // Número de filas por página
-  mostrarBuscador = true, // Mostrar/ocultar buscador
-  buscarEnCampos = [],   // Campos en los que buscar (si vacío, busca en todos)
-  paginacion = true,     // Mostrar/ocultar paginacion
-  mostrarIndicadorFilas = true // Mostrar indicador de filas mostradas
+  columnas,
+  datos,
+  filasPorPagina: filasPorPaginaInicial = 10,
+  mostrarBuscador = true,
+  buscarEnCampos = [],
+  paginacion = true,
+  mostrarIndicadorFilas = true,
+  renderAcciones,
 }) => {
-  // Estado para paginación y búsqueda
   const [paginaActual, setPaginaActual] = useState(1);
   const [terminoBusqueda, setTerminoBusqueda] = useState("");
+  // ← Bug corregido: filasPorPagina como estado local, no solo prop
+  const [filasPorPagina, setFilasPorPagina] = useState(filasPorPaginaInicial);
 
-  // Filtrar datos según término de búsqueda
+  // ── Filtrado ──────────────────────────────────────────────
   const datosFiltrados = useMemo(() => {
     if (!terminoBusqueda.trim()) return datos;
 
     const termino = terminoBusqueda.toLowerCase().trim();
-    
-    // Si no se especifican campos para buscar, buscar en todos
-    const camposABuscar = buscarEnCampos.length > 0 
-      ? buscarEnCampos 
-      : columnas.map(col => col.campo);
+    const camposABuscar =
+      buscarEnCampos.length > 0
+        ? buscarEnCampos
+        : columnas.map((col) => col.campo);
 
-    return datos.filter(fila => 
-      camposABuscar.some(campo => 
-        fila[campo] != null && 
-        String(fila[campo]).toLowerCase().includes(termino)
+    return datos.filter((fila) =>
+      camposABuscar.some(
+        (campo) =>
+          fila[campo] != null &&
+          String(fila[campo]).toLowerCase().includes(termino)
       )
     );
   }, [datos, terminoBusqueda, columnas, buscarEnCampos]);
 
-  // Calcular total de páginas
-  const totalPaginas = useMemo(() => {
-    return Math.max(1, Math.ceil(datosFiltrados.length / filasPorPagina));
-  }, [datosFiltrados, filasPorPagina]);
+  // ── Paginación ────────────────────────────────────────────
+  const totalPaginas = useMemo(
+    () => Math.max(1, Math.ceil(datosFiltrados.length / filasPorPagina)),
+    [datosFiltrados, filasPorPagina]
+  );
 
-  // Asegurar que la página actual sea válida
-  const paginaValida = useMemo(() => {
-    return Math.min(paginaActual, totalPaginas);
-  }, [paginaActual, totalPaginas]);
+  const paginaValida = useMemo(
+    () => Math.min(paginaActual, totalPaginas),
+    [paginaActual, totalPaginas]
+  );
 
-  // Obtener datos para la página actual
   const datosPagina = useMemo(() => {
-    const indiceInicio = (paginaValida - 1) * filasPorPagina;
-    const indiceFin = indiceInicio + filasPorPagina;
-    return datosFiltrados.slice(indiceInicio, indiceFin);
+    const inicio = (paginaValida - 1) * filasPorPagina;
+    return datosFiltrados.slice(inicio, inicio + filasPorPagina);
   }, [datosFiltrados, paginaValida, filasPorPagina]);
 
-  // Funciones de manejo
-  const manejarCambioPagina = useCallback((nuevaPagina) => {
-    setPaginaActual(nuevaPagina);
+  // ── Handlers ──────────────────────────────────────────────
+  const manejarCambioPagina = useCallback((nueva) => {
+    setPaginaActual(nueva);
   }, []);
 
   const manejarCambioBusqueda = useCallback((e) => {
     setTerminoBusqueda(e.target.value);
-    setPaginaActual(1); // Resetear a primera página al buscar
+    setPaginaActual(1);
   }, []);
 
   const manejarCambioFilasPorPagina = useCallback((e) => {
-    const nuevasFilas = parseInt(e.target.value);
-    setFilasPorPagina(nuevasFilas);
-    setPaginaActual(1); // Resetear a primera página al cambiar filas por página
+    setFilasPorPagina(parseInt(e.target.value));
+    setPaginaActual(1);
   }, []);
 
-  // Renderizar encabezado de tabla
-  const renderEncabezado = () => (
-    <thead>
-      <tr>
-        {columnas.map((col) => (
-          <th key={col.campo} className={`th-${col.campo}`}>
-            {col.label}
-          </th>
-        ))}
-      </tr>
-    </thead>
-  );
+  // ── Render celda ──────────────────────────────────────────
+  const renderCelda = (fila, col) => {
+    const valor = fila[col.campo];
 
-  // Renderizar cuerpo de tabla
-  const renderCuerpo = () => (
-    <tbody>
-      {datosPagina.length > 0 ? (
-        datosPagina.map((fila, indice) => (
-          <tr key={`${fila.id || indice}-${indice}`} className="hover-row">
-            {columnas.map((col) => {
-              let valor = fila[col.campo];
-              
-              // Manejar tipos especiales
-              switch (col.tipo) {
-                case "estado":
-                  valor = <EstadoBadge estado={valor} />;
-                  break;
-                case "moneda":
-                  valor = valor != null ? new Intl.NumberFormat("es-CO", {
-                    style: "currency",
-                    currency: "COP",
-                    minimumFractionDigits: 0
-                  }).format(valor) : "$0";
-                  break;
-                case "fecha":
-                  valor = valor != null ? new Date(valor).toLocaleDateString("es-CO") : "";
-                  break;
-                case "acciones":
-                  // Este tipo se maneja differently - se asume que ya viene como JSX
-                  break;
-                default:
-                  // Valor por defecto
-                  valor = valor != null ? valor : "";
-              }
-              
-              return (
-                <td key={col.campo} className={`td-${col.campo}`}>
-                  {valor}
-                </td>
-              );
-            })}
-          </tr>
-        ))
-      ) : (
-        <tr>
-          <td colSpan={columnas.length} className="empty-state">
-            No se encontraron resultados
-          </td>
-        </tr>
-      )}
-    </tbody>
-  );
+    switch (col.tipo) {
+      case "estado":
+        return <EstadoBadge estado={valor} />;
 
-  // Renderizar paginación
-  const renderPaginacion = () => {
-    if (!paginacion || totalPaginas <= 1) return null;
+      case "moneda":
+        return valor != null
+          ? new Intl.NumberFormat("es-CO", {
+              style: "currency",
+              currency: "COP",
+              minimumFractionDigits: 0,
+            }).format(valor)
+          : "$0";
 
-    return (
-      <div className="pagination-container">
-        <div className="pagination-info">
-          Mostrando {datosPagina.length} de {datosFiltrados.length} entradas
-        </div>
-        <div className="pagination-controls">
-          <button
-            onClick={() => manejarCambioPagina(1)}
-            disabled={paginaValida === 1}
-            className="pagination-btn"
-          >
-            « Primera
-          </button>
-          <button
-            onClick={() => manejarCambioPagina(paginaValida - 1)}
-            disabled={paginaValida === 1}
-            className="pagination-btn"
-          >
-            ‹ Anterior
-          </button>
-          <span className="pagination-current">
-            Página {paginaValida} de {totalPaginas}
-          </span>
-          <button
-            onClick={() => manejarCambioPagina(paginaValida + 1)}
-            disabled={paginaValida === totalPaginas}
-            className="pagination-btn"
-          >
-            Siguiente ›
-          </button>
-          <button
-            onClick={() => manejarCambioPagina(totalPaginas)}
-            disabled={paginaValida === totalPaginas}
-            className="pagination-btn"
-          >
-            Última »
-          </button>
-        </div>
-        {mostrarIndicadorFilas && (
-          <div className="rows-per-page">
-            <label htmlFor="filas-por-pagina">
-              Mostrar:
-            </label>
-            <select
-              id="filas-por-pagina"
-              value={filasPorPagina}
-              onChange={manejarCambioFilasPorPagina}
-              className="rows-per-page-select"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            filas
-          </div>
-        )}
-      </div>
-    );
+      case "fecha":
+        return valor != null
+          ? new Date(valor).toLocaleDateString("es-CO")
+          : "—";
+
+      case "booleano":
+        return valor ? (
+          <EstadoBadge estado="activo" />
+        ) : (
+          <EstadoBadge estado="inactivo" />
+        );
+
+      default:
+        return valor != null ? String(valor) : "—";
+    }
   };
 
+  // ── Columnas con acciones ─────────────────────────────────
+  const columnasFinales = renderAcciones
+    ? [...columnas, { campo: "__acciones", label: "Acciones", tipo: "acciones" }]
+    : columnas;
+
+  // ── Render ────────────────────────────────────────────────
   return (
     <div className="tabla-contenedor">
+      {/* Buscador */}
       {mostrarBuscador && (
         <div className="search-container">
+          <span className="material-symbols-outlined search-icon">search</span>
           <input
             type="text"
             placeholder="Buscar..."
@@ -207,20 +135,130 @@ const TablaGenerica = ({
             onChange={manejarCambioBusqueda}
             className="search-input"
           />
-          <span className="material-symbols-outlined search-icon">
-            search
-          </span>
         </div>
       )}
-      
+
+      {/* Tabla */}
       <div className="table-responsive">
         <table className="generica-table">
-          {renderEncabezado()}
-          {renderCuerpo()}
+          <thead>
+            <tr>
+              {columnasFinales.map((col) => (
+                <th key={col.campo}>{col.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {datosPagina.length > 0 ? (
+              datosPagina.map((fila, idx) => (
+                <tr key={fila.id ?? idx}>
+                  {columnasFinales.map((col) => (
+                    <td key={col.campo}>
+                      {col.tipo === "acciones" ? (
+                        <div className="tabla-acciones">
+                          {renderAcciones(fila).map((accion, i) => (
+                            <button
+                              key={i}
+                              onClick={accion.onClick}
+                              className={`tabla-accion-btn ${
+                                accion.variante === "danger"
+                                  ? "tabla-accion-btn--danger"
+                                  : accion.variante === "success"
+                                  ? "tabla-accion-btn--success"
+                                  : ""
+                              }`}
+                              type="button"
+                            >
+                              {accion.icon && (
+                                <span className="material-symbols-outlined">
+                                  {accion.icon}
+                                </span>
+                              )}
+                              {accion.label}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        renderCelda(fila, col)
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columnasFinales.length} className="empty-state">
+                  {terminoBusqueda
+                    ? "No se encontraron resultados para la búsqueda."
+                    : "No hay datos disponibles."}
+                </td>
+              </tr>
+            )}
+          </tbody>
         </table>
       </div>
-      
-      {renderPaginacion()}
+
+      {/* Paginación */}
+      {paginacion && totalPaginas > 1 && (
+        <div className="pagination-container">
+          <div className="pagination-info">
+            Mostrando {datosPagina.length} de {datosFiltrados.length} registros
+          </div>
+
+          <div className="pagination-controls">
+            <button
+              onClick={() => manejarCambioPagina(1)}
+              disabled={paginaValida === 1}
+              className="pagination-btn"
+            >
+              «
+            </button>
+            <button
+              onClick={() => manejarCambioPagina(paginaValida - 1)}
+              disabled={paginaValida === 1}
+              className="pagination-btn"
+            >
+              ‹ Anterior
+            </button>
+            <span className="pagination-current">
+              {paginaValida} / {totalPaginas}
+            </span>
+            <button
+              onClick={() => manejarCambioPagina(paginaValida + 1)}
+              disabled={paginaValida === totalPaginas}
+              className="pagination-btn"
+            >
+              Siguiente ›
+            </button>
+            <button
+              onClick={() => manejarCambioPagina(totalPaginas)}
+              disabled={paginaValida === totalPaginas}
+              className="pagination-btn"
+            >
+              »
+            </button>
+          </div>
+
+          {mostrarIndicadorFilas && (
+            <div className="rows-per-page">
+              <label htmlFor="filas-por-pagina">Mostrar:</label>
+              <select
+                id="filas-por-pagina"
+                value={filasPorPagina}
+                onChange={manejarCambioFilasPorPagina}
+                className="rows-per-page-select"
+              >
+                {[5, 10, 25, 50, 100].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              filas
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
