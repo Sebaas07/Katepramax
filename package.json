@@ -1,15 +1,11 @@
 {
   "name": "katepramax-monorepo",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "dev:api": "npm run dev -w api",
-    "dev:web": "npm run dev -w web",
-    "dev": "concurrently -n \"API,WEB\" -c \"magenta,cyan\" \"npm run dev:api\" \"npm run dev:web\"",
-    "install-all": "npm install"
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev": "concurrently -n \"API,WEB\" -c \"magenta,cyan\" \"pnpm dev:api\" \"pnpm dev:web\"",
+    "install-all": "pnpm install"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

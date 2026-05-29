@@ -16,19 +16,7 @@ import AccesoDenegadoPage from "@/pages/common/AccesoDenegadoPage/AccesoDenegado
 import { useAuth } from "@/hooks/useAuth";
 import ProveedoresPage from "../pages/proveedores/ProveedoresPage/ProveedoresPage";
 
-// Páginas — Comunes
-import DashboardPage   from "@/pages/dashboard/DashboardPage/DashboardPage";
-import Error404Page    from "@/pages/common/Error404Page/Error404Page";
-import AccesoDenegadoPage from "@/pages/common/AccesoDenegadoPage/AccesoDenegadoPage";
 
-// Páginas — Bodega + Admin
-import InventarioPage  from "@/pages/inventario/InventarioPage/InventarioPage";
-import PedidosPage     from "@/pages/pedidos/PedidosPage/PedidosPage";
-import ClientesPage    from "@/pages/clientes/ClientePage/ClientePage";
-import ProveedoresPage from "@/pages/proveedores/ProveedoresPage/ProveedoresPage";
-
-// Páginas — Entregador
-import EntregasPage from "@/pages/entregas/EntregasPage/EntregasPage";
 
 // Páginas — Solo Admin (placeholders hasta Sprint 4-5)
 // Se importan en diferido para no bloquear el bundle
@@ -122,8 +110,6 @@ const ROLES = {
 };
 
 // ─── Redirección inteligente desde la raíz ────────────────────
-import { useAuth } from "@/hooks/useAuth";
-
 const RootRedirect = () => {
   const { isAuthenticated, usuario, isLoading } = useAuth();
 
@@ -235,7 +221,6 @@ const AppRouter = () => {
           </Route>
 
         </Route>
-      </Route>
 
       {/* 404 — fuera del layout */}
       <Route path="*" element={<Error404Page />} />
