@@ -14,6 +14,7 @@ import ClientesPage from "@/pages/clientes/ClientePage/ClientePage";
 import Error404Page from "@/pages/common/Error404Page/Error404Page";
 import AccesoDenegadoPage from "@/pages/common/AccesoDenegadoPage/AccesoDenegadoPage";
 import { useAuth } from "@/hooks/useAuth";
+import ProveedoresPage from "../pages/proveedores/ProveedoresPage/ProveedoresPage";
 
 // Definición de roles por módulo
 const ROLES = {
@@ -66,12 +67,12 @@ const AppRouter = () => {
             <Route path="/entregas" element={<EntregasPage />} />
           </Route>
 
-           {/* Admin + Bodega (incluye AdminBogota) */}
-           <Route element={<RequireRole roles={ROLES.BODEGA} />}>
-             <Route path="/pedidos" element={<PedidosPage />} />
-             <Route path="/inventario" element={<InventarioPage />} />
-             <Route path="/clientes" element={<ClientesPage />} />
-           </Route>
+          {/* Admin + Bodega (incluye AdminBogota) */}
+          <Route element={<RequireRole roles={ROLES.BODEGA} />}>
+            <Route path="/pedidos" element={<PedidosPage />} />
+            <Route path="/inventario" element={<InventarioPage />} />
+            <Route path="/clientes" element={<ClientesPage />} />
+          </Route>
 
           {/* Solo Admin (global) */}
           <Route element={<RequireRole roles={ROLES.ADMIN} />}>
@@ -83,13 +84,13 @@ const AppRouter = () => {
           </Route>
 
           {/* Admin + AdminBogota (bodega central) */}
-          <Route element={<RequireRole roles={ROLES.ADMIN_BODEGA} />}>
+          <Route element={<RequireRole roles={ROLES.ADMIN} />}>
             <Route
               path="/distribucion"
               element={<div>Distribución Page</div>}
             />
             <Route path="/productos" element={<div>Productos Page</div>} />
-            <Route path="/proveedores" element={<div>Proveedores Page</div>} />
+            <Route path="/proveedores" element={<ProveedoresPage />} />
             <Route path="/reportes" element={<div>Reportes Page</div>} />
           </Route>
 

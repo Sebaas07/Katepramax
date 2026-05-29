@@ -1,4 +1,4 @@
-import { proveedoresApi } from "@/api/proveedoresApi";
+import proveedoresApi from "@/api/proveedoresApi";
 import { obtenerSesion } from "@/utils/sessionHelper";
 
 const proveedoresService = {
@@ -42,7 +42,7 @@ const proveedoresService = {
       if (!sesion) {
         throw new Error("Usuario no autenticado");
       }
-      if (!proveedorData.nombre || !proveedorData.identificacion) {
+      if (!proveedorData.nombre) {
         throw new Error("Faltan datos requeridos para crear el proveedor");
       }
       const nuevoProveedor = await proveedoresApi.crearProveedor(proveedorData);

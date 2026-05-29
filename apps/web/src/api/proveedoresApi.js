@@ -1,8 +1,18 @@
 import { clienteApi } from "./axiosConfig";
 
 const proveedoresApi = {
-  obtenerProveedores: async () => {
-    const response = await clienteApi.get("/proveedores");
+  obtenerProveedores: async (filtros = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filtros).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, value);
+      }
+    });
+
+    const queryString = params.toString();
+    const url = queryString ? `/proveedores?${queryString}` : "/proveedores";
+
+    const response = await clienteApi.get(url);
     return response.data;
   },
   obtenerProveedorPorId: async (id) => {
