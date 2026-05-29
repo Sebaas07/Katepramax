@@ -1,16 +1,14 @@
 import clientesApi from "@/api/clientesApi";
-import { obtenerSesion } from "@/utils/sessionHelper";
 
+/**
+ * clientes.service.js — Katepramax
+ * Lógica de negocio del lado cliente para el módulo de clientes.
+ * Alineado con el schema Prisma real: nombre, telefono, limiteCredito, saldoDeuda, activo.
+ * No incluye "identificacion" ni "email" — esos campos no existen en el modelo.
+ */
 const clientesService = {
   obtenerClientes: async (filtros = {}) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
-
-      // Intentar obtener datos de la API
       const clientes = await clientesApi.obtenerClientes(filtros);
       return clientes;
     } catch (error) {
@@ -21,13 +19,6 @@ const clientesService = {
 
   obtenerClientePorId: async (id) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
-
-      // Intentar obtener datos de la API
       const cliente = await clientesApi.obtenerClientePorId(id);
       return cliente;
     } catch (error) {
@@ -38,18 +29,10 @@ const clientesService = {
 
   crearCliente: async (clienteData) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
+      // Validación alineada con el schema real
+      if (!clienteData.nombre || !clienteData.nombre.trim()) {
+        throw new Error("El nombre del cliente es obligatorio.");
       }
-
-      // Validar datos mínimos requeridos (ajustar según el esquema)
-      if (!clienteData.nombre || !clienteData.identificacion) {
-        throw new Error("Faltan datos requeridos para crear el cliente");
-      }
-
-      // Intentar crear cliente vía API
       const nuevoCliente = await clientesApi.crearCliente(clienteData);
       return nuevoCliente;
     } catch (error) {
@@ -60,18 +43,10 @@ const clientesService = {
 
   actualizarCliente: async (id, clienteData) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
+      if (!id) throw new Error("Se requiere el ID del cliente.");
+      if (!clienteData || Object.keys(clienteData).length === 0) {
+        throw new Error("No hay datos para actualizar.");
       }
-
-      // Validar que al menos haya algo para actualizar
-      if (!id || !clienteData || Object.keys(clienteData).length === 0) {
-        throw new Error("Se requiere ID y datos para actualizar");
-      }
-
-      // Intentar actualizar cliente vía API
       const clienteActualizado = await clientesApi.actualizarCliente(id, clienteData);
       return clienteActualizado;
     } catch (error) {
@@ -82,18 +57,7 @@ const clientesService = {
 
   desactivarCliente: async (id) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
-
-      // Validar ID
-      if (!id) {
-        throw new Error("Se requiere ID para desactivar el cliente");
-      }
-
-      // Intentar desactivar cliente vía API
+      if (!id) throw new Error("Se requiere el ID del cliente.");
       const resultado = await clientesApi.desactivarCliente(id);
       return resultado;
     } catch (error) {

@@ -1,0 +1,206 @@
+/* ============================================================
+   UploadFoto.css — Katepramax
+   Componente de carga de foto — optimizado para móvil
+   ============================================================ */
+
+.upload-foto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ─── Etiqueta ───────────────────────────────────────────────*/
+.upload-foto__label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+.upload-foto__req {
+  color: var(--error);
+  margin-left: 2px;
+}
+
+/* ─── Área principal ─────────────────────────────────────────*/
+.upload-foto__area {
+  position: relative;
+  border: 2px dashed rgba(233, 195, 73, 0.3);
+  border-radius: var(--radius-lg);
+  background: rgba(233, 195, 73, 0.03);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--transition-fast),
+              background var(--transition-fast);
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+
+.upload-foto__area:hover:not(.upload-foto__area--disabled),
+.upload-foto__area:focus:not(.upload-foto__area--disabled) {
+  border-color: rgba(233, 195, 73, 0.6);
+  background: rgba(233, 195, 73, 0.07);
+}
+
+.upload-foto__area--con-foto {
+  border-style: solid;
+  border-color: rgba(233, 195, 73, 0.2);
+  min-height: 200px;
+}
+
+.upload-foto__area--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ─── Placeholder (sin foto) ─────────────────────────────────*/
+.upload-foto__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.upload-foto__icono-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  background: rgba(233, 195, 73, 0.08);
+  border: 1px solid rgba(233, 195, 73, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-foto__icono {
+  font-size: 26px;
+  color: var(--secondary);
+  opacity: 0.8;
+}
+
+.upload-foto__texto-principal {
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.upload-foto__texto-secundario {
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  margin: 0;
+}
+
+/* ─── Preview de foto ────────────────────────────────────────*/
+.upload-foto__preview {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  max-height: 280px;
+  object-fit: cover;
+  display: block;
+}
+
+/* ─── Overlay al hover sobre foto ────────────────────────────*/
+.upload-foto__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(18, 16, 20, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+
+.upload-foto__area--con-foto:hover .upload-foto__overlay {
+  opacity: 1;
+}
+
+.upload-foto__overlay .material-symbols-outlined {
+  font-size: 32px;
+  color: var(--secondary);
+}
+
+.upload-foto__overlay-texto {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+/* ─── Botón eliminar ─────────────────────────────────────────*/
+.upload-foto__eliminar {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: rgba(18, 16, 20, 0.75);
+  border: 1px solid rgba(255, 180, 171, 0.3);
+  color: var(--error);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast);
+  z-index: 2;
+}
+
+.upload-foto__eliminar:hover {
+  background: rgba(255, 180, 171, 0.15);
+  border-color: var(--error);
+}
+
+.upload-foto__eliminar .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* ─── Error ──────────────────────────────────────────────────*/
+.upload-foto__error {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--error);
+  margin: 0;
+}
+
+.upload-foto__error .material-symbols-outlined {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ─── Responsive móvil ───────────────────────────────────────*/
+@media (max-width: 767.98px) {
+  .upload-foto__area--con-foto {
+    min-height: 220px;
+  }
+
+  .upload-foto__overlay {
+    /* En móvil el hover no funciona bien, siempre visible */
+    opacity: 0;
+  }
+
+  .upload-foto__eliminar {
+    /* Siempre visible en móvil */
+    opacity: 1;
+  }
+}

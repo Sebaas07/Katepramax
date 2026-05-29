@@ -1,478 +1,469 @@
-import { useState, useEffect } from "react";
-import { obtenerSesion, esBodegaBogota, obtenerRol } from "@/utils/sessionHelper";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "react-hot-toast";
+import { useAuth } from "@/hooks/useAuth";
 import pedidosService from "@/services/pedidos.service";
+import inventarioService from "@/services/inventario.service";
+import clientesService from "@/services/clientes.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import "./PedidosPage.css";
 
+const Spinner = () => (
+  <div className="ped-spinner-wrap">
+    <div className="ped-spinner" />
+    <span>Cargando pedidos...</span>
+  </div>
+);
+
+const ITEM_VACIO = { productoId: "", cantidad: "", precioUnitario: "" };
+
+const FORM_INICIAL = {
+  clienteId:    "",
+  observaciones: "",
+  items:        [{ ...ITEM_VACIO }],
+};
+
 const PedidosPage = () => {
-  const usuario = obtenerSesion();
-  const rol = obtenerRol();
-  const esAdmin = rol === "AdminBogota" || rol === "Admin";
+  const { esAdmin, esBodega } = useAuth();
+  const puedeCrear   = esAdmin || esBodega;
+  const puedeAsignar = esAdmin || esBodega;
+  const puedeCancelar = esAdmin;
 
-  const [pedidos, setPedidos] = useState([]);
+  // ── Estado ────────────────────────────────────────────────
+  const [pedidos,      setPedidos]      = useState([]);
+  const [productos,    setProductos]    = useState([]);
+  const [clientes,     setClientes]     = useState([]);
   const [entregadores, setEntregadores] = useState([]);
-  const [filtros, setFiltros] = useState({
-    estado: "",
-    sede: ""
-  });
-  const [modalPedidoAbierto, setModalPedidoAbierto] = useState(false);
+  const [cargando,     setCargando]     = useState(false);
+  const [guardando,    setGuardando]    = useState(false);
+
+  // Estados con mayúscula inicial — igual que el backend
+  const [filtros, setFiltros] = useState({ estado: "" });
+
+  const [modalPedidoAbierto,  setModalPedidoAbierto]  = useState(false);
   const [modalAsignarAbierto, setModalAsignarAbierto] = useState(false);
-  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
-  const [formPedido, setFormPedido] = useState({
-    cliente: "",
-    direccion: "",
-    sedeId: "",
-    items: [{ productoId: "", cantidad: "", precioUnitario: "" }]
-  });
-  const [formAsignar, setFormAsignar] = useState({
-    entregadorId: ""
-  });
+  const [modalCancelarAbierto, setModalCancelarAbierto] = useState(false);
+  const [pedidoSeleccionado,  setPedidoSeleccionado]  = useState(null);
 
-  // Load data when component mounts or when filters change
-  useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const [pedidosData, entregadoresData] = await Promise.all([
+  const [formPedido,  setFormPedido]  = useState(FORM_INICIAL);
+  const [entregadorId, setEntregadorId] = useState("");
+
+  // ── Carga ─────────────────────────────────────────────────
+  const cargarDatos = useCallback(async () => {
+    setCargando(true);
+    try {
+      const [pedidosData, productosData, clientesData] =
+        await Promise.all([
           pedidosService.obtenerPedidos(filtros),
-          pedidosService.obtenerEntregadoresDisponibles()
+          inventarioService.obtenerProductos({ activo: "true" }),
+          clientesService.obtenerClientes({ activo: "true" }),
         ]);
-        setPedidos(pedidosData);
+      setPedidos(pedidosData);
+      setProductos(productosData);
+      setClientes(clientesData);
+      // Solo Admin puede ver lista de usuarios
+      if (esAdmin) {
+        const entregadoresData = await pedidosService.obtenerEntregadores();
         setEntregadores(entregadoresData);
-      } catch (error) {
-        console.error("Error loading pedidos data:", error);
-        // Error will be handled by the service falling back to mocks
+      } else {
+        setEntregadores([]);
       }
-    };
+    } catch (err) {
+      toast.error("Error al cargar datos: " + err.message);
+      setEntregadores([]);
+    } finally {
+      setCargando(false);
+    }
+  }, [filtros, esAdmin]);
 
-    cargarDatos();
-  }, [filtros]);
+  useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
-  // Handle filter changes
-  const handleCambioFiltro = (e) => {
+  // ── Handlers form pedido ──────────────────────────────────
+  const handleCambioFormPedido = (e) => {
     const { name, value } = e.target;
-    setFiltros(prev => ({
+    setFormPedido((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCambioItem = (index, campo, valor) => {
+    setFormPedido((prev) => ({
       ...prev,
-      [name]: value
+      items: prev.items.map((item, i) =>
+        i === index ? { ...item, [campo]: valor } : item
+      ),
     }));
   };
 
-  // Handle form changes for pedido
-  const handleCambioFormPedido = (e) => {
-    const { name, value } = e.target;
-    if (name === "items") {
-      // Special handling for items array
-      setFormPedido(prev => {
-        const itemsArray = [...prev.items];
-        // Find which item index we're updating based on the name format
-        // For simplicity, we'll reset items when needed
-        return {
-          ...prev,
-          items: [{ productoId: "", cantidad: "", precioUnitario: "" }]
-        };
-      });
-    } else {
-      setFormPedido(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+  // Al seleccionar producto — autocompletar precio de venta
+  const handleSeleccionProducto = (index, productoId) => {
+    const prod = productos.find((p) => p.codigo === productoId);
+    setFormPedido((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              productoId,
+              precioUnitario: prod ? String(prod.precioVenta ?? "") : "",
+            }
+          : item
+      ),
+    }));
   };
 
-  // Handle adding/removing items
   const handleAgregarItem = () => {
-    setFormPedido(prev => ({
+    setFormPedido((prev) => ({
       ...prev,
-      items: [...prev.items, { productoId: "", cantidad: "", precioUnitario: "" }]
+      items: [...prev.items, { ...ITEM_VACIO }],
     }));
   };
 
   const handleEliminarItem = (index) => {
-    if (formPedido.items.length > 1) {
-      setFormPedido(prev => ({
-        ...prev,
-        items: prev.items.filter((_, i) => i !== index)
-      }));
-    }
+    if (formPedido.items.length <= 1) return;
+    setFormPedido((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index),
+    }));
   };
 
-  // Handle form submission for new pedido
+  // ── Crear pedido ──────────────────────────────────────────
+  const abrirModalNuevo = () => {
+    setFormPedido(FORM_INICIAL);
+    setModalPedidoAbierto(true);
+  };
+
   const handleGuardarPedido = async () => {
+    setGuardando(true);
     try {
-      // Validate form
-      if (!formPedido.cliente) {
-        alert("Por favor ingrese el nombre del cliente");
-        return;
-      }
-      
-      if (!formPedido.direccion) {
-        alert("Por favor ingrese la dirección");
-        return;
-      }
-      
-      if (!formPedido.sedeId) {
-        alert("Por favor seleccione la sede");
-        return;
-      }
-      
-      if (!formPedido.items || formPedido.items.length === 0) {
-        alert("Por favor agregue al menos un ítem");
-        return;
-      }
-
-      // Validate each item
-      const itemsValidos = formPedido.items.filter(item => 
-        item.productoId && 
-        item.cantidad && 
-        parseFloat(item.cantidad) > 0 &&
-        item.precioUnitario && 
-        parseFloat(item.precioUnitario) >= 0
+      const itemsValidos = formPedido.items.filter(
+        (item) => item.productoId && parseInt(item.cantidad) >= 1
       );
-
-      if (itemsValidos.length === 0) {
-        alert("Por favor ingrese ítems válidos con producto, cantidad y precio");
-        return;
-      }
-
-      // Prepare data for submission
-      const pedidoData = {
-        cliente: formPedido.cliente,
-        direccion: formPedido.direccion,
-        sedeId: formPedido.sedeId,
-        items: formPedido.items.map(item => ({
-          productoId: item.productoId,
-          cantidad: parseFloat(item.cantidad),
-          precioUnitario: parseFloat(item.precioUnitario)
-        }))
-      };
-
-      // Save pedido via service
-      await pedidosService.crearPedido(pedidoData);
-      
-      // Close modal and refresh data
-      setModalPedidoAbierto(false);
-      setFormPedido({
-        cliente: "",
-        direccion: "",
-        sedeId: "",
-        items: [{ productoId: "", cantidad: "", precioUnitario: "" }]
+      await pedidosService.crearPedido({
+        clienteId:    formPedido.clienteId,
+        observaciones: formPedido.observaciones,
+        items:        itemsValidos,
       });
-      
-      // Refresh pedidos
-      const pedidosData = await pedidosService.obtenerPedidos(filtros);
-      setPedidos(pedidosData);
-    } catch (error) {
-      console.error("Error saving pedido:", error);
-      alert("Error al guardar el pedido: " + error.message);
+      toast.success("Pedido creado correctamente.");
+      setModalPedidoAbierto(false);
+      await cargarDatos();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setGuardando(false);
     }
   };
 
-  // Handle form submission for asignar entregador
-  const handleAsignarEntregador = async () => {
+  // ── Asignar entregador ────────────────────────────────────
+  const abrirAsignar = (pedido) => {
+    setPedidoSeleccionado(pedido);
+    setEntregadorId("");
+    setModalAsignarAbierto(true);
+  };
+
+  const handleAsignar = async () => {
+    if (!entregadorId) {
+      toast("Selecciona un entregador.", { icon: "⚠️" });
+      return;
+    }
+    setGuardando(true);
     try {
-      if (!pedidoSeleccionado) {
-        alert("No hay pedido seleccionado");
-        return;
-      }
-      
-      if (!formAsignar.entregadorId) {
-        alert("Por favor seleccione un entregador");
-        return;
-      }
-
-      // Assign entregador via service
-      await pedidosService.asignarEntregador(
-        pedidoSeleccionado.id, 
-        formAsignar.entregadorId
-      );
-      
-      // Close modal and refresh data
+      await pedidosService.asignarEntregador(pedidoSeleccionado.id, entregadorId);
+      toast.success("Entregador asignado.");
       setModalAsignarAbierto(false);
-      setFormAsignar({ entregadorId: "" });
-      
-      // Refresh pedidos
-      const pedidosData = await pedidosService.obtenerPedidos(filtros);
-      setPedidos(pedidosData);
-    } catch (error) {
-      console.error("Error assigning entregador:", error);
-      alert("Error al asignar el entregador: " + error.message);
+      await cargarDatos();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setGuardando(false);
     }
   };
 
-  // Define columns for pedidos table
-  const columnasPedidos = [
-    { campo: "codigo", label: "Código", tipo: "texto" },
-    { campo: "cliente", label: "Cliente", tipo: "texto" },
-    { campo: "direccion", label: "Dirección", tipo: "texto" },
-    { campo: "sede", label: "Sede", tipo: "texto" },
-    { campo: "estado", label: "Estado", tipo: "estado" },
-    { campo: "entregador", label: "Entregador", tipo: "texto" },
-    { campo: "total", label: "Total", tipo: "moneda" },
-    { campo: "fechaCreacion", label: "Fecha", tipo: "fecha" }
+  // ── Cancelar pedido (solo Admin) ──────────────────────────
+  const abrirCancelar = (pedido) => {
+    setPedidoSeleccionado(pedido);
+    setModalCancelarAbierto(true);
+  };
+
+  const handleCancelar = async () => {
+    setGuardando(true);
+    try {
+      await pedidosService.cancelarPedido(pedidoSeleccionado.id);
+      toast.success("Pedido cancelado.");
+      setModalCancelarAbierto(false);
+      await cargarDatos();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // ── Columnas ──────────────────────────────────────────────
+  const columnas = [
+    { campo: "id",            label: "#",          tipo: "texto"  },
+    { campo: "cliente",       label: "Cliente",    tipo: "texto"  },
+    { campo: "estado",        label: "Estado",     tipo: "estado" },
+    { campo: "entregador",    label: "Entregador", tipo: "texto"  },
+    { campo: "totalRecibido", label: "Total",      tipo: "moneda" },
+    { campo: "creadoEn",      label: "Fecha",      tipo: "fecha"  },
   ];
 
-  // Define available actions based on role and pedido state
-  const getAccionesPedido = (pedido) => {
-    const acciones = [];
-    
-    // All roles can view details (implicit in table)
-    
-    // Only Admin/Bodega can create/edit
-    if (esAdmin) {
-      acciones.push({ 
-        label: "Crear Pedido", 
-        onClick: () => {
-          setModalPedidoAbierto(true);
-          setFormPedido({
-            cliente: "",
-            direccion: "",
-            sedeId: "",
-            items: [{ productoId: "", cantidad: "", precioUnitario: "" }]
-          });
-        }
+  // Mapear campos anidados para la tabla
+  const pedidosMapeados = pedidos.map((p) => ({
+    ...p,
+    cliente:    p.cliente?.nombre ?? "—",
+    entregador: p.asignaciones?.[0]?.entregador?.nombreCompleto ?? "Sin asignar",
+  }));
+
+  const acciones = (pedido) => {
+    const lista = [];
+    if (puedeAsignar && pedido.estado === "Pendiente") {
+      lista.push({
+        label: "Asignar",
+        icon: "delivery_dining",
+        onClick: () => abrirAsignar(pedido),
       });
     }
-    
-    // Only Admin/Bodega can assign entregador to pendiente pedidos
-    if (esAdmin && pedido.estado === "pendiente") {
-      acciones.push({ 
-        label: "Asignar Entregador", 
-        onClick: () => {
-          setPedidoSeleccionado(pedido);
-          setFormAsignar({ entregadorId: "" });
-          setModalAsignarAbierto(true);
-        }
+    if (puedeCancelar && ["Pendiente", "Asignado"].includes(pedido.estado)) {
+      lista.push({
+        label: "Cancelar",
+        icon: "cancel",
+        variante: "danger",
+        onClick: () => abrirCancelar(pedido),
       });
     }
-    
-    return acciones;
+    return lista;
   };
 
+  // ── Render ────────────────────────────────────────────────
   return (
     <div className="pedidos-page">
+      {/* Header */}
       <div className="page-header">
         <h1>Gestión de Pedidos</h1>
-        <div className="filters">
+
+        <div className="ped-header-acciones">
+          {/* Filtro estado — mayúscula inicial igual que el backend */}
           <div className="filter-group">
-            <label htmlFor="estado-filter">Estado:</label>
+            <label htmlFor="ped-estado">Estado</label>
             <select
-              id="estado-filter"
+              id="ped-estado"
               value={filtros.estado}
-              onChange={handleCambioFiltro}
-              name="estado"
+              onChange={(e) => setFiltros({ estado: e.target.value })}
               className="filter-select"
             >
               <option value="">Todos</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="confirmado">Confirmado</option>
-              <option value="en_ruta">En ruta</option>
-              <option value="entregado">Entregado</option>
-              <option value="fallido">Fallido</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Asignado">Asignado</option>
+              <option value="Entregado">Entregado</option>
+              <option value="Cancelado">Cancelado</option>
             </select>
           </div>
-          
-          <div className="filter-group">
-            <label htmlFor="sede-filter">Sede:</label>
-            <select
-              id="sede-filter"
-              value={filtros.sede}
-              onChange={handleCambioFiltro}
-              name="sede"
-              className="filter-select"
-            >
-              <option value="">Todas</option>
-              <option value="Bogotá">Bogotá</option>
-              <option value="Cartagena">Cartagena</option>
-              <option value="Villavicencio">Villavicencio</option>
-            </select>
-          </div>
+
+          {puedeCrear && (
+            <button className="btn-primary" onClick={abrirModalNuevo} type="button">
+              <span className="material-symbols-outlined">add_shopping_cart</span>
+              Nuevo pedido
+            </button>
+          )}
         </div>
       </div>
 
-      <TablaGenerica
-        columnas={columnasPedidos}
-        datos={pedidos}
-        filasPorPagina={10}
-        mostrarBuscador={true}
-        buscarEnCampos={["codigo", "cliente", "direccion", "sede", "estado", "entregador"]}
-        paginacion={true}
-        renderAcciones={getAccionesPedido}
-      />
+      {/* Tabla */}
+      <div className="tab-content">
+        {cargando ? (
+          <Spinner />
+        ) : (
+          <TablaGenerica
+            columnas={columnas}
+            datos={pedidosMapeados}
+            filasPorPagina={10}
+            mostrarBuscador
+            buscarEnCampos={["cliente", "entregador"]}
+            paginacion
+            renderAcciones={acciones}
+          />
+        )}
+      </div>
 
-      {/* Modal for creating new pedido */}
+      {/* Modal — Nuevo pedido */}
       <Modal
         isOpen={modalPedidoAbierto}
         onClose={() => setModalPedidoAbierto(false)}
         titulo="Nuevo Pedido"
+        textoBotonConfirmar={guardando ? "Creando..." : "Crear pedido"}
         onConfirmar={handleGuardarPedido}
-        mostrarCancelar={true}
+        mostrarCancelar
       >
         <div className="modal-form">
+          {/* Cliente — select con clientes reales */}
           <div className="form-group">
-            <label htmlFor="cliente-input">Cliente:</label>
-            <input
-              id="cliente-input"
-              type="text"
-              name="cliente"
-              value={formPedido.cliente}
-              onChange={handleCambioFormPedido}
-              className="form-control"
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="direccion-input">Dirección:</label>
-            <input
-              id="direccion-input"
-              type="text"
-              name="direccion"
-              value={formPedido.direccion}
-              onChange={handleCambioFormPedido}
-              className="form-control"
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="sede-select">Sede:</label>
+            <label htmlFor="ped-cliente">Cliente *</label>
             <select
-              id="sede-select"
-              name="sedeId"
-              value={formPedido.sedeId}
+              id="ped-cliente"
+              name="clienteId"
+              value={formPedido.clienteId}
               onChange={handleCambioFormPedido}
               className="form-control"
-              required
             >
-              <option value="">-- Seleccione una sede --</option>
-              <option value="1">Bogotá</option>
-              <option value="2">Cartagena</option>
-              <option value="3">Villavicencio</option>
+              <option value="">— Selecciona un cliente —</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                  {c.telefono ? ` · ${c.telefono}` : ""}
+                </option>
+              ))}
             </select>
           </div>
-          
+
+          {/* Observaciones / dirección */}
           <div className="form-group">
-            <label>Ítems:</label>
+            <label htmlFor="ped-obs">Dirección / Observaciones</label>
+            <input
+              id="ped-obs"
+              type="text"
+              name="observaciones"
+              value={formPedido.observaciones}
+              onChange={handleCambioFormPedido}
+              className="form-control"
+              placeholder="Dirección de entrega u observaciones"
+            />
+          </div>
+
+          {/* Items */}
+          <div className="form-group">
+            <label>Productos *</label>
             {formPedido.items.map((item, index) => (
               <div key={index} className="item-group">
-                <h4>Ítem {index + 1}</h4>
-                <div className="item-fields">
-                  <div>
-                    <label htmlFor={`producto-${index}`}>Producto:</label>
-                    <select
-                      id={`producto-${index}`}
-                      name={`items[${index}].productoId`}
-                      value={item.productoId}
-                      onChange={handleCambioFormPedido}
-                      className="form-control"
-                      required
-                    >
-                      <option value="">-- Seleccione un producto --</option>
-                      {/* In a real app, these would come from productos service */}
-                      <option value="1">Arroz Diana x 500g</option>
-                      <option value="2">Aceite Girasol x 1L</option>
-                      <option value="3">Leche Alquería x 1L</option>
-                      <option value="4">Huevos x 30 unidades</option>
-                      <option value="5">Panela Redonda x 250g</option>
-                      <option value="6">Azúcar Blanca x 1kg</option>
-                      <option value="7">Frijoles Negros x 1kg</option>
-                      <option value="8">Leche de Coco x 400ml</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor={`cantidad-${index}`}>Cantidad:</label>
-                    <input
-                      id={`cantidad-${index}`}
-                      type="number"
-                      name={`items[${index}].cantidad`}
-                      value={item.cantidad}
-                      onChange={handleCambioFormPedido}
-                      className="form-control"
-                      min="0.01"
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor={`precio-${index}`}>Precio Unitario:</label>
-                    <input
-                      id={`precio-${index}`}
-                      type="number"
-                      name={`items[${index}].precioUnitario`}
-                      value={item.precioUnitario}
-                      onChange={handleCambioFormPedido}
-                      className="form-control"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  
+                <div className="item-group-header">
+                  <h4>Ítem {index + 1}</h4>
                   {formPedido.items.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => handleEliminarItem(index)}
                       className="btn-remove-item"
+                      onClick={() => handleEliminarItem(index)}
                     >
-                      Eliminar Ítem
+                      <span className="material-symbols-outlined">close</span>
                     </button>
                   )}
                 </div>
+                <div className="item-fields">
+                  <div className="item-field--producto">
+                    <label htmlFor={`ped-prod-${index}`}>Producto</label>
+                    <select
+                      id={`ped-prod-${index}`}
+                      value={item.productoId}
+                      onChange={(e) => handleSeleccionProducto(index, e.target.value)}
+                      className="form-control"
+                    >
+                      <option value="">— Selecciona —</option>
+                      {productos.map((p) => (
+                        <option key={p.codigo} value={p.codigo}>
+                          [{p.codigo}] {p.descripcion}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="item-field--cantidad">
+                    <label htmlFor={`ped-cant-${index}`}>Cant.</label>
+                    <input
+                      id={`ped-cant-${index}`}
+                      type="number"
+                      value={item.cantidad}
+                      onChange={(e) => handleCambioItem(index, "cantidad", e.target.value)}
+                      className="form-control"
+                      min="1"
+                      step="1"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="item-field--precio">
+                    <label htmlFor={`ped-precio-${index}`}>
+                      Precio unit.{" "}
+                      <span className="item-precio-hint">(opcional)</span>
+                    </label>
+                    <input
+                      id={`ped-precio-${index}`}
+                      type="number"
+                      value={item.precioUnitario}
+                      onChange={(e) =>
+                        handleCambioItem(index, "precioUnitario", e.target.value)
+                      }
+                      className="form-control"
+                      min="0"
+                      step="100"
+                      placeholder="Auto"
+                    />
+                  </div>
+                </div>
               </div>
             ))}
-            
-            <button 
-              type="button" 
-              onClick={handleAgregarItem}
-              className="btn-add-item"
-            >
-              Agregar Ítem
+            <button type="button" className="btn-add-item" onClick={handleAgregarItem}>
+              <span className="material-symbols-outlined">add</span>
+              Agregar producto
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* Modal for assigning entregador */}
+      {/* Modal — Asignar entregador */}
       <Modal
         isOpen={modalAsignarAbierto}
         onClose={() => setModalAsignarAbierto(false)}
         titulo="Asignar Entregador"
-        onConfirmar={handleAsignarEntregador}
-        mostrarCancelar={true}
+        textoBotonConfirmar={guardando ? "Asignando..." : "Asignar"}
+        onConfirmar={handleAsignar}
+        mostrarCancelar
       >
         <div className="modal-form">
           {pedidoSeleccionado && (
-            <>
-              <div className="form-group">
-                <label>Pedido:</label>
-                <p className="pedido-info">
-                  <strong>{pedidoSeleccionado.codigo}</strong> - 
-                  {pedidoSeleccionado.cliente}
-                </p>
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="entregador-select">Entregador:</label>
-                <select
-                  id="entregador-select"
-                  name="entregadorId"
-                  value={formAsignar.entregadorId}
-                  onChange={e => setFormAsignar({ entregadorId: e.target.value })}
-                  className="form-control"
-                  required
-                >
-                  <option value="">-- Seleccione un entregador --</option>
-                  {entregadores.map(entregador => (
-                    <option key={entregador.id} value={entregador.id}>
-                      {entregador.nombreCompleto}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
+            <div className="form-group">
+              <label>Pedido #{pedidoSeleccionado.id}</label>
+              <p className="pedido-info">
+                {pedidoSeleccionado.cliente?.nombre ?? pedidoSeleccionado.cliente}
+                {pedidoSeleccionado.observaciones && (
+                  <span className="pedido-info__dir">
+                    {" "}— {pedidoSeleccionado.observaciones}
+                  </span>
+                )}
+              </p>
+            </div>
           )}
+          <div className="form-group">
+            <label htmlFor="ped-entregador">Entregador *</label>
+            <select
+              id="ped-entregador"
+              value={entregadorId}
+              onChange={(e) => setEntregadorId(e.target.value)}
+              className="form-control"
+            >
+              <option value="">— Selecciona un entregador —</option>
+              {entregadores.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.nombreCompleto}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal — Confirmar cancelar */}
+      <Modal
+        isOpen={modalCancelarAbierto}
+        onClose={() => setModalCancelarAbierto(false)}
+        titulo="Cancelar Pedido"
+        textoBotonConfirmar={guardando ? "Cancelando..." : "Sí, cancelar"}
+        onConfirmar={handleCancelar}
+        mostrarCancelar
+      >
+        <div className="ped-confirm-body">
+          <span className="material-symbols-outlined ped-confirm-icon">warning</span>
+          <p>
+            ¿Cancelar el pedido{" "}
+            <strong>#{pedidoSeleccionado?.id}</strong> de{" "}
+            <strong>{pedidoSeleccionado?.cliente?.nombre}</strong>?
+          </p>
+          <p className="ped-confirm-sub">Esta acción no se puede deshacer.</p>
         </div>
       </Modal>
     </div>

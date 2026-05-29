@@ -1,62 +1,52 @@
 import inventarioApi from "@/api/inventarioApi";
-import { obtenerSesion } from "@/utils/sessionHelper";
+import { getSemanaISO } from "@/utils/formatters";
 
 const inventarioService = {
-  obtenerProductos: async () => {
-    try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
-      
-      // Intentar obtener datos de la API
-      const productos = await inventarioApi.obtenerProductos();
-      return productos;
-    } catch (error) {
-      console.error("Error en inventarioService.obtenerProductos:", error);
-      throw error;
-    }
+  obtenerProductos: async (filtros = {}) => {
+    try { return await inventarioApi.obtenerProductos(filtros); }
+    catch (e) { console.error("inventarioService.obtenerProductos:", e); throw e; }
   },
-  
-  obtenerMovimientos: async () => {
+  obtenerProductoPorCodigo: async (codigo) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
-      
-      // Intentar obtener datos de la API
-      const movimientos = await inventarioApi.obtenerMovimientos();
-      return movimientos;
-    } catch (error) {
-      console.error("Error en inventarioService.obtenerMovimientos:", error);
-      throw error;
-    }
+      if (!codigo) throw new Error("Se requiere el código del producto.");
+      return await inventarioApi.obtenerProductoPorCodigo(codigo);
+    } catch (e) { console.error("inventarioService.obtenerProductoPorCodigo:", e); throw e; }
   },
-  
-  crearMovimiento: async (movimientoData) => {
+  registrarEntrada: async ({ fecha, semana, sedeId, productoId, cantidadIngresada, costo }) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
-      
-      // Validar datos mínimos requeridos
-      if (!movimientoData.productoId || !movimientoData.tipo || !movimientoData.cantidad) {
-        throw new Error("Faltan datos requeridos para crear el movimiento");
-      }
-      
-      // Intentar crear movimiento vía API
-      const nuevoMovimiento = await inventarioApi.crearMovimiento(movimientoData);
-      return nuevoMovimiento;
-    } catch (error) {
-      console.error("Error en inventarioService.crearMovimiento:", error);
-      throw error;
-    }
-  }
+      if (!fecha)   throw new Error("La fecha es obligatoria.");
+      if (!sedeId)  throw new Error("Selecciona la sede.");
+      if (!productoId) throw new Error("Selecciona un producto.");
+      if (!cantidadIngresada || cantidadIngresada <= 0) throw new Error("La cantidad debe ser mayor a 0.");
+      if (costo === undefined || costo === null || costo < 0) throw new Error("El costo debe ser un valor válido.");
+      const semanaFinal = semana ?? getSemanaISO(new Date(fecha));
+      return await inventarioApi.crearEntrada({
+        fecha, semana: semanaFinal, sedeId: parseInt(sedeId),
+        productoId, cantidadIngresada: parseInt(cantidadIngresada), costo: parseFloat(costo),
+      });
+    } catch (e) { console.error("inventarioService.registrarEntrada:", e); throw e; }
+  },
+  listarEntradas: async (filtros = {}) => {
+    try { return await inventarioApi.listarEntradas(filtros); }
+    catch (e) { console.error("inventarioService.listarEntradas:", e); throw e; }
+  },
+  editarEntrada: async (id, datos) => {
+    try {
+      if (!id) throw new Error("Se requiere el ID del registro.");
+      return await inventarioApi.editarEntrada(id, datos);
+    } catch (e) { console.error("inventarioService.editarEntrada:", e); throw e; }
+  },
+  eliminarEntrada: async (id) => {
+    try {
+      if (!id) throw new Error("Se requiere el ID del registro.");
+      return await inventarioApi.eliminarEntrada(id);
+    } catch (e) { console.error("inventarioService.eliminarEntrada:", e); throw e; }
+  },
+  resumenSemanal: async (semana) => {
+    try {
+      const sem = semana ?? getSemanaISO(new Date());
+      return await inventarioApi.resumenSemanal(sem);
+    } catch (e) { console.error("inventarioService.resumenSemanal:", e); throw e; }
+  },
 };
-
 export default inventarioService;

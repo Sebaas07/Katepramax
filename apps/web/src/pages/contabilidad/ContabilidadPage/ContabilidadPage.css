@@ -1,0 +1,528 @@
+/* ============================================================
+   ContabilidadPage.css — Katepramax
+   ============================================================ */
+
+.cont-page {
+  min-height: 100vh;
+}
+
+/* ─── Header ─────────────────────────────────────────────────*/
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-header h1 {
+  font-family: var(--font-headline);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* ─── Filtros ────────────────────────────────────────────────*/
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.filter-group label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+.filter-select {
+  padding: 0.5rem 0.875rem;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface);
+  min-width: 130px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23978d9d' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  padding-right: 2rem;
+  transition: border-color var(--transition-fast);
+}
+
+.filter-select:focus {
+  border-color: var(--secondary);
+}
+
+.filter-select option {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
+/* ─── Botón primary ──────────────────────────────────────────*/
+.btn-primary {
+  background: var(--secondary);
+  color: var(--surface-container-lowest);
+  border: none;
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(233, 195, 73, 0.2);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #d4ae3f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(233, 195, 73, 0.35);
+}
+
+.btn-primary .material-symbols-outlined { font-size: 16px; }
+
+/* ─── Tabs ───────────────────────────────────────────────────*/
+.cont-tabs {
+  display: flex;
+  gap: 0.375rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+/* Hereda .tab-btn y .tab-active del sistema global */
+.cont-tabs .tab-btn,
+.cont-tabs .tab-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container);
+  color: var(--on-surface-variant);
+  transition: all var(--transition-fast);
+}
+
+.cont-tabs .tab-btn .material-symbols-outlined,
+.cont-tabs .tab-active .material-symbols-outlined { font-size: 16px; }
+
+.cont-tabs .tab-btn:hover {
+  border-color: var(--outline);
+  color: var(--on-surface);
+}
+
+.cont-tabs .tab-active {
+  background: rgba(233, 195, 73, 0.12);
+  border-color: rgba(233, 195, 73, 0.4);
+  color: var(--secondary);
+  font-weight: 700;
+}
+
+/* ─── Cuerpo del tab ─────────────────────────────────────────*/
+.cont-tab-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ─── Tarjetas resumen ───────────────────────────────────────*/
+.cont-resumen-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.cont-resumen-card {
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  border-top: 3px solid var(--card-color, var(--secondary));
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.cont-resumen-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cont-resumen-card__header .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--card-color, var(--secondary));
+}
+
+.cont-resumen-card__header h4 {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.cont-resumen-card__filas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.cont-resumen-card__fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cont-resumen-card__sede {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+}
+
+.cont-resumen-card__valor {
+  font-family: var(--font-headline);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.cont-resumen-card__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--outline-variant);
+  padding-top: 0.625rem;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--card-color, var(--secondary));
+}
+
+/* ─── Tab content (tabla) ────────────────────────────────────*/
+.tab-content {
+  background: var(--surface-container);
+  border: 1px solid rgba(233, 195, 73, 0.12);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 180px;
+}
+
+/* ─── Arqueo Semanal ─────────────────────────────────────────*/
+.cont-arqueo {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cont-arqueo-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cont-arqueo-header h2 {
+  font-family: var(--font-headline);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.cont-arqueo-rango {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+}
+
+.arqueo-bloque {
+  background: var(--surface-container);
+  border: 1px solid rgba(233, 195, 73, 0.12);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.arqueo-bloque__titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid rgba(233, 195, 73, 0.1);
+  font-family: var(--font-headline);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.arqueo-bloque__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: rgba(233, 195, 73, 0.15);
+  border: 1px solid rgba(233, 195, 73, 0.3);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--secondary);
+  flex-shrink: 0;
+}
+
+.arqueo-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.arqueo-tabla th {
+  padding: 0.625rem 1.25rem;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  border-bottom: 1px solid rgba(76, 68, 81, 0.25);
+  text-align: left;
+}
+
+.arqueo-tabla td {
+  padding: 0.625rem 1.25rem;
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface);
+  border-bottom: 1px solid rgba(76, 68, 81, 0.15);
+}
+
+.arqueo-tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.arqueo-tabla tbody tr:hover td {
+  background: var(--surface-container-high);
+}
+
+.arqueo-tabla__total td {
+  font-weight: 700;
+  color: var(--secondary) !important;
+  background: rgba(233, 195, 73, 0.05) !important;
+  border-top: 1px solid rgba(233, 195, 73, 0.2);
+}
+
+/* ─── Modal form ─────────────────────────────────────────────*/
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.form-group label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+.form-control {
+  padding: 0.625rem 0.875rem;
+  background: var(--surface-container-lowest);
+  border: none;
+  border-bottom: 2px solid var(--outline-variant);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  font-family: var(--font-headline);
+  font-size: 14px;
+  color: var(--on-surface);
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color var(--transition-fast);
+  resize: vertical;
+}
+
+.form-control:focus {
+  border-bottom-color: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: rgba(151, 141, 157, 0.4);
+}
+
+select.form-control {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23978d9d' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;
+}
+
+select.form-control option {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
+/* Total calculado en ingreso */
+.cont-total-calculado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(233, 195, 73, 0.06);
+  border: 1px solid rgba(233, 195, 73, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.875rem;
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+}
+
+.cont-total-valor {
+  font-family: var(--font-headline);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+/* Preview COP bajo input */
+.cont-preview-cop {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--secondary);
+  margin-top: 2px;
+}
+
+/* Nota cartera */
+.cont-cartera-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: rgba(221, 183, 255, 0.06);
+  border: 1px solid rgba(221, 183, 255, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  line-height: 1.5;
+}
+
+.cont-cartera-nota .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--primary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.cont-cartera-nota p { margin: 0; }
+
+/* Modal confirm */
+.cont-confirm-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.875rem;
+  padding: 0.5rem 0;
+}
+
+.cont-confirm-icon {
+  font-size: 48px;
+  color: var(--error);
+}
+
+.cont-confirm-body p {
+  font-family: var(--font-label);
+  font-size: 14px;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+/* Empty */
+.cont-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+  text-align: center;
+}
+
+.cont-empty .material-symbols-outlined {
+  font-size: 48px;
+  opacity: 0.25;
+}
+
+/* Spinner */
+.cont-spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+}
+
+.cont-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--outline-variant);
+  border-top-color: var(--secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Responsive ─────────────────────────────────────────────*/
+@media (max-width: 767.98px) {
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .filters     { width: 100%; flex-direction: column; }
+  .filter-select, .btn-primary { width: 100%; justify-content: center; }
+  .cont-tabs   { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  .cont-resumen-row { grid-template-columns: 1fr; }
+  .arqueo-tabla th, .arqueo-tabla td { padding: 0.5rem 0.75rem; font-size: 12px; }
+}

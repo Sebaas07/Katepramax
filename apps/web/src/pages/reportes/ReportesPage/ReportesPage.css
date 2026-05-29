@@ -1,9 +1,9 @@
 /* ============================================================
-   ClientePage.css — Katepramax
+   ProveedoresPage.css — Katepramax
    Paleta oscura con variables del sistema de diseño global
    ============================================================ */
 
-.clientes-page {
+.proveedores-page {
   min-height: 100vh;
 }
 
@@ -26,7 +26,7 @@
   margin: 0;
 }
 
-/* ─── Filtros ────────────────────────────────────────────────*/
+/* ─── Filtros y botón ────────────────────────────────────────*/
 .filters {
   display: flex;
   gap: 0.875rem;
@@ -78,7 +78,6 @@
   color: var(--on-surface);
 }
 
-/* ─── Botones ────────────────────────────────────────────────*/
 .btn-primary {
   background: var(--secondary);
   color: var(--surface-container-lowest);
@@ -106,14 +105,13 @@
 .btn-primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-  transform: none;
 }
 
 .btn-primary .material-symbols-outlined {
   font-size: 16px;
 }
 
-/* ─── Tab content (heredado del sistema) ─────────────────────*/
+/* ─── Tabla container ────────────────────────────────────────*/
 .tab-content {
   background: var(--surface-container);
   border: 1px solid rgba(233, 195, 73, 0.12);
@@ -169,27 +167,13 @@
   color: rgba(151, 141, 157, 0.4);
 }
 
-select.form-control {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23978d9d' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  padding-right: 2.5rem;
-}
-
-select.form-control option {
-  background: var(--surface-container-high);
-  color: var(--on-surface);
-}
-
-/* Checkbox personalizado */
+/* Checkbox */
 .form-group--check {
   flex-direction: row;
   align-items: center;
 }
 
-.cli-check-label {
+.prov-check-label {
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -202,7 +186,7 @@ select.form-control option {
   letter-spacing: normal !important;
 }
 
-.cli-checkbox {
+.prov-checkbox {
   width: 16px;
   height: 16px;
   accent-color: var(--secondary);
@@ -210,7 +194,7 @@ select.form-control option {
 }
 
 /* ─── Modal confirmación ─────────────────────────────────────*/
-.cli-confirm-body {
+.prov-confirm-body {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -219,29 +203,29 @@ select.form-control option {
   padding: 0.5rem 0;
 }
 
-.cli-confirm-icon {
+.prov-confirm-icon {
   font-size: 48px;
   color: var(--error);
 }
 
-.cli-confirm-body p {
+.prov-confirm-body p {
   font-family: var(--font-label);
   font-size: 14px;
   color: var(--on-surface);
   margin: 0;
 }
 
-.cli-confirm-body strong {
+.prov-confirm-body strong {
   color: var(--secondary);
 }
 
-.cli-confirm-sub {
+.prov-confirm-sub {
   font-size: 12px !important;
   color: var(--on-surface-variant) !important;
 }
 
-/* ─── Spinner de carga ───────────────────────────────────────*/
-.cli-spinner-wrap {
+/* ─── Spinner ────────────────────────────────────────────────*/
+.prov-spinner-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -253,7 +237,7 @@ select.form-control option {
   font-size: 13px;
 }
 
-.cli-spinner {
+.prov-spinner {
   width: 32px;
   height: 32px;
   border: 3px solid var(--outline-variant);
@@ -278,10 +262,7 @@ select.form-control option {
     flex-direction: column;
   }
 
-  .filter-select {
-    width: 100%;
-  }
-
+  .filter-select,
   .btn-primary {
     width: 100%;
     justify-content: center;

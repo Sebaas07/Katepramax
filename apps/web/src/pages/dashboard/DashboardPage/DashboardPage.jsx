@@ -1,10 +1,18 @@
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useSearchParams } from "react-router-dom";
-import * as bogotaMocks from "@/mocks/datos.mock";
-import * as cartagenaMocks from "@/mocks/datosCartagena.mock";
-import * as villavicencioMocks from "@/mocks/datosVillavicencio.mock";
+import { toast } from "react-hot-toast";
+import reportesApi from "@/api/reportesApi";
+import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
+import { formatCOP, formatFechaHora } from "@/utils/formatters";
+
+// Mocks como fallback mientras el backend del Sprint 4-5 no tenga reportes
+import * as mocksBogota        from "@/mocks/datos.mock";
+import * as mocksCartagena     from "@/mocks/datosCartagena.mock";
+import * as mocksVillavicencio from "@/mocks/datosVillavicencio.mock";
+
 import "./DashboardPage.css";
 
+// ─── Config KPIs ──────────────────────────────────────────────
 const KPI_CONFIG = [
   {
     key: "pedidosPendientes",
@@ -37,50 +45,85 @@ const KPI_CONFIG = [
   },
 ];
 
+// ─── Spinner compacto ─────────────────────────────────────────
+const SpinnerKPI = () => (
+  <div className="kpi-spinner" />
+);
+
+// ─── Componente ───────────────────────────────────────────────
 const DashboardPage = () => {
-  const { usuario, esBodegaBogota } = useAuth();
-  const [searchParams] = useSearchParams();
-  const sedeDesdeURL = searchParams.get("sede");
+  const { usuario } = useAuth();
 
-  const getSedeString = (sede) => {
-    if (!sede) return "Bogotá";
-    if (typeof sede === "object") return sede.nombre || sede.name || "Bogotá";
-    return sede;
-  };
+  const [kpis,          setKpis]          = useState(null);
+  const [pedidos,       setPedidos]       = useState([]);
+  const [cargandoKpis,  setCargandoKpis]  = useState(true);
+  const [cargandoTabla, setCargandoTabla] = useState(true);
+  const [usandoMocks,   setUsandoMocks]   = useState(false);
 
-  const sedeAMostrar = sedeDesdeURL || getSedeString(usuario?.sede) || "Bogotá";
+  // Determinar sede del usuario
+  const sedeNombre = typeof usuario?.sede === "object"
+    ? usuario.sede.nombre
+    : usuario?.sede ?? "Bogotá";
+  const sedeId = usuario?.sedeId ?? null;
 
-  // Seleccionar los mocks apropiados según la sede a mostrar
-  let mocks;
-  if (sedeAMostrar === "Cartagena") {
-    mocks = cartagenaMocks;
-  } else if (sedeAMostrar === "Villavicencio") {
-    mocks = villavicencioMocks;
-  } else {
-    mocks = bogotaMocks;
-  }
+  // Seleccionar mocks por sede
+  const mocks =
+    sedeNombre === "Cartagena"     ? mocksCartagena :
+    sedeNombre === "Villavicencio" ? mocksVillavicencio :
+    mocksBogota;
 
-  const hora = new Date().getHours();
-  const saludo =
-    hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
-  const nombre = usuario?.nombreCompleto?.split(" ")[0] || "Usuario";
-
-  const fecha = new Date().toLocaleDateString("es-CO", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+  // Saludo según hora
+  const hora    = new Date().getHours();
+  const saludo  = hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
+  const nombre  = usuario?.nombreCompleto?.split(" ")[0] || "Usuario";
+  const fecha   = new Date().toLocaleDateString("es-CO", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
-  // Mostrar solo los últimos 5 pedidos de la sede a mostrar
-  const pedidosFiltrados = mocks.PEDIDOS_MOCK.filter(
-    (pedido) => pedido.sede === sedeAMostrar,
-  );
-  const pedidos = pedidosFiltrados.slice(0, 5);
+  // ── Carga KPIs ────────────────────────────────────────────
+  const cargarKpis = useCallback(async () => {
+    setCargandoKpis(true);
+    try {
+      const data = await reportesApi.obtenerResumenDia(sedeId);
+      setKpis(data);
+      setUsandoMocks(false);
+    } catch {
+      // Fallback a mocks — el endpoint de reportes llega en Sprint 5
+      setKpis(mocks.KPI_MOCK);
+      setUsandoMocks(true);
+    } finally {
+      setCargandoKpis(false);
+    }
+  }, [sedeId, mocks]);
 
+  // ── Carga últimos pedidos ─────────────────────────────────
+  const cargarPedidos = useCallback(async () => {
+    setCargandoTabla(true);
+    try {
+      const data = await reportesApi.obtenerUltimosPedidos(sedeId, 5);
+      setPedidos(Array.isArray(data) ? data.slice(0, 5) : []);
+      setUsandoMocks(false);
+    } catch {
+      // Fallback a mocks filtrados por sede
+      const filtrados = mocks.PEDIDOS_MOCK
+        .filter((p) => !sedeNombre || p.sede === sedeNombre)
+        .slice(0, 5);
+      setPedidos(filtrados);
+      setUsandoMocks(true);
+    } finally {
+      setCargandoTabla(false);
+    }
+  }, [sedeId, sedeNombre, mocks]);
+
+  useEffect(() => {
+    cargarKpis();
+    cargarPedidos();
+  }, [cargarKpis, cargarPedidos]);
+
+  // ── Render ────────────────────────────────────────────────
   return (
     <div>
-      {/* ── Encabezado ── */}
+      {/* Encabezado */}
       <div className="d-flex align-items-start justify-content-between mb-4 flex-wrap gap-2">
         <div>
           <h4 className="dashboard-header__saludo">
@@ -88,52 +131,35 @@ const DashboardPage = () => {
           </h4>
           <div className="dashboard-header__sede">
             <span className="material-symbols-outlined">location_on</span>
-            <span>Sede {sedeAMostrar}</span>
-            {esBodegaBogota && sedeAMostrar === "Bogotá" && (
-              <span
-                style={{
-                  marginLeft: "0.5rem",
-                  fontSize: "10px",
-                  fontWeight: "600",
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  color: "var(--secondary)",
-                  background: "rgba(233,195,73,0.1)",
-                  border: "1px solid rgba(233,195,73,0.25)",
-                  padding: "2px 8px",
-                  borderRadius: "999px",
-                }}
-              >
-                Bodega principal
-              </span>
+            <span>Sede {sedeNombre}</span>
+            {usandoMocks && (
+              <span className="dashboard-badge-mock">Demo</span>
             )}
           </div>
         </div>
         <span className="dashboard-header__fecha">{fecha}</span>
       </div>
 
-      {/* ── KPIs ── */}
+      {/* KPIs */}
       <div className="row g-3 mb-4">
         {KPI_CONFIG.map((kpi) => (
           <div className="col-12 col-sm-6 col-xl-3" key={kpi.key}>
             <div className="kpi-card">
-              <div
-                className="kpi-card__icon"
-                style={{ backgroundColor: kpi.iconBg }}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: kpi.iconColor }}
-                >
+              <div className="kpi-card__icon" style={{ backgroundColor: kpi.iconBg }}>
+                <span className="material-symbols-outlined" style={{ color: kpi.iconColor }}>
                   {kpi.icon}
                 </span>
               </div>
               <div>
-                <div className="kpi-card__valor">
-                  {kpi.esPeso
-                    ? mocks.formatearPesos(mocks.KPI_MOCK[kpi.key])
-                    : mocks.KPI_MOCK[kpi.key]}
-                </div>
+                {cargandoKpis ? (
+                  <SpinnerKPI />
+                ) : (
+                  <div className="kpi-card__valor">
+                    {kpi.esPeso
+                      ? formatCOP(kpis?.[kpi.key] ?? 0)
+                      : (kpis?.[kpi.key] ?? 0)}
+                  </div>
+                )}
                 <div className="kpi-card__label">{kpi.label}</div>
               </div>
             </div>
@@ -141,14 +167,16 @@ const DashboardPage = () => {
         ))}
       </div>
 
-      {/* ── Tabla de últimos pedidos ── */}
+      {/* Tabla últimos pedidos */}
       <div className="dashboard-tabla">
         <div className="dashboard-tabla__header">
           <h6 className="dashboard-tabla__titulo">
             <span className="material-symbols-outlined">history</span>
             Últimos pedidos
           </h6>
-          <span className="dashboard-tabla__badge">Datos de hoy</span>
+          <span className="dashboard-tabla__badge">
+            {usandoMocks ? "Datos de demostración" : "Datos en tiempo real"}
+          </span>
         </div>
 
         <div className="table-responsive">
@@ -161,55 +189,54 @@ const DashboardPage = () => {
                 <th>Sede</th>
                 <th>Estado</th>
                 <th>Total</th>
+                <th>Fecha</th>
               </tr>
             </thead>
             <tbody>
-              {pedidos.map((pedido) => {
-                const est = mocks.CONFIG_ESTADO[pedido.estado];
-                return (
+              {cargandoTabla ? (
+                <tr>
+                  <td colSpan={7} className="dashboard-tabla__cargando">
+                    <div className="kpi-spinner" style={{ margin: "1.5rem auto" }} />
+                  </td>
+                </tr>
+              ) : pedidos.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="dashboard-tabla__vacio">
+                    No hay pedidos recientes.
+                  </td>
+                </tr>
+              ) : (
+                pedidos.map((pedido) => (
                   <tr key={pedido.id}>
                     <td className="dashboard-tabla__num">#{pedido.id}</td>
                     <td>
-                      <span
-                        style={{
-                          fontFamily: "var(--font-label)",
-                          fontSize: "12px",
-                          color: "var(--secondary)",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {pedido.codigo}
+                      <span className="dashboard-tabla__codigo">
+                        {pedido.codigo ?? `KP-${String(pedido.id).padStart(4, "0")}`}
                       </span>
                     </td>
                     <td className="dashboard-tabla__cliente">
-                      {pedido.cliente}
+                      {pedido.cliente?.nombre ?? pedido.cliente ?? "—"}
                     </td>
                     <td>
                       <span className="dashboard-tabla__sede">
-                        <span className="material-symbols-outlined">
-                          location_on
-                        </span>
-                        {pedido.sede}
+                        <span className="material-symbols-outlined">location_on</span>
+                        {pedido.sede?.nombre ?? pedido.sede ?? sedeNombre}
                       </span>
                     </td>
                     <td>
-                      <span
-                        className="estado-badge"
-                        style={{
-                          color: est.color,
-                          backgroundColor: est.bg,
-                          borderColor: est.border,
-                        }}
-                      >
-                        {est.label}
-                      </span>
+                      <EstadoBadge
+                        estado={pedido.estado?.toLowerCase?.() ?? pedido.estado}
+                      />
                     </td>
                     <td className="dashboard-tabla__total">
-                      {mocks.formatearPesos(pedido.total)}
+                      {formatCOP(pedido.total ?? pedido.totalRecibido ?? 0)}
+                    </td>
+                    <td className="dashboard-tabla__fecha">
+                      {formatFechaHora(pedido.creadoEn ?? pedido.fechaCreacion)}
                     </td>
                   </tr>
-                );
-              })}
+                ))
+              )}
             </tbody>
           </table>
         </div>

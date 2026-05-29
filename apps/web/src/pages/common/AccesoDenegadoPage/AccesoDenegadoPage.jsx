@@ -1,35 +1,31 @@
 import { useNavigate } from "react-router-dom";
+import "../ErrorPages.css";
 
 const AccesoDenegadoPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div
-      className="d-flex align-items-center justify-content-center"
-      style={{ minHeight: "100vh", backgroundColor: "#f1f5f9" }}
-    >
-      <div className="text-center px-3">
-        <div
-          className="rounded-3 d-inline-flex align-items-center justify-content-center mb-4"
-          style={{ width: 80, height: 80, backgroundColor: "#fef2f2" }}
-        >
-          <i className="bi bi-shield-x" style={{ fontSize: "2.5rem", color: "#dc2626" }}></i>
+    <div className="error-page">
+      <div className="error-page__card">
+        <div className="error-page__icono-wrap error-page__icono-wrap--danger">
+          <span className="material-symbols-outlined">shield_lock</span>
         </div>
-        <h1 className="fw-black mb-2" style={{ fontSize: "5rem", color: "#0f1b2d", lineHeight: 1 }}>
-          403
-        </h1>
-        <h5 className="fw-bold mb-2" style={{ color: "#0f1b2d" }}>
-          Acceso denegado
-        </h5>
-        <p className="text-muted mb-4" style={{ fontSize: "0.9375rem", maxWidth: 340, margin: "0 auto 1.5rem" }}>
-          No tienes permisos para ver esta página. Contacta al administrador si crees que es un error.
+
+        <h1 className="error-page__codigo">403</h1>
+
+        <h2 className="error-page__titulo">Acceso denegado</h2>
+
+        <p className="error-page__descripcion">
+          No tienes permisos para ver esta página. Si crees que es un error,
+          contacta al administrador del sistema.
         </p>
+
         <button
-          className="btn px-4 py-2 fw-semibold"
-          style={{ backgroundColor: "#0f1b2d", color: "#fff", borderRadius: "0.5rem" }}
+          className="error-page__btn"
           onClick={() => navigate("/dashboard")}
+          type="button"
         >
-          <i className="bi bi-arrow-left me-2"></i>
+          <span className="material-symbols-outlined">arrow_back</span>
           Volver al dashboard
         </button>
       </div>
