@@ -1,0 +1,278 @@
+/* ============================================================
+   DistribucionPage.css — Katepramax
+   Vista de flujo de distribución y seguimiento de entregas
+   ============================================================ */
+
+.distribucion-page { min-height: 100vh; }
+
+/* ─── Header ─────────────────────────────────────────────────*/
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-header h1 {
+  font-family: var(--font-headline);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.dist-subtitulo {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+  margin: 0.25rem 0 0;
+}
+
+/* ─── KPIs ───────────────────────────────────────────────────*/
+.dist-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.dist-kpi {
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-left: 3px solid var(--kpi-color, var(--aged-gold));
+  border-radius: var(--radius-lg);
+  padding: 0.875rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.dist-kpi:hover {
+  transform: translateY(-2px);
+  border-color: var(--kpi-color, var(--aged-gold));
+}
+
+.dist-kpi__icon {
+  font-size: 22px;
+  color: var(--kpi-color, var(--aged-gold));
+  flex-shrink: 0;
+}
+
+.dist-kpi__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dist-kpi__valor {
+  font-family: var(--font-headline);
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  line-height: 1;
+}
+
+.dist-kpi__label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ─── Pipeline visual ────────────────────────────────────────*/
+.dist-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface-container);
+  border: 1px solid var(--aged-gold-border);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+}
+
+.dist-pipeline__etapa-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.dist-pipeline__etapa {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--radius-lg);
+  transition: background var(--transition-fast);
+  cursor: default;
+}
+
+.dist-pipeline__etapa:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dist-pipeline__icono {
+  font-size: 28px;
+  color: var(--etapa-color, var(--aged-gold));
+}
+
+.dist-pipeline__count {
+  font-family: var(--font-headline);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--etapa-color, var(--aged-gold));
+  line-height: 1;
+}
+
+.dist-pipeline__label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--on-surface-variant);
+}
+
+.dist-pipeline__flecha {
+  font-size: 20px;
+  color: var(--outline-variant);
+  flex-shrink: 0;
+  padding: 0 0.25rem;
+}
+
+/* ─── Tabs ───────────────────────────────────────────────────*/
+.dist-tabs {
+  display: flex;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.dist-tabs .tab-btn,
+.dist-tabs .tab-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container);
+  color: var(--on-surface-variant);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.dist-tabs .tab-btn .material-symbols-outlined,
+.dist-tabs .tab-active .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.dist-tabs .tab-btn:hover {
+  border-color: var(--outline);
+  color: var(--on-surface);
+}
+
+.dist-tabs .tab-active {
+  background: var(--aged-gold-dim);
+  border-color: var(--aged-gold-border);
+  color: var(--aged-gold);
+  font-weight: 700;
+}
+
+.dist-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  background: var(--aged-gold-dim);
+  border: 1px solid var(--aged-gold-border);
+  border-radius: var(--radius-full);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--aged-gold);
+  padding: 0 5px;
+}
+
+.dist-tabs .tab-active .dist-tab-count {
+  background: rgba(197, 179, 88, 0.3);
+}
+
+/* ─── Tabla ──────────────────────────────────────────────────*/
+.tab-content {
+  background: var(--surface-container);
+  border: 1px solid var(--aged-gold-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 180px;
+}
+
+/* ─── Empty ──────────────────────────────────────────────────*/
+.dist-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.875rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+  text-align: center;
+}
+
+.dist-empty .material-symbols-outlined {
+  font-size: 48px;
+  opacity: 0.2;
+}
+
+/* ─── Spinner ────────────────────────────────────────────────*/
+.dist-spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+}
+
+.dist-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--outline-variant);
+  border-top-color: var(--aged-gold);
+  border-radius: 50%;
+  animation: dist-spin 0.8s linear infinite;
+}
+
+@keyframes dist-spin { to { transform: rotate(360deg); } }
+
+/* ─── Responsive ─────────────────────────────────────────────*/
+@media (max-width: 767.98px) {
+  .page-header  { flex-direction: column; align-items: flex-start; }
+  .dist-kpis    { grid-template-columns: repeat(3, 1fr); }
+  .dist-pipeline { padding: 1rem; }
+  .dist-pipeline__count { font-size: 1.375rem; }
+  .dist-tabs    { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+}
+
+@media (max-width: 480px) {
+  .dist-kpis { grid-template-columns: repeat(2, 1fr); }
+}
