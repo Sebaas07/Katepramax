@@ -8,10 +8,15 @@ const { PrismaClient } = require("@prisma/client");
  */
 async function prismaPlugin(app) {
   const prisma = new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query", "warn", "error"] : ["error"],
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "warn", "error"]
+        : ["error"],
   });
 
-  await prisma.$connect();
+  if (process.env.NODE_ENV !== "test") {
+    await prisma.$connect();
+  }
 
   app.decorate("prisma", prisma);
 

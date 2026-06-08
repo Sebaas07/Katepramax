@@ -5,7 +5,7 @@ const { registrarAccion } = require("../utils/logger");
 const { AppError } = require("../errors/AppError");
 
 // Tiempo de vida del access token
-const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL ?? '15m'
+const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL ?? "15m";
 
 const authService = (app) => {
   const usuRepo = usuarioRepo(app.prisma);
@@ -39,7 +39,7 @@ const authService = (app) => {
       );
 
       // Actualización asíncrona de último acceso
-      usuRepo.updateUltimoAcceso(user.id).catch(() => {});
+      Promise.resolve(usuRepo.updateUltimoAcceso(user.id)).catch(() => {});
 
       await registrarAccion(
         app,
@@ -125,16 +125,16 @@ const authService = (app) => {
       const user = await app.prisma.usuario.findUnique({ where: { id } });
       if (!user) throw new AppError("Usuario no encontrado", 404);
 
-      const valida = await bcrypt.compare(claveActual, user.clave);
-      if (!valida) throw new AppError("La clave actual es incorrecta", 400);
-
-      // Evitar hashear si la clave es la misma
-      if (claveActual === claveNueva) {
+      // Primero validar que no sean iguales
+      if (claveActual === claveNueva)
         throw new AppError(
           "La nueva clave no puede ser igual a la anterior",
           400,
         );
-      }
+
+      // Luego validar que la actual sea correcta
+      const valida = await bcrypt.compare(claveActual, user.clave);
+      if (!valida) throw new AppError("La clave actual es incorrecta", 400);
 
       const hash = await bcrypt.hash(claveNueva, 10);
       await usuRepo.update(id, { clave: hash });
