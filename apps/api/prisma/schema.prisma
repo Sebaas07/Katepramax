@@ -43,6 +43,8 @@ model Sede {
   ingresos    Ingreso[]
   inventarios Inventario[]
   stockSedes  StockSede[]
+  egresos     Egreso[]
+  abonos      Abono[]
 
   @@map("sedes")
 }
@@ -173,6 +175,7 @@ model Proveedor {
   creadoEn DateTime @default(now()) @map("creado_en")
 
   productos Producto[]
+  abonos    Abono[]
 
   @@map("proveedores")
 }
@@ -265,4 +268,41 @@ model Ingreso {
   @@index([fecha, semana])
   @@index([sedeId])
   @@map("ingresos")
+}
+
+model Egreso {
+  id          Int      @id @default(autoincrement())
+  fecha       DateTime @db.Date
+  semana      Int
+  concepto    String   @db.VarChar(200)
+  total       Decimal  @default(0) @db.Decimal(15, 2)
+  observacion String?  @db.VarChar(500)
+  creadoEn    DateTime @default(now()) @map("creado_en")
+
+  sedeId Int  @map("sede_id")
+  sede   Sede @relation(fields: [sedeId], references: [id])
+
+  @@index([fecha, semana])
+  @@index([sedeId])
+  @@map("egresos")
+}
+
+model Abono {
+  id          Int      @id @default(autoincrement())
+  fecha       DateTime @db.Date
+  semana      Int
+  valorPagado Decimal  @map("valor_pagado") @db.Decimal(15, 2)
+  observacion String?  @db.VarChar(500)
+  creadoEn    DateTime @default(now()) @map("creado_en")
+
+  proveedorId Int @map("proveedor_id")
+  sedeId      Int @map("sede_id")
+
+  proveedor Proveedor @relation(fields: [proveedorId], references: [id])
+  sede      Sede      @relation(fields: [sedeId], references: [id])
+
+  @@index([fecha, semana])
+  @@index([proveedorId])
+  @@index([sedeId])
+  @@map("abonos")
 }

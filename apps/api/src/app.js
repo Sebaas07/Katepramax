@@ -13,8 +13,6 @@ const app = Fastify({
 });
 
 // ── Plugins ───────────────────────────────────────────────────────────────────
-// env debe registrarse primero — valida las variables antes de que cualquier
-// otro plugin intente usarlas.
 app.register(require("./plugins/env.plugin"));
 app.register(cors, { origin: process.env.CORS_ORIGIN || "*" });
 app.register(require("./plugins/prisma.plugin"));
@@ -22,23 +20,16 @@ app.register(require("./plugins/jwt.plugin"));
 
 // Swagger — comentar en producción si no se quiere exponer la documentación
 app.register(require("./plugins/swagger.plugin"));
-
-app.register(require("@fastify/rate-limit"), {
-  global: false, // solo donde indiquemos, no en todas las rutas
-});
-
+app.register(require("@fastify/rate-limit"), { global: false });
 app.register(require("@fastify/helmet"));
 
 // ── Error handler global ──────────────────────────────────────────────────────
 app.setErrorHandler(async (error, request, reply) => {
   const status = error.statusCode || 500;
-
   if (status >= 500) {
     request.log.error(error);
     await registrarError(app, error, request);
   }
-
-  // Respuesta al cliente
   return reply.code(status).send({
     error: status === 500 ? "Error interno del servidor" : error.message,
   });
@@ -49,28 +40,28 @@ app.get("/salud", async () => ({ status: "ok", timestamp: new Date() }));
 
 // ── Rutas ─────────────────────────────────────────────────────────────────────
 const routePrefix = { prefix: "/api/v1" };
-app.register(require("./routes/auth.routes"), routePrefix);
-app.register(require("./routes/user.routes"), routePrefix);
-app.register(require("./routes/inventario.routes"), routePrefix);
-app.register(require("./routes/pedido.routes"), routePrefix);
-app.register(require("./routes/producto.routes"), routePrefix);
-app.register(require("./routes/cliente.routes"), routePrefix);
+
+// Módulos existentes
+app.register(require("./routes/auth.routes"),       routePrefix);
+app.register(require("./routes/user.routes"),       routePrefix);
+app.register(require("./routes/producto.routes"),   routePrefix); 
+app.register(require("./routes/inventario.routes"), routePrefix); 
+app.register(require("./routes/pedido.routes"),     routePrefix);
+app.register(require("./routes/cliente.routes"),    routePrefix);
 app.register(require("./routes/asignacion.routes"), routePrefix);
-app.register(require("./routes/proveedor.routes"), routePrefix);
+app.register(require("./routes/proveedor.routes"),  routePrefix);
+
+// Módulos nuevos (contabilidad)
+app.register(require("./routes/ingreso.routes"),    routePrefix);
+app.register(require("./routes/egreso.routes"),     routePrefix);
+app.register(require("./routes/abono.routes"),      routePrefix);
+app.register(require("./routes/reporte.routes"),    routePrefix);
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
 const start = async () => {
   try {
-    // 1. Hook onReady: se dispara cuando Fastify terminó de cargar TODO
     await app.ready();
-
-    // 2. Escuchamos en el puerto
-    await app.listen({
-      port: parseInt(process.env.PORT) || 3000,
-      host: "0.0.0.0",
-    });
-
-    // 3. Iniciamos el Cron de forma segura
+    await app.listen({ port: parseInt(process.env.PORT) || 3000, host: "0.0.0.0" });
     initCronJobs(app);
   } catch (err) {
     console.error("DETALLE DEL ERROR:", err);

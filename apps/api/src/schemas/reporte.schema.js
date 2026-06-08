@@ -1,0 +1,79 @@
+
+const sedeResumen = {
+  type: "object",
+  properties: { sede: { type: "string" }, sedeId: { type: "integer" } },
+};
+
+const arqueoSemanalSchema = {
+  summary: "Arqueo semanal completo: ingresos, egresos, abonos y saldo neto",
+  description: "Equivale a la hoja 'Arqueo Semanal' del Excel. Solo Admin.",
+  tags: ["Reportes"], security: [{ bearerAuth: [] }],
+  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer", minimum: 1, maximum: 53 } }, additionalProperties: false },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        semana:   { type: "integer" },
+        ingresos: { type: "object", properties: { porSede: { type: "array", items: { ...sedeResumen, properties: { ...sedeResumen.properties, efectivo: { type: "number" }, cuentas: { type: "number" }, total: { type: "number" } } } }, totales: { type: "object" } } },
+        egresos:  { type: "object", properties: { porSede: { type: "array", items: { ...sedeResumen, properties: { ...sedeResumen.properties, operativo: { type: "number" }, proveedores: { type: "number" }, totalEgresos: { type: "number" } } } }, totales: { type: "object" } } },
+        saldoNeto: { type: "object", properties: { porSede: { type: "array" }, total: { type: "number" } } },
+        cartera:   { type: "number" },
+        costoInventario: { type: "number" },
+      },
+    },
+  },
+};
+
+const panelGeneralSchema = {
+  summary: "Panel general del día: ingresos, egresos, cartera y stock",
+  description: "Equivale a la hoja 'Panel General' del Excel.",
+  tags: ["Reportes"], security: [{ bearerAuth: [] }],
+  querystring: { type: "object", required: ["fecha"], properties: { fecha: { type: "string", format: "date" } }, additionalProperties: false },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        fecha:       { type: "string" },
+        ingresos:    { type: "object" },
+        egresos:     { type: "object" },
+        cartera:     { type: "number" },
+        totalStockUnidades: { type: "integer" },
+      },
+    },
+  },
+};
+
+const historialSemanalSchema = {
+  summary: "Historial acumulado de arqueos por semana",
+  description: "Equivale a la hoja 'Historial Semanal' del Excel.",
+  tags: ["Reportes"], security: [{ bearerAuth: [] }],
+  querystring: { type: "object", properties: { skip: { type: "integer", minimum: 0, default: 0 }, take: { type: "integer", minimum: 1, maximum: 52, default: 20 } }, additionalProperties: false },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        total: { type: "integer" },
+        skip:  { type: "integer" },
+        take:  { type: "integer" },
+        data: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              semana:           { type: "integer" },
+              ingTotal:         { type: "number" },
+              egrTotal:         { type: "number" },
+              saldoNeto:        { type: "number" },
+              ingEfectivo:      { type: "number" },
+              ingCuentas:       { type: "number" },
+              deudaProveedores: { type: "number" },
+              costoInventario:  { type: "number" },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+module.exports = { arqueoSemanalSchema, panelGeneralSchema, historialSemanalSchema };

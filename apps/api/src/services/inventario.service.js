@@ -1,10 +1,14 @@
+
+
 const repo     = require("../repositories/inventario.repository");
 const AppError = require("../errors/AppError");
 
 /**
  * inventario.service.js
- * Lógica de negocio del módulo Inventario.
- * Recibe el objeto `app` (Fastify) para acceder a app.prisma.
+ *
+ * CAMBIO CLAVE: usar repo.upsertDiario en lugar de repo.crear.
+ * El @@unique([sedeId, productoId, fecha]) causa P2002 si bodega
+ * registra el mismo producto dos veces el mismo día. upsert acumula.
  */
 
 async function registrar(app, body) {
@@ -12,18 +16,24 @@ async function registrar(app, body) {
   if (!sede) throw new AppError(`Sede ${body.sedeId} no encontrada`, 404);
 
   const producto = await app.prisma.producto.findUnique({ where: { codigo: body.productoId } });
-  if (!producto) throw new AppError(`Producto ${body.productoId} no encontrado`, 404);
+  if (!producto) throw new AppError(`Producto "${body.productoId}" no encontrado`, 404);
+  if (!producto.activo) throw new AppError(`Producto "${body.productoId}" está inactivo`, 422);
 
-  const registro = await repo.crear(app.prisma, {
-    fecha:             new Date(body.fecha),
+  // Normalizar fecha a medianoche UTC para que el @@unique funcione siempre igual
+  const fecha = new Date(body.fecha);
+  fecha.setUTCHours(0, 0, 0, 0);
+
+  // upsert: si existe (misma sede+producto+fecha) → incrementa; si no → crea
+  const registro = await repo.upsertDiario(app.prisma, {
+    fecha,
     semana:            body.semana,
     sedeId:            body.sedeId,
     productoId:        body.productoId,
     cantidadIngresada: body.cantidadIngresada,
-    costo:             body.costo,
+    costo:             body.costo ?? Number(producto.precioCosto) * body.cantidadIngresada,
   });
 
-  // Actualizar stock acumulado
+  // Actualizar stock acumulado en StockSede
   await app.prisma.stockSede.upsert({
     where:  { sedeId_productoId: { sedeId: body.sedeId, productoId: body.productoId } },
     update: { stockActual: { increment: body.cantidadIngresada } },
@@ -52,17 +62,17 @@ async function obtenerPorId(app, id) {
 }
 
 async function editar(app, id, body) {
-  const registroAnterior = await obtenerPorId(app, id);
+  const anterior = await obtenerPorId(app, id);
 
   const actualizado = await repo.actualizar(app.prisma, id, body);
 
   // Si cambió cantidadIngresada, recalcular el delta en StockSede
   if (body.cantidadIngresada !== undefined) {
-    const delta = body.cantidadIngresada - registroAnterior.cantidadIngresada;
+    const delta = body.cantidadIngresada - anterior.cantidadIngresada;
     await app.prisma.stockSede.upsert({
-      where:  { sedeId_productoId: { sedeId: registroAnterior.sedeId, productoId: registroAnterior.productoId } },
+      where:  { sedeId_productoId: { sedeId: anterior.sedeId, productoId: anterior.productoId } },
       update: { stockActual: { increment: delta } },
-      create: { sedeId: registroAnterior.sedeId, productoId: registroAnterior.productoId, stockActual: delta },
+      create: { sedeId: anterior.sedeId, productoId: anterior.productoId, stockActual: delta },
     });
   }
 
@@ -73,7 +83,7 @@ async function borrar(app, id) {
   const registro = await obtenerPorId(app, id);
   await repo.eliminar(app.prisma, id);
 
-  // Revertir el stock al eliminar el registro
+  // Revertir el stock
   await app.prisma.stockSede.update({
     where: { sedeId_productoId: { sedeId: registro.sedeId, productoId: registro.productoId } },
     data:  { stockActual: { decrement: registro.cantidadIngresada } },
@@ -82,12 +92,18 @@ async function borrar(app, id) {
 
 async function resumenSemanal(app, semana) {
   const filas = await repo.resumenSemanal(app.prisma, semana);
-  const sedes = await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
-  const mapaS = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
+  const [sedes, productos] = await Promise.all([
+    app.prisma.sede.findMany({ select: { id: true, nombre: true } }),
+    app.prisma.producto.findMany({ select: { codigo: true, descripcion: true } }),
+  ]);
+  const mapaSede     = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
+  const mapaProducto = Object.fromEntries(productos.map((p) => [p.codigo, p.descripcion]));
 
   return filas.map((f) => ({
-    sede:        mapaS[f.sedeId] ?? `Sede ${f.sedeId}`,
+    sede:        mapaSede[f.sedeId]         ?? `Sede ${f.sedeId}`,
     sedeId:      f.sedeId,
+    producto:    mapaProducto[f.productoId] ?? f.productoId,
+    productoId:  f.productoId,
     cantidad:    f._sum.cantidadIngresada,
     costo:       f._sum.costo,
     ultimaFecha: f._max.fecha,
