@@ -1,15 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
-import { getSemanaISO, formatCOP } from "@/utils/formatters";
 import "./InventarioPage.css";
 
 const HOY = new Date().toISOString().split("T")[0];
-const SEMANA_ACTUAL = getSemanaISO(new Date());
 
+// ─── Spinner ──────────────────────────────────────────────────
 const Spinner = () => (
   <div className="inv-spinner-wrap">
     <div className="inv-spinner" />
@@ -17,286 +16,392 @@ const Spinner = () => (
   </div>
 );
 
-// Form inicial alineado con el contrato real del backend
-const FORM_ENTRADA_INICIAL = {
-  fecha:             HOY,
-  semana:            String(SEMANA_ACTUAL),
-  sedeId:            "",
-  productoId:        "",
-  cantidadIngresada: "",
-  costo:             "",
-};
+// ─── Tabs del inventario ───────────────────────────────────────
+const TABS = [
+  { key: "productos", label: "Productos", icon: "category" },
+  { key: "entradas", label: "Entradas", icon: "move_to_inbox" },
+  { key: "movimientos", label: "Movimientos", icon: "swap_horiz" },
+];
 
 const InventarioPage = () => {
   const { usuario, esAdmin, esBodega } = useAuth();
   const puedeRegistrar = esAdmin || esBodega;
-
-  // Sede del usuario (Bodega solo ve la suya, Admin puede cambiar)
   const sedeIdUsuario = usuario?.sedeId ?? null;
 
-  const [activeTab,   setActiveTab]   = useState("entradas");
-  const [productos,   setProductos]   = useState([]);
-  const [entradas,    setEntradas]    = useState([]);
-  const [cargando,    setCargando]    = useState(false);
-  const [guardando,   setGuardando]   = useState(false);
-  const [modalAbierto, setModalAbierto] = useState(false);
+  const [activeTab, setActiveTab] = useState("productos");
+  const [productos, setProductos] = useState([]);
+  const [movimientos, setMovimientos] = useState([]);
+  const [cargando, setCargando] = useState(false);
+  const [guardandoMov, setGuardandoMov] = useState(false);
+  const [modalMovAbierto, setModalMovAbierto] = useState(false);
+
+  // Formulario movimiento
   const [form, setForm] = useState({
-    ...FORM_ENTRADA_INICIAL,
-    sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "",
+    tipo: "entrada",
+    productoId: "",
+    cantidad: "",
+    nota: "",
+    sedeId: "",
+    fecha: HOY,
   });
 
-  // Filtros para el tab de entradas
-  const [filtros, setFiltros] = useState({
-    sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "",
-    semana: String(SEMANA_ACTUAL),
+  // Filtros movimientos
+  const [filtrosMov, setFiltrosMov] = useState({
+    sedeId: "",
+    productoId: "",
+    tipo: "",
   });
 
-  // ── Carga ────────────────────────────────────────────────
+  // ── Carga de datos ───────────────────────────────────────────
   const cargarProductos = useCallback(async () => {
+    setCargando(true);
     try {
       const data = await inventarioService.obtenerProductos({ activo: "true" });
       setProductos(data);
     } catch (err) {
       toast.error("Error al cargar productos: " + err.message);
-    }
-  }, []);
-
-  const cargarEntradas = useCallback(async () => {
-    setCargando(true);
-    try {
-      const params = {};
-      if (filtros.sedeId) params.sedeId = parseInt(filtros.sedeId);
-      if (filtros.semana) params.semana  = parseInt(filtros.semana);
-      const data = await inventarioService.listarEntradas(params);
-      setEntradas(data);
-    } catch (err) {
-      toast.error("Error al cargar entradas: " + err.message);
     } finally {
       setCargando(false);
     }
-  }, [filtros]);
+  }, []);
 
-  useEffect(() => { cargarProductos(); }, [cargarProductos]);
+  const cargarMovimientos = useCallback(async () => {
+    setCargando(true);
+    try {
+      const params = {};
+      if (filtrosMov.sedeId && esAdmin) params.sedeId = parseInt(filtrosMov.sedeId);
+      if (filtrosMov.productoId) params.productoId = filtrosMov.productoId;
+      if (filtrosMov.tipo) params.tipo = filtrosMov.tipo;
+      const data = await inventarioService.listarMovimientos(params);
+      setMovimientos(data);
+    } catch (err) {
+      toast.error("Error al cargar movimientos: " + err.message);
+    } finally {
+      setCargando(false);
+    }
+  }, [filtrosMov.sedeId, filtrosMov.productoId, filtrosMov.tipo, esAdmin]);
 
   useEffect(() => {
-    if (activeTab === "entradas") cargarEntradas();
-  }, [activeTab, cargarEntradas]);
+    if (activeTab === "productos") cargarProductos();
+    if (activeTab === "movimientos") cargarMovimientos();
+  }, [activeTab, cargarProductos, cargarMovimientos]);
 
-  // ── Handlers form ────────────────────────────────────────
+  // ── Handlers formulario ──────────────────────────────────────
   const handleCambioForm = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => {
-      const next = { ...prev, [name]: value };
-      // Calcular semana automáticamente al cambiar fecha
-      if (name === "fecha" && value) {
-        next.semana = String(getSemanaISO(new Date(value)));
-      }
-      return next;
-    });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSeleccionProducto = (e) => {
-    const codigo = e.target.value;
-    const prod = productos.find((p) => p.codigo === codigo);
-    setForm((prev) => ({
-      ...prev,
-      productoId: codigo,
-      // Autocompletar costo con precioCosto del producto
-      costo: prod ? String(prod.precioCosto ?? "") : prev.costo,
-    }));
-  };
-
-  const abrirModal = () => {
+  const abrirModalMovimiento = () => {
     setForm({
-      ...FORM_ENTRADA_INICIAL,
-      sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "",
+      tipo: "entrada",
+      productoId: "",
+      cantidad: "",
+      nota: "",
+      sedeId: esAdmin ? "" : String(sedeIdUsuario),
+      fecha: HOY,
     });
-    setModalAbierto(true);
+    setModalMovAbierto(true);
   };
 
-  // ── Guardar entrada ──────────────────────────────────────
-  const handleGuardar = async () => {
-    setGuardando(true);
+  const handleGuardarMovimiento = async () => {
+    setGuardandoMov(true);
     try {
-      await inventarioService.registrarEntrada({
-        fecha:             form.fecha,
-        semana:            parseInt(form.semana),
-        sedeId:            parseInt(form.sedeId),
-        productoId:        form.productoId,
-        cantidadIngresada: parseInt(form.cantidadIngresada),
-        costo:             parseFloat(form.costo),
+      await inventarioService.registrarMovimiento({
+        tipo: form.tipo,
+        productoId: form.productoId,
+        cantidad: parseInt(form.cantidad),
+        nota: form.nota,
+        sedeId: form.sedeId,
+        fecha: form.fecha,
       });
-      toast.success("Entrada registrada correctamente.");
-      setModalAbierto(false);
-      await cargarEntradas();
+      toast.success("Movimiento registrado correctamente.");
+      setModalMovAbierto(false);
+      if (activeTab === "movimientos") await cargarMovimientos();
+      if (activeTab === "productos") await cargarProductos();
     } catch (err) {
       toast.error("Error al registrar: " + err.message);
     } finally {
-      setGuardando(false);
+      setGuardandoMov(false);
     }
   };
 
-  // ── Columnas ─────────────────────────────────────────────
+  // ── Columnas ───────────────────────────────────────────────────
   const columnasProductos = [
-    { campo: "codigo",             label: "Código",      tipo: "texto"    },
-    { campo: "descripcion",        label: "Producto",    tipo: "texto"    },
-    { campo: "precioCosto",        label: "Costo",       tipo: "moneda"   },
-    { campo: "precioVenta",        label: "P. Venta",    tipo: "moneda"   },
-    { campo: "precioMayoreo",      label: "Mayoreo",     tipo: "moneda"   },
-    { campo: "porcentajeGanancia", label: "% Ganancia",  tipo: "texto"    },
-    { campo: "activo",             label: "Estado",      tipo: "booleano" },
+    { campo: "codigo", label: "Código", tipo: "texto" },
+    { campo: "nombre", label: "Nombre", tipo: "texto" },
+    { campo: "precioDetal", label: "Precio", tipo: "moneda" },
+    { campo: "existencia", label: "Existencia", tipo: "texto" },
+    { campo: "departamento", label: "Departamento", tipo: "texto" },
+    { campo: "sede", label: "Sede", tipo: "texto" },
+    { campo: "activo", label: "Estado", tipo: "booleano" },
   ];
 
-  const columnasEntradas = [
-    { campo: "fecha",             label: "Fecha",      tipo: "fecha"  },
-    { campo: "semana",            label: "Semana",     tipo: "texto"  },
-    { campo: "sede",              label: "Sede",       tipo: "texto"  }, // nombre sede
-    { campo: "producto",          label: "Producto",   tipo: "texto"  }, // descripción producto
-    { campo: "cantidadIngresada", label: "Cantidad",   tipo: "texto"  },
-    { campo: "costo",             label: "Costo",      tipo: "moneda" },
+  const columnasMovimientos = [
+    { campo: "fecha", label: "Fecha", tipo: "fecha" },
+    { campo: "producto", label: "Producto", tipo: "texto" },
+    { campo: "tipo", label: "Tipo", tipo: "estado" },
+    { campo: "cantidad", label: "Cantidad", tipo: "texto" },
+    { campo: "nota", label: "Nota", tipo: "texto" },
+    { campo: "sede", label: "Sede", tipo: "texto" },
   ];
 
-  // Mapear datos de entradas para la tabla (extraer campos anidados)
-  const entradasMapeadas = entradas.map((e) => ({
-    ...e,
-    sede:    e.sede?.nombre    ?? `Sede ${e.sedeId}`,
-    producto: e.producto?.descripcion ?? e.productoId,
-  }));
+  // Mapear datos movimientos
+  const movimientosMapeados = useMemo(
+    () =>
+      movimientos.map((m) => ({
+        ...m,
+        producto: m.producto?.nombre || m.productoNombre || m.productoId,
+        sede: m.sede?.nombre || `Sede ${m.sedeId}`,
+      })),
+    [movimientos]
+  );
 
-  // ── Render ───────────────────────────────────────────────
+  // Stats stock bajo
+  const stockBajoCount = productos.filter(
+    (p) => p.existencia <= p.stockMinimo
+  ).length;
+
+  // ── Render ───────────────────────────────────────────────────────
   return (
     <div className="inventario-page">
       {/* Header */}
       <div className="page-header">
         <div>
           <h1>Gestión de Inventario</h1>
+          <p className="inv-subtitulo">
+            Control de stock, entradas y movimientos de productos
+          </p>
         </div>
         <div className="inv-header-acciones">
           {/* Tabs */}
           <div className="tabs">
-            <button
-              className={activeTab === "productos" ? "tab-active" : "tab-btn"}
-              onClick={() => setActiveTab("productos")}
-              type="button"
-            >
-              <span className="material-symbols-outlined">category</span>
-              Productos
-            </button>
-            <button
-              className={activeTab === "entradas" ? "tab-active" : "tab-btn"}
-              onClick={() => setActiveTab("entradas")}
-              type="button"
-            >
-              <span className="material-symbols-outlined">move_to_inbox</span>
-              Entradas
-            </button>
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                className={activeTab === tab.key ? "tab-active" : "tab-btn"}
+                onClick={() => setActiveTab(tab.key)}
+                type="button"
+              >
+                <span className="material-symbols-outlined">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* Botón registrar entrada */}
-          {puedeRegistrar && activeTab === "entradas" && (
-            <button className="btn-primary" onClick={abrirModal} type="button">
+          {/* Botón registrar movimiento */}
+          {puedeRegistrar && (
+            <button className="btn-primary" onClick={abrirModalMovimiento} type="button">
               <span className="material-symbols-outlined">add</span>
-              Registrar entrada
+              Nuevo Movimiento
             </button>
           )}
         </div>
       </div>
 
-      {/* Filtros del tab entradas */}
-      {activeTab === "entradas" && (
-        <div className="inv-filtros">
-          {esAdmin && (
-            <div className="filter-group">
-              <label htmlFor="inv-filtro-sede">Sede</label>
-              <select
-                id="inv-filtro-sede"
-                value={filtros.sedeId}
-                onChange={(e) => setFiltros((p) => ({ ...p, sedeId: e.target.value }))}
-                className="filter-select"
-              >
-                <option value="">Todas</option>
-                <option value="1">Bogotá</option>
-                <option value="2">Cartagena</option>
-                <option value="3">Villavicencio</option>
-              </select>
-            </div>
-          )}
-          <div className="filter-group">
-            <label htmlFor="inv-filtro-semana">Semana</label>
-            <input
-              id="inv-filtro-semana"
-              type="number"
-              min="1"
-              max="53"
-              value={filtros.semana}
-              onChange={(e) => setFiltros((p) => ({ ...p, semana: e.target.value }))}
-              className="filter-select"
-              style={{ minWidth: 80 }}
-            />
+      {/* Alertas stock bajo */}
+      {stockBajoCount > 0 && (
+        <div className="inv-alertas">
+          <div className="inv-alerta-stock">
+            <span className="material-symbols-outlined">warning</span>
+            <span>
+              <strong>{stockBajoCount} productos</strong> con stock bajo requieren atención
+            </span>
           </div>
         </div>
       )}
 
-      {/* Contenido */}
+      {/* Contenido según tab */}
       <div className="tab-content">
         {cargando ? (
           <Spinner />
-        ) : activeTab === "productos" ? (
-          <>
-            <div className="page-actions">
-              <h2>
-                <span className="material-symbols-outlined">category</span>
-                Catálogo de Productos
-              </h2>
-              <span className="inv-contador">{productos.length} productos</span>
-            </div>
-            <TablaGenerica
-              columnas={columnasProductos}
-              datos={productos}
-              filasPorPagina={10}
-              mostrarBuscador
-              buscarEnCampos={["codigo", "descripcion"]}
-              paginacion
-            />
-          </>
         ) : (
           <>
-            <div className="page-actions">
-              <h2>
-                <span className="material-symbols-outlined">move_to_inbox</span>
-                Entradas de Inventario
-              </h2>
-              <span className="inv-contador">{entradas.length} registros</span>
-            </div>
-            <TablaGenerica
-              columnas={columnasEntradas}
-              datos={entradasMapeadas}
-              filasPorPagina={10}
-              mostrarBuscador
-              buscarEnCampos={["sede", "producto"]}
-              paginacion
-            />
+            {activeTab === "productos" && (
+              <>
+                <div className="page-actions">
+                  <h2>
+                    <span className="material-symbols-outlined">category</span>
+                    Catálogo de Productos
+                  </h2>
+                  <span className="inv-contador">{productos.length} productos</span>
+                </div>
+                <TablaGenerica
+                  columnas={columnasProductos}
+                  datos={productos.map((p) => ({
+                    ...p,
+                    nombre: p.nombre || p.descripcion,
+                    sede: p.sede?.nombre || `Sede ${p.sedeId}`,
+                  }))}
+                  filasPorPagina={15}
+                  mostrarBuscador
+                  buscarEnCampos={["codigo", "nombre"]}
+                  paginacion
+                />
+              </>
+            )}
+
+            {activeTab === "movimientos" && (
+              <>
+                {/* Filtros de movimientos */}
+                <div className="inv-filtros">
+                  {esAdmin && (
+                    <div className="filter-group">
+                      <label htmlFor="mov-filtro-sede">Sede</label>
+                      <select
+                        id="mov-filtro-sede"
+                        value={filtrosMov.sedeId}
+                        onChange={(e) =>
+                          setFiltrosMov((p) => ({ ...p, sedeId: e.target.value }))
+                        }
+                        className="filter-select"
+                      >
+                        <option value="">Todas</option>
+                        <option value="1">Bogotá</option>
+                        <option value="2">Cartagena</option>
+                        <option value="3">Villavicencio</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="filter-group">
+                    <label htmlFor="mov-filtro-tipo">Tipo</label>
+                    <select
+                      id="mov-filtro-tipo"
+                      value={filtrosMov.tipo}
+                      onChange={(e) =>
+                        setFiltrosMov((p) => ({ ...p, tipo: e.target.value }))
+                      }
+                      className="filter-select"
+                    >
+                      <option value="">Todos</option>
+                      <option value="entrada">Entrada</option>
+                      <option value="salida">Salida</option>
+                      <option value="ajuste">Ajuste</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="page-actions">
+                  <h2>
+                    <span className="material-symbols-outlined">swap_horiz</span>
+                    Movimientos de Inventario
+                  </h2>
+                  <span className="inv-contador">{movimientos.length} registros</span>
+                </div>
+                <TablaGenerica
+                  columnas={columnasMovimientos}
+                  datos={movimientosMapeados}
+                  filasPorPagina={15}
+                  mostrarBuscador
+                  buscarEnCampos={["producto", "nota"]}
+                  paginacion
+                />
+              </>
+            )}
+
+            {activeTab === "entradas" && (
+              <>
+                <div className="page-actions">
+                  <h2>
+                    <span className="material-symbols-outlined">move_to_inbox</span>
+                    Entradas de Inventario
+                  </h2>
+                </div>
+                <TablaGenerica
+                  columnas={[
+                    { campo: "fecha", label: "Fecha", tipo: "fecha" },
+                    { campo: "producto", label: "Producto", tipo: "texto" },
+                    { campo: "sede", label: "Sede", tipo: "texto" },
+                    { campo: "cantidad", label: "Cantidad", tipo: "texto" },
+                    { campo: "costo", label: "Costo", tipo: "moneda" },
+                  ]}
+                  datos={entradas.map((e) => ({
+                    ...e,
+                    producto: e.producto?.descripcion || e.productoId,
+                    sede: e.sede?.nombre || `Sede ${e.sedeId}`,
+                  }))}
+                  filasPorPagina={15}
+                  mostrarBuscador
+                  buscarEnCampos={["producto"]}
+                  paginacion
+                />
+              </>
+            )}
           </>
         )}
       </div>
 
-      {/* Modal — Registrar entrada */}
+      {/* Modal — Nuevo Movimiento */}
       <Modal
-        isOpen={modalAbierto}
-        onClose={() => setModalAbierto(false)}
-        titulo="Registrar Entrada de Inventario"
-        textoBotonConfirmar={guardando ? "Guardando..." : "Registrar"}
-        onConfirmar={handleGuardar}
+        isOpen={modalMovAbierto}
+        onClose={() => setModalMovAbierto(false)}
+        titulo="Registrar Movimiento"
+        textoBotonConfirmar={guardandoMov ? "Registrando..." : "Registrar"}
+        onConfirmar={handleGuardarMovimiento}
         mostrarCancelar
+        disabled={guardandoMov}
       >
         <div className="modal-form">
+          {/* Tipo de movimiento */}
+          <div className="form-group">
+            <label htmlFor="mov-tipo">Tipo *</label>
+            <select
+              id="mov-tipo"
+              name="tipo"
+              value={form.tipo}
+              onChange={handleCambioForm}
+              className="form-control"
+            >
+              <option value="entrada">Entrada</option>
+              <option value="salida">Salida</option>
+              <option value="ajuste">Ajuste (+/-)</option>
+            </select>
+          </div>
+
+          {/* Producto */}
+          <div className="form-group">
+            <label htmlFor="mov-producto">Producto *</label>
+            <select
+              id="mov-producto"
+              name="productoId"
+              value={form.productoId}
+              onChange={handleCambioForm}
+              className="form-control"
+            >
+              <option value="">— Selecciona un producto —</option>
+              {productos.map((p) => (
+                <option key={p.codigo} value={p.codigo}>
+                  [{p.codigo}] {p.nombre || p.descripcion}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Cantidad */}
+          <div className="form-group">
+            <label htmlFor="mov-cantidad">
+              {form.tipo === "ajuste" ? "Ajuste (número)" : "Cantidad *"}
+            </label>
+            <input
+              id="mov-cantidad"
+              name="cantidad"
+              type="number"
+              value={form.cantidad}
+              onChange={handleCambioForm}
+              className="form-control"
+              min={form.tipo === "ajuste" ? undefined : "1"}
+              step="1"
+              placeholder={form.tipo === "ajuste" ? "-10 o +20" : "0"}
+            />
+          </div>
+
           {/* Fecha */}
           <div className="form-group">
-            <label htmlFor="inv-fecha">Fecha *</label>
+            <label htmlFor="mov-fecha">Fecha *</label>
             <input
-              id="inv-fecha"
-              type="date"
+              id="mov-fecha"
               name="fecha"
+              type="date"
               value={form.fecha}
               onChange={handleCambioForm}
               className="form-control"
@@ -304,35 +409,18 @@ const InventarioPage = () => {
             />
           </div>
 
-          {/* Semana (auto) */}
-          <div className="form-group">
-            <label htmlFor="inv-semana">Semana (calculada automáticamente)</label>
-            <input
-              id="inv-semana"
-              type="number"
-              name="semana"
-              value={form.semana}
-              onChange={handleCambioForm}
-              className="form-control"
-              min="1"
-              max="53"
-              readOnly
-              style={{ opacity: 0.6, cursor: "not-allowed" }}
-            />
-          </div>
-
           {/* Sede */}
           {esAdmin && (
             <div className="form-group">
-              <label htmlFor="inv-sede">Sede *</label>
+              <label htmlFor="mov-sede">Sede *</label>
               <select
-                id="inv-sede"
+                id="mov-sede"
                 name="sedeId"
                 value={form.sedeId}
                 onChange={handleCambioForm}
                 className="form-control"
               >
-                <option value="">— Selecciona una sede —</option>
+                <option value="">— Selecciona —</option>
                 <option value="1">Bogotá</option>
                 <option value="2">Cartagena</option>
                 <option value="3">Villavicencio</option>
@@ -340,59 +428,18 @@ const InventarioPage = () => {
             </div>
           )}
 
-          {/* Producto */}
+          {/* Nota */}
           <div className="form-group">
-            <label htmlFor="inv-producto">Producto *</label>
-            <select
-              id="inv-producto"
-              value={form.productoId}
-              onChange={handleSeleccionProducto}
-              className="form-control"
-            >
-              <option value="">— Selecciona un producto —</option>
-              {productos.map((p) => (
-                <option key={p.codigo} value={p.codigo}>
-                  [{p.codigo}] {p.descripcion}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Cantidad ingresada */}
-          <div className="form-group">
-            <label htmlFor="inv-cantidad">Cantidad ingresada *</label>
-            <input
-              id="inv-cantidad"
-              type="number"
-              name="cantidadIngresada"
-              value={form.cantidadIngresada}
+            <label htmlFor="mov-nota">Nota</label>
+            <textarea
+              id="mov-nota"
+              name="nota"
+              value={form.nota}
               onChange={handleCambioForm}
-              className="form-control"
-              min="1"
-              step="1"
-              placeholder="0"
+              className="form-control textarea"
+              placeholder="Observaciones del movimiento..."
+              rows={3}
             />
-          </div>
-
-          {/* Costo */}
-          <div className="form-group">
-            <label htmlFor="inv-costo">Costo total (COP) *</label>
-            <input
-              id="inv-costo"
-              type="number"
-              name="costo"
-              value={form.costo}
-              onChange={handleCambioForm}
-              className="form-control"
-              min="0"
-              step="1000"
-              placeholder="0"
-            />
-            {form.costo && (
-              <span className="inv-costo-preview">
-                {formatCOP(form.costo)}
-              </span>
-            )}
           </div>
         </div>
       </Modal>

@@ -1,6 +1,6 @@
 /* ============================================================
    PedidosPage.css — Katepramax
-   Paleta oscura con variables del sistema de diseño global
+   Estilo limpio, consistente con Inventario y paleta global
    ============================================================ */
 
 .pedidos-page {
@@ -26,14 +26,15 @@
   margin: 0;
 }
 
-/* ─── Filtros ────────────────────────────────────────────────*/
-.filters {
-  display: flex;
-  gap: 0.875rem;
-  flex-wrap: wrap;
-  align-items: flex-end;
+/* ─── Subtítulo ──────────────────────────────────────────────*/
+.ped-subtitulo {
+  margin: 0.25rem 0 0;
+  font-size: 13px;
+  color: var(--on-surface-variant);
+  min-height: 20px;
 }
 
+/* ─── Filtros ────────────────────────────────────────────────*/
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -52,7 +53,7 @@
 .filter-select {
   padding: 0.5rem 2.25rem 0.5rem 0.875rem;
   background: var(--surface-container);
-  border: 1px solid var(--outline-variant);
+  border: 1px solid var(--aged-gold-border);
   border-radius: var(--radius-lg);
   font-family: var(--font-label);
   font-size: 13px;
@@ -61,16 +62,15 @@
   cursor: pointer;
   outline: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23978d9d' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23C5B358' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
-  transition: border-color var(--transition-fast),
-              box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .filter-select:focus {
-  border-color: var(--secondary);
-  box-shadow: 0 0 0 3px rgba(233, 195, 73, 0.1);
+  border-color: var(--aged-gold);
+  box-shadow: 0 0 0 3px var(--aged-gold-glow);
 }
 
 .filter-select option {
@@ -106,29 +106,7 @@
 .btn-primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: rgba(221, 183, 255, 0.1);
-  color: var(--primary);
-  border: 1px solid rgba(221, 183, 255, 0.25);
-  padding: 0.5rem 1.125rem;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-label);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  transition: all var(--transition-fast);
-  letter-spacing: 0.02em;
-}
-
-.btn-secondary:hover {
-  background: rgba(221, 183, 255, 0.18);
-  border-color: rgba(221, 183, 255, 0.5);
-  transform: translateY(-1px);
+  transform: none;
 }
 
 .btn-outline {
@@ -149,44 +127,111 @@
   color: var(--on-surface);
 }
 
-.btn-remove-item {
-  background: rgba(255, 180, 171, 0.1);
-  color: var(--error);
-  border: 1px solid rgba(255, 180, 171, 0.25);
-  padding: 0.375rem 0.75rem;
+/* ─── Header Acciones ────────────────────────────────────────*/
+.ped-header-acciones {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ─── Tabs ───────────────────────────────────────────────────*/
+.ped-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+}
+
+.ped-tab,
+.ped-tab--active {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  background: transparent;
   border-radius: var(--radius-md);
   font-family: var(--font-label);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  align-self: flex-end;
-}
-
-.btn-remove-item:hover {
-  background: rgba(255, 180, 171, 0.2);
-  border-color: var(--error);
-}
-
-.btn-add-item {
-  background: rgba(233, 195, 73, 0.08);
-  color: var(--secondary);
-  border: 1px dashed rgba(233, 195, 73, 0.3);
-  padding: 0.625rem 1.125rem;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-label);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  width: 100%;
+  color: var(--on-surface-variant);
   transition: all var(--transition-fast);
   letter-spacing: 0.02em;
-  margin-top: 0.25rem;
 }
 
-.btn-add-item:hover {
-  background: rgba(233, 195, 73, 0.14);
-  border-color: rgba(233, 195, 73, 0.5);
+.ped-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--on-surface);
+}
+
+.ped-tab--active {
+  background: var(--surface-container-highest) !important;
+  color: var(--secondary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.ped-tab--active:hover {
+  background: var(--surface-container-highest) !important;
+  color: var(--secondary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Tab content ────────────────────────────────────────────*/
+.tab-content {
+  background: var(--surface-container);
+  border: 1px solid rgba(233, 195, 73, 0.12);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 200px;
+}
+
+/* ─── Búsqueda propia ────────────────────────────────────────*/
+.ped-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid rgba(233, 195, 73, 0.08);
+}
+
+.ped-search .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--secondary);
+}
+
+.ped-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-headline);
+  font-size: 14px;
+  color: var(--on-surface);
+}
+
+.ped-search-input::placeholder {
+  color: rgba(151, 141, 157, 0.5);
+}
+
+/* ─── Estado vacío / error ───────────────────────────────────*/
+.ped-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+}
+
+.ped-error .material-symbols-outlined {
+  font-size: 48px;
+  color: var(--error);
 }
 
 /* ─── Modal form ─────────────────────────────────────────────*/
@@ -223,8 +268,7 @@
   width: 100%;
   box-sizing: border-box;
   outline: none;
-  transition: border-color var(--transition-fast),
-              box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .form-control:focus {
@@ -236,7 +280,6 @@
   color: rgba(151, 141, 157, 0.4);
 }
 
-.form-control.select,
 select.form-control {
   cursor: pointer;
   appearance: none;
@@ -260,72 +303,6 @@ select.form-control option {
   margin-bottom: 0.625rem;
 }
 
-.item-group h4 {
-  font-family: var(--font-label);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--on-surface-variant);
-  margin: 0 0 0.75rem 0;
-}
-
-.item-fields {
-  display: flex;
-  gap: 0.875rem;
-  flex-wrap: wrap;
-  align-items: flex-end;
-}
-
-.item-fields > div {
-  flex: 1;
-  min-width: 150px;
-}
-
-.item-fields label {
-  display: block;
-  font-family: var(--font-label);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--secondary);
-  margin-bottom: 0.375rem;
-}
-
-/* Info del pedido en modal de asignar */
-.pedido-info {
-  font-family: var(--font-label);
-  font-size: 13px;
-  color: var(--on-surface-variant);
-  background: var(--surface-container-high);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
-  padding: 0.625rem 0.875rem;
-  margin: 0;
-}
-
-.pedido-info strong {
-  color: var(--secondary);
-  font-weight: 700;
-}
-/* ─── Extras Sprint 2 ────────────────────────────────────────*/
-
-.ped-header-acciones {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.tab-content {
-  background: var(--surface-container);
-  border: 1px solid rgba(233, 195, 73, 0.12);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  min-height: 200px;
-}
-
 .item-group-header {
   display: flex;
   justify-content: space-between;
@@ -335,33 +312,31 @@ select.form-control option {
 
 .item-group-header h4 {
   margin: 0;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.btn-remove-item {
-  background: rgba(255, 180, 171, 0.1);
-  color: var(--error);
-  border: 1px solid rgba(255, 180, 171, 0.25);
-  padding: 0.25rem;
-  border-radius: var(--radius-md);
-  cursor: pointer;
+.item-fields {
   display: flex;
-  align-items: center;
-  transition: all var(--transition-fast);
+  gap: 0.875rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
 }
 
-.btn-remove-item .material-symbols-outlined {
-  font-size: 16px;
-}
-
-.btn-remove-item:hover {
-  background: rgba(255, 180, 171, 0.2);
-  border-color: var(--error);
-}
-
-/* Campos de items con proporciones */
 .item-field--producto { flex: 3; min-width: 160px; }
 .item-field--cantidad { flex: 1; min-width: 80px; }
 .item-field--precio   { flex: 1.5; min-width: 110px; }
+.item-field--subtotal {
+  flex: 1;
+  min-width: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
 
 .item-fields label {
   display: block;
@@ -374,13 +349,122 @@ select.form-control option {
   margin-bottom: 0.375rem;
 }
 
-.pedido-info__dir {
+.item-precio-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--on-surface-variant);
+}
+
+.item-subtotal {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 0.75rem;
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  font-family: var(--font-headline);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+/* ─── Botón agregar item ─────────────────────────────────────*/
+.btn-add-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: rgba(233, 195, 73, 0.06);
+  border: 1px dashed rgba(233, 195, 73, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--secondary);
+  font-family: var(--font-label);
   font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 0.875rem;
+  margin-top: 0.5rem;
+  transition: all var(--transition-fast);
+}
+
+.btn-add-item:hover {
+  background: rgba(233, 195, 73, 0.1);
+  border-color: rgba(233, 195, 73, 0.5);
+}
+
+.btn-add-item .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* ─── Resumen pedido ─────────────────────────────────────────*/
+.ped-resumen {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(233, 195, 73, 0.08);
+  border: 1px solid rgba(233, 195, 73, 0.25);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface);
+}
+
+.ped-resumen strong {
+  color: var(--secondary);
+  font-size: 16px;
+}
+
+/* ─── Info del pedido en modal asignar ───────────────────────*/
+.pedido-info {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface);
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.875rem;
+  margin: 0;
+}
+
+.pedido-info__dir {
   color: var(--on-surface-variant);
   font-style: italic;
 }
 
-/* Spinner */
+/* ─── Confirmar cancelar ─────────────────────────────────────*/
+.ped-confirm-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.875rem;
+  padding: 0.5rem 0;
+}
+
+.ped-confirm-icon {
+  font-size: 48px;
+  color: var(--error);
+}
+
+.ped-confirm-body p {
+  font-family: var(--font-label);
+  font-size: 14px;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.ped-confirm-body strong {
+  color: var(--secondary);
+}
+
+.ped-confirm-sub {
+  font-size: 12px !important;
+  color: var(--on-surface-variant) !important;
+}
+
+/* ─── Spinner ────────────────────────────────────────────────*/
 .ped-spinner-wrap {
   display: flex;
   flex-direction: column;
@@ -402,34 +486,28 @@ select.form-control option {
   animation: spin 0.8s linear infinite;
 }
 
-/* Clientes service también necesita el fix de identificacion */
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* ─── Extras Sprint 2 ────────────────────────────────────────*/
-.ped-header-acciones { display: flex; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap; }
-.tab-content { background: var(--surface-container); border: 1px solid rgba(233,195,73,0.12); border-radius: var(--radius-lg); overflow: hidden; min-height: 200px; }
-.item-group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-.item-group-header h4 { margin: 0; font-family: var(--font-label); font-size: 12px; font-weight: 600; color: var(--on-surface-variant); text-transform: uppercase; letter-spacing: 0.05em; }
-.btn-remove-item { background: rgba(255,180,171,0.1); color: var(--error); border: 1px solid rgba(255,180,171,0.25); padding: 0.25rem; border-radius: var(--radius-md); cursor: pointer; display: flex; align-items: center; transition: all var(--transition-fast); }
-.btn-remove-item .material-symbols-outlined { font-size: 16px; }
-.btn-remove-item:hover { background: rgba(255,180,171,0.2); border-color: var(--error); }
-.item-fields { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-.item-field--producto { flex: 3; min-width: 160px; }
-.item-field--cantidad { flex: 1; min-width: 80px; }
-.item-field--precio   { flex: 1.5; min-width: 110px; }
-.item-fields label { display: block; font-family: var(--font-label); font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--secondary); margin-bottom: 0.375rem; }
-.item-precio-hint { font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--on-surface-variant); }
-.btn-add-item { display: inline-flex; align-items: center; gap: 0.375rem; background: rgba(233,195,73,0.06); border: 1px dashed rgba(233,195,73,0.3); border-radius: var(--radius-md); color: var(--secondary); font-family: var(--font-label); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0.5rem 0.875rem; margin-top: 0.5rem; transition: all var(--transition-fast); }
-.btn-add-item:hover { background: rgba(233,195,73,0.1); border-color: rgba(233,195,73,0.5); }
-.btn-add-item .material-symbols-outlined { font-size: 16px; }
-.pedido-info { font-family: var(--font-label); font-size: 13px; color: var(--on-surface); margin: 0; }
-.pedido-info__dir { color: var(--on-surface-variant); font-style: italic; }
-.ped-confirm-body { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.875rem; padding: 0.5rem 0; }
-.ped-confirm-icon { font-size: 48px; color: var(--error); }
-.ped-confirm-body p { font-family: var(--font-label); font-size: 14px; color: var(--on-surface); margin: 0; }
-.ped-confirm-body strong { color: var(--secondary); }
-.ped-confirm-sub { font-size: 12px !important; color: var(--on-surface-variant) !important; }
-.ped-spinner-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 4rem 2rem; color: var(--on-surface-variant); font-family: var(--font-label); font-size: 13px; }
-.ped-spinner { width: 32px; height: 32px; border: 3px solid var(--outline-variant); border-top-color: var(--secondary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+/* ─── Responsive ─────────────────────────────────────────────*/
+@media (max-width: 767.98px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ped-header-acciones {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .ped-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .ped-tab,
+  .ped-tab--active {
+    flex: 1;
+    white-space: nowrap;
+    text-align: center;
+  }
+}
