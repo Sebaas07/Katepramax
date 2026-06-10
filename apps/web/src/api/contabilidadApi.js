@@ -2,18 +2,18 @@ import { clienteApi } from "./axiosConfig";
 
 /**
  * contabilidadApi.js — Katepramax
- * Endpoints de contabilidad. El backend aún no tiene estas rutas implementadas
- * (no existen en /routes). Se dejan preparados para cuando las tenga.
- * El schema Prisma sí tiene el modelo Ingreso.
  *
- * Contratos basados en el Excel real y el modelo Prisma:
+ * El schema Prisma tiene el modelo Ingreso.
+ * El backend aún NO tiene rutas /contabilidad/* implementadas.
+ * Todos los métodos fallan silenciosamente (service retorna []).
  *
- * Ingreso: { fecha, semana, sedeId, efectivo, cuentas, total, observacion? }
- * Egreso:  { fecha, semana, sedeId, concepto, total, observaciones?, dia? }
- * Cartera: { fecha, semana, sedeId, saldoDia }
+ * Contratos listos para cuando el backend los implemente:
+ *   Ingreso: { fecha, semana, sedeId, efectivo, cuentas, total, observacion? }
+ *   Egreso:  { fecha, semana, sedeId, concepto, total, observaciones?, dia? }
+ *   Cartera: { fecha, semana, sedeId, saldoDia }
  */
 const contabilidadApi = {
-  // ── INGRESOS ────────────────────────────────────────────────
+  // ── INGRESOS ──────────────────────────────────────────────
   obtenerIngresos: async (filtros = {}) => {
     const params = new URLSearchParams();
     Object.entries(filtros).forEach(([k, v]) => {
@@ -25,7 +25,6 @@ const contabilidadApi = {
   },
 
   registrarIngreso: async (data) => {
-    // data: { fecha, semana, sedeId, efectivo, cuentas, total, observacion? }
     const r = await clienteApi.post("/contabilidad/ingresos", data);
     return r.data;
   },
@@ -40,7 +39,7 @@ const contabilidadApi = {
     return r.data;
   },
 
-  // ── EGRESOS ─────────────────────────────────────────────────
+  // ── EGRESOS ───────────────────────────────────────────────
   obtenerEgresos: async (filtros = {}) => {
     const params = new URLSearchParams();
     Object.entries(filtros).forEach(([k, v]) => {
@@ -52,7 +51,6 @@ const contabilidadApi = {
   },
 
   registrarEgreso: async (data) => {
-    // data: { fecha, semana, sedeId, concepto, total, observaciones?, dia? }
     const r = await clienteApi.post("/contabilidad/egresos", data);
     return r.data;
   },
@@ -67,7 +65,7 @@ const contabilidadApi = {
     return r.data;
   },
 
-  // ── CARTERA ─────────────────────────────────────────────────
+  // ── CARTERA ───────────────────────────────────────────────
   obtenerCartera: async (filtros = {}) => {
     const params = new URLSearchParams();
     Object.entries(filtros).forEach(([k, v]) => {
@@ -79,23 +77,13 @@ const contabilidadApi = {
   },
 
   registrarCartera: async (data) => {
-    // data: { fecha, semana, sedeId, saldoDia }
-    // El backend calcula variación vs registro anterior automáticamente
     const r = await clienteApi.post("/contabilidad/cartera", data);
     return r.data;
   },
 
-  // ── ARQUEO SEMANAL ───────────────────────────────────────────
+  // ── ARQUEO SEMANAL ────────────────────────────────────────
   obtenerArqueo: async (semana) => {
-    // Devuelve los 6 bloques del arqueo consolidado por sede
     const r = await clienteApi.get(`/contabilidad/arqueo?semana=${semana}`);
-    return r.data;
-  },
-
-  // ── PANEL GENERAL (resumen del día) ──────────────────────────
-  obtenerPanelGeneral: async (fecha) => {
-    const params = fecha ? `?fecha=${fecha}` : "";
-    const r = await clienteApi.get(`/contabilidad/panel${params}`);
     return r.data;
   },
 };

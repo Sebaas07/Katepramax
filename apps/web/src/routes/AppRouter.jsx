@@ -55,7 +55,7 @@ const Cargando = () => (
   </div>
 );
 
-// ─── Redirección inteligente desde raíz ──────────────────────
+// ─── Redirección inteligente desde raíz ───────────────────────
 const RootRedirect = () => {
   const { isAuthenticated, usuario, isLoading } = useAuth();
   if (isLoading)        return <Cargando />;
@@ -76,13 +76,16 @@ const AppRouter = () => (
     <Route element={<RequireAuth />}>
       <Route element={<MainLayout />}>
 
+        {/* Todos los roles */}
         <Route path="/dashboard"       element={<DashboardPage />} />
         <Route path="/acceso-denegado" element={<AccesoDenegadoPage />} />
 
+        {/* Solo Entregador */}
         <Route element={<RequireRole roles={ROLES.ENTREGADOR} />}>
           <Route path="/entregas" element={<EntregasPage />} />
         </Route>
 
+        {/* Admin + Bodega */}
         <Route element={<RequireRole roles={ROLES.BODEGA} />}>
           <Route path="/pedidos"      element={<PedidosPage />} />
           <Route path="/inventario"   element={<InventarioPage />} />
@@ -94,6 +97,7 @@ const AppRouter = () => (
           <Route path="/reportes"     element={<ReportesPage />} />
         </Route>
 
+        {/* Solo Admin */}
         <Route element={<RequireRole roles={ROLES.ADMIN} />}>
           <Route path="/admin/usuarios"  element={<UsuariosPage />} />
           <Route path="/admin/audit-log" element={<AuditLogPage />} />
