@@ -1,9 +1,6 @@
 /**
  * Mock centralizado de PrismaClient.
- * Cada modelo expone las funciones de Prisma como vi.fn() para que
- * cada test pueda configurar lo que retorna con .mockResolvedValue().
  */
-
 const prisma = {
   usuario: {
     findUnique: vi.fn(),
@@ -19,18 +16,46 @@ const prisma = {
     updateMany: vi.fn(),
     deleteMany: vi.fn(),
   },
+  log: {
+    create: vi.fn(),
+  },
   cliente: {
     findUnique: vi.fn(),
     findMany: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
   },
-  log: {
+  producto: {
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
     create: vi.fn(),
+    update: vi.fn(),
+  },
+  proveedor: {
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
+  inventario: {
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
+    upsert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    groupBy: vi.fn(),
+  },
+  stockSede: {
+    upsert: vi.fn(),
+    update: vi.fn(),
+  },
+  sede: {
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
   },
 };
 
-// Limpia todos los mocks antes de cada test automáticamente
 beforeEach(() => {
   vi.clearAllMocks();
 });

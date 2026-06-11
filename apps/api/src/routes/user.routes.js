@@ -15,8 +15,7 @@ const {
 } = require("../schemas/usuario.schema");
 
 async function userRoutes(app) {
-  
-  const preSoloAdmin = soloAdmin.preHandler;
+  const preValidation = soloAdmin.preValidation;
 
   // GET /api/usuarios
   app.get("/usuarios", {
@@ -25,7 +24,7 @@ async function userRoutes(app) {
       tags: ["Usuarios"],
       response: { 200: { type: "array", items: usuarioResponse } },
     },
-    preHandler: preSoloAdmin,
+    preValidation,
     handler: getAll,
   });
 
@@ -37,7 +36,7 @@ async function userRoutes(app) {
       params: idParam,
       response: { 200: usuarioResponse },
     },
-    preHandler: preSoloAdmin,
+    preValidation,
     handler: getById,
   });
 
@@ -48,7 +47,7 @@ async function userRoutes(app) {
       tags: ["Usuarios"],
       body: createUsuarioBody,
     },
-    preHandler: preSoloAdmin,
+    preValidation,
     handler: create,
   });
 
@@ -60,8 +59,19 @@ async function userRoutes(app) {
       params: idParam,
       body: updateUsuarioBody,
     },
-    preHandler: preSoloAdmin,
+    preValidation,
     handler: update,
+  });
+
+  // PATCH /api/usuarios/:id/activar  ← DEBE ir ANTES de /:id
+  app.patch("/usuarios/:id/activar", {
+    schema: {
+      summary: "Activar usuario",
+      tags: ["Usuarios"],
+      params: idParam,
+    },
+    preValidation,
+    handler: activar,
   });
 
   // PATCH /api/usuarios/:id — desactivar
@@ -71,19 +81,8 @@ async function userRoutes(app) {
       tags: ["Usuarios"],
       params: idParam,
     },
-    preHandler: preSoloAdmin,
+    preValidation,
     handler: desactivar,
-  });
-
-  // PATCH /api/usuarios/:id/activar
-  app.patch("/usuarios/:id/activar", {
-    schema: {
-      summary: "Activar usuario",
-      tags: ["Usuarios"],
-      params: idParam,
-    },
-    preHandler: preSoloAdmin,
-    handler: activar,
   });
 }
 

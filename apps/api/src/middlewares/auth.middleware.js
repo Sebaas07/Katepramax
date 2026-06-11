@@ -1,4 +1,5 @@
 const sesionRepository = require("../repositories/sesion.repository");
+const AppError = require("../errors/AppError");
 
 /**
  * Middleware para verificar el token y validar la sesión contra la BD.
@@ -8,7 +9,8 @@ const verifyToken = async (request, reply) => {
     // 1. Verificar firma del JWT
     await request.jwtVerify();
   } catch (err) {
-    return reply.code(401).send({ error: "Token inválido o expirado." });
+    // Lanzar error en lugar de enviar respuesta directamente
+    throw new AppError("Token inválido o expirado.", 401);
   }
 
   const { sesionId } = request.user;
@@ -21,17 +23,14 @@ const verifyToken = async (request, reply) => {
 
   // 3. Validaciones críticas
   if (!sesion) {
-    return reply.code(401).send({ error: "Sesión inexistente o revocada." });
+    throw new AppError("Sesión inexistente o revocada.", 401);
   }
 
   if (!sesion.usuario || !sesion.usuario.activo) {
-    return reply
-      .code(401)
-      .send({ error: "El usuario ya no tiene acceso al sistema." });
+    throw new AppError("El usuario ya no tiene acceso al sistema.", 401);
   }
 
   // 4. Sobreescribir request.user con datos REALES de la BD
-  // Esto previene que un cambio de rol en el panel administrativo sea ignorado por el token
   request.user = {
     id: sesion.usuario.id,
     usuario: sesion.usuario.usuario,
@@ -47,18 +46,23 @@ const verifyToken = async (request, reply) => {
 const requireRole = (roles) => async (request, reply) => {
   // Verificamos que verifyToken ya haya corrido (request.user existe)
   if (!request.user || !roles.includes(request.user.rol)) {
-    return reply.code(403).send({
-      error: "No tienes permisos suficientes para realizar esta acción.",
-      required: roles,
-    });
+    throw new AppError(
+      "No tienes permisos suficientes para realizar esta acción.",
+      403,
+    );
   }
 };
 
-// Exportación de esquemas de protección
+// Exportación de esquemas de protección.
+// Se usa preValidation (en lugar de preHandler) para que la autenticación
+// se ejecute ANTES de la validación del body por Fastify. Así un request
+// sin token devuelve 401 y no 400, incluso si el body está incompleto.
 module.exports = {
   verifyToken,
   requireRole,
-  soloAdmin: { preHandler: [verifyToken, requireRole(["Admin"])] },
-  adminOBodega: { preHandler: [verifyToken, requireRole(["Admin", "Bodega"])] },
-  todos: { preHandler: [verifyToken] },
+  soloAdmin: { preValidation: [verifyToken, requireRole(["Admin"])] },
+  adminOBodega: {
+    preValidation: [verifyToken, requireRole(["Admin", "Bodega"])],
+  },
+  todos: { preValidation: [verifyToken] },
 };
