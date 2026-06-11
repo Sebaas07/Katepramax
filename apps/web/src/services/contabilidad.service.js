@@ -166,13 +166,55 @@ const contabilidadService = {
     }
   },
 
+  // ── PROVEEDORES ────────────────────────────────────────────
+  obtenerProveedores: async (filtros = {}) => {
+    try {
+      return await contabilidadApi.obtenerProveedores(filtros);
+    } catch {
+      return [];
+    }
+  },
+
+  registrarPagoProveedor: async (data) => {
+    try {
+      return await contabilidadApi.registrarPagoProveedor(data);
+    } catch (error) {
+      console.error("contabilidadService.registrarPagoProveedor:", error);
+      throw error;
+    }
+  },
+
+  obtenerResumenProveedores: async (semana) => {
+    try {
+      return await contabilidadApi.obtenerResumenProveedores(semana);
+    } catch {
+      return [];
+    }
+  },
+
   // ── ARQUEO ────────────────────────────────────────────────
   obtenerArqueo: async (semana) => {
     try {
       const sem = semana ?? getSemanaISO(new Date());
       return await contabilidadApi.obtenerArqueo(sem);
     } catch {
-      return null; // Backend pendiente — fallback silencioso
+      return null;
+    }
+  },
+
+  obtenerPanelGeneral: async (fecha) => {
+    try {
+      return await contabilidadApi.obtenerPanelGeneral(fecha);
+    } catch {
+      return null;
+    }
+  },
+
+  obtenerInventarioSemanal: async (semana) => {
+    try {
+      return await contabilidadApi.obtenerInventarioSemanal(semana);
+    } catch {
+      return [];
     }
   },
 };

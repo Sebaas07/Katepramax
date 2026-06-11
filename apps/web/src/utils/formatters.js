@@ -106,3 +106,22 @@ export const getSemanaISO = (fecha = new Date()) => {
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 };
+
+/**
+ * Obtiene el rango de fechas (inicio/fin) de una semana ISO.
+ * Ej: getRangoSemana(19, 2025) → { inicio: "2025-05-05", fin: "2025-05-11" }
+ */
+export const getRangoSemana = (semana, anio = new Date().getFullYear()) => {
+  const jan4 = new Date(anio, 0, 4);
+  const dayOfWeek = jan4.getDay() || 7;
+  const week1Start = new Date(jan4);
+  week1Start.setDate(jan4.getDate() - dayOfWeek + 1);
+  const start = new Date(week1Start);
+  start.setDate(week1Start.getDate() + (semana - 1) * 7);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return {
+    inicio: start.toISOString().split("T")[0],
+    fin: end.toISOString().split("T")[0],
+  };
+};

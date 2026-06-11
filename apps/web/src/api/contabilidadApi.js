@@ -81,9 +81,40 @@ const contabilidadApi = {
     return r.data;
   },
 
+  // ── PROVEEDORES ─────────────────────────────────────────────
+  obtenerProveedores: async (filtros = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filtros).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") params.append(k, v);
+    });
+    const qs = params.toString();
+    const r = await clienteApi.get(qs ? `/abonos?${qs}` : "/abonos");
+    return r.data;
+  },
+
+  registrarPagoProveedor: async (data) => {
+    const r = await clienteApi.post("/abonos", data);
+    return r.data;
+  },
+
+  obtenerResumenProveedores: async (semana) => {
+    const r = await clienteApi.get(`/abonos/resumen-proveedor?semana=${semana}`);
+    return r.data;
+  },
+
   // ── ARQUEO SEMANAL ────────────────────────────────────────
   obtenerArqueo: async (semana) => {
-    const r = await clienteApi.get(`/contabilidad/arqueo?semana=${semana}`);
+    const r = await clienteApi.get(`/reportes/arqueo-semanal?semana=${semana}`);
+    return r.data;
+  },
+
+  obtenerPanelGeneral: async (fecha) => {
+    const r = await clienteApi.get(`/reportes/panel-general?fecha=${fecha}`);
+    return r.data;
+  },
+
+  obtenerInventarioSemanal: async (semana) => {
+    const r = await clienteApi.get(`/inventario/resumen-semanal?semana=${semana}`);
     return r.data;
   },
 };
