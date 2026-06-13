@@ -175,9 +175,23 @@ const contabilidadService = {
     }
   },
 
-  registrarPagoProveedor: async (data) => {
+  registrarPagoProveedor: async ({ fecha, sedeId, proveedorId, valorAbono, observacion }) => {
     try {
-      return await contabilidadApi.registrarPagoProveedor(data);
+      if (!fecha)  throw new Error("La fecha es obligatoria.");
+      if (!sedeId) throw new Error("Selecciona la sede.");
+      if (!proveedorId) throw new Error("Selecciona el proveedor.");
+      const valor = parseFloat(valorAbono);
+      if (isNaN(valor) || valor <= 0)
+        throw new Error("Ingresa un valor de abono válido mayor a cero.");
+      const semana = getSemanaISO(new Date(fecha));
+      return await contabilidadApi.registrarPagoProveedor({
+        fecha,
+        semana,
+        sedeId:     parseInt(sedeId),
+        proveedorId: parseInt(proveedorId),
+        valorAbono: valor,
+        observacion: observacion?.trim() || undefined,
+      });
     } catch (error) {
       console.error("contabilidadService.registrarPagoProveedor:", error);
       throw error;

@@ -26,6 +26,7 @@ const TablaGenerica = ({
   paginacion = true,
   mostrarIndicadorFilas = true,
   renderAcciones,
+  renderCeldaCustom,
 }) => {
   const [paginaActual, setPaginaActual] = useState(1);
   const [terminoBusqueda, setTerminoBusqueda] = useState("");
@@ -84,6 +85,11 @@ const TablaGenerica = ({
 
   // ── Render celda ──────────────────────────────────────────
   const renderCelda = (fila, col) => {
+    if (renderCeldaCustom) {
+      const custom = renderCeldaCustom(fila, col);
+      if (custom !== null && custom !== undefined) return custom;
+    }
+
     const valor = fila[col.campo];
 
     switch (col.tipo) {

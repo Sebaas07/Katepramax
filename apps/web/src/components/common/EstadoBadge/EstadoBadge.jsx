@@ -27,6 +27,9 @@ const CONFIG_ESTADO = {
   // ── Deudas proveedores ──
   pagado:     { label: "Pagado",     color: "#4ade80", bg: "rgba(74,222,128,0.12)",  border: "rgba(74,222,128,0.3)"  },
   parcial:    { label: "Parcial",    color: "#e9c349", bg: "rgba(233,195,73,0.12)",  border: "rgba(233,195,73,0.3)"  },
+  al_dia:    { label: "Al dia",    color: "#4ade80", bg: "rgba(74,222,128,0.12)",  border: "rgba(74,222,128,0.3)"  },
+  pendiente: { label: "Pendiente", color: "#e9c349", bg: "rgba(233,195,73,0.12)",  border: "rgba(233,195,73,0.3)"  },
+  vencida:   { label: "Vencida",   color: "#ffb4ab", bg: "rgba(255,180,171,0.12)", border: "rgba(255,180,171,0.3)" },
 };
 
 const EstadoBadge = ({ estado }) => {
