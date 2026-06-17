@@ -28,7 +28,14 @@ const usuarioResponse = {
 // POST /usuarios — crear usuario
 const createUsuarioBody = {
   type: "object",
-  required: ["nombreCompleto", "usuario", "correo", "contrasena", "rol", "telefono", "sedeId"],
+  required: [
+    "nombreCompleto",
+    "usuario",
+    "correo",
+    "contrasena",
+    "rol",
+    "sedeId",
+  ],
   additionalProperties: false,
   properties: {
     nombreCompleto: { type: "string", minLength: 3, maxLength: 255 },
