@@ -1,5 +1,4 @@
 const fp = require("fastify-plugin");
-const { PrismaClient } = require("@prisma/client");
 
 /**
  * Plugin que inyecta Prisma como decorador en la instancia de Fastify.
@@ -7,6 +6,15 @@ const { PrismaClient } = require("@prisma/client");
  * disponible en toda la app via app.prisma o request.server.prisma.
  */
 async function prismaPlugin(app) {
+  // En modo test los tests reemplazan app.prisma con el mock manualmente
+  // después de buildApp(). Evitamos instanciar PrismaClient porque los
+  // binarios generados no están disponibles en el entorno de test.
+  if (process.env.NODE_ENV === "test") {
+    app.decorate("prisma", {});
+    return;
+  }
+
+  const { PrismaClient } = require("@prisma/client");
   const prisma = new PrismaClient({
     log:
       process.env.NODE_ENV === "development"
@@ -14,10 +22,7 @@ async function prismaPlugin(app) {
         : ["error"],
   });
 
-  if (process.env.NODE_ENV !== "test") {
-    await prisma.$connect();
-  }
-
+  await prisma.$connect();
   app.decorate("prisma", prisma);
 
   app.addHook("onClose", async () => {

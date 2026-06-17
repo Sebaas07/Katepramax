@@ -20,28 +20,28 @@ const {
 
 async function pedidoRoutes(app) {
   app.post("/pedidos", {
-    schema:     schemas.crearPedido,
-    preHandler: adminOBodega.preHandler,
-    handler:    ctrl.crear,
+    schema:        schemas.crearPedido,
+    preValidation: adminOBodega.preValidation,
+    handler:       ctrl.crear,
   });
 
   app.get("/pedidos", {
-    schema:     schemas.listarPedidos,
-    preHandler: adminOBodega.preHandler,
-    handler:    ctrl.listar,
+    schema:        schemas.listarPedidos,
+    preValidation: adminOBodega.preValidation,
+    handler:       ctrl.listar,
   });
 
   app.get("/pedidos/:id", {
-    schema:     schemas.obtenerPedido,
-    preHandler: adminOBodega.preHandler,
-    handler:    ctrl.obtenerPorId,
+    schema:        schemas.obtenerPedido,
+    preValidation: adminOBodega.preValidation,
+    handler:       ctrl.obtenerPorId,
   });
 
   // Solo Admin puede cancelar un pedido manualmente
   app.patch("/pedidos/:id/estado", {
-    schema:     schemas.cambiarEstadoPedido,
-    preHandler: soloAdmin.preHandler,
-    handler:    ctrl.cambiarEstado,
+    schema:        schemas.cambiarEstadoPedido,
+    preValidation: soloAdmin.preValidation,
+    handler:       ctrl.cambiarEstado,
   });
 }
 
