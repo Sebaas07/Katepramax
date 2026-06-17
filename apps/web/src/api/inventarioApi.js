@@ -2,10 +2,11 @@ import { clienteApi } from "./axiosConfig";
 
 /**
  * inventarioApi.js — Katepramax
- * Alineado con los endpoints reales del backend.
+ * Versión unificada y mejorada (Sprint 2)
  */
+
 const inventarioApi = {
-  // Productos
+  // ─── Productos ────────────────────────────────────────────────────────────
   obtenerProductos: async (filtros = {}) => {
     const params = new URLSearchParams();
     Object.entries(filtros).forEach(([k, v]) => {
@@ -37,7 +38,7 @@ const inventarioApi = {
     return response.data;
   },
 
-  // Entradas
+  // ─── Entradas de Inventario ─────────────────────────────────────────────
   crearEntrada: async (datos) => {
     const response = await clienteApi.post("/inventario", datos);
     return response.data;
@@ -53,7 +54,7 @@ const inventarioApi = {
     return response.data;
   },
 
-  // Movimientos (Sprint 2)
+  // ─── Movimientos de Inventario ──────────────────────────────────────────
   registrarMovimiento: async (datos) => {
     const response = await clienteApi.post("/inventario/movimientos", datos);
     return response.data;
@@ -74,7 +75,7 @@ const inventarioApi = {
     return response.data;
   },
 
-  // Resumen y stock bajo
+  // ─── Resumen y Stock Bajo ───────────────────────────────────────────────
   resumenSemanal: async (semana) => {
     const response = await clienteApi.get(`/inventario/resumen-semanal?semana=${semana}`);
     return response.data;
