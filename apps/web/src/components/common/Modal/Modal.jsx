@@ -2,15 +2,16 @@ import { useState, useEffect } from "react";
 import "./Modal.css";
 
 const Modal = ({ 
-  isOpen, 
-  onClose, 
-  titulo, 
-  children, 
-  textoBotonConfirmar = "Confirmar", 
-  textoBotonCancelar = "Cancelar",
-  onConfirmar,
-  mostrarCancelar = true
-}) => {
+   isOpen, 
+   onClose, 
+   titulo, 
+   children, 
+   textoBotonConfirmar = "Confirmar", 
+   textoBotonCancelar = "Cancelar",
+   onConfirmar,
+   mostrarCancelar = true,
+   disabled = false
+ }) => {
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   const handleConfirmar = () => {
@@ -71,7 +72,7 @@ const Modal = ({
             <button
               className="modal-btn modal-btn--confirmar"
               onClick={handleConfirmar}
-              disabled={isConfirmed}
+              disabled={disabled || isConfirmed}
             >
               {isConfirmed ? "Procesando..." : textoBotonConfirmar}
             </button>

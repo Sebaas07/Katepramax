@@ -1,17 +1,48 @@
 import pedidosApi from "@/api/pedidosApi";
 
+/**
+ * Mapa códigos reales de estado del API portable hacia etiquetas UI legibles.
+ * Códigos posibles desde el backend:
+ *   1  → Pendiente
+ *   2  → Asignado
+ *   3  → En ruta
+ *   4  → Entregado
+ *   5  → Fallido
+ */
+const MAPA_ESTADO = {
+  1: "Pendiente",
+  2: "Asignado",
+  3: "En ruta",
+  4: "Entregado",
+  5: "Fallido",
+};
+
+const normalizarEstado = (raw) => {
+  if (!raw && raw !== 0) return null;
+  // Ya es string legible
+  if (typeof raw === "string" && /^[A-Za-z]/.test(raw)) return raw;
+  // Es código numérico
+  const n = typeof raw === "number" ? raw : parseInt(String(raw), 10);
+  return MAPA_ESTADO[n] ?? String(raw);
+};
+
 const pedidosService = {
   obtenerPedidos: async (filtros = {}) => {
     try {
       const f = { ...filtros };
-      if (f.estado) f.estado = f.estado.charAt(0).toUpperCase() + f.estado.slice(1).toLowerCase();
+      // Si el usuario envía estado en mayúscula, el backend portable acepta ambos formatos
+      // No necesitamos transformar porque el backend portable mapea estados por insensibilidad
       return await pedidosApi.obtenerPedidos(f);
     } catch (e) { console.error("pedidosService.obtenerPedidos:", e); throw e; }
   },
   obtenerPedidoPorId: async (id) => {
     try {
       if (!id) throw new Error("Se requiere el ID del pedido.");
-      return await pedidosApi.obtenerPedidoPorId(id);
+      const p = await pedidosApi.obtenerPedidoPorId(id);
+      return {
+        ...p,
+        estado: normalizarEstado(p.estado),
+      };
     } catch (e) { console.error("pedidosService.obtenerPedidoPorId:", e); throw e; }
   },
   crearPedido: async ({ clienteId, items, observaciones }) => {
@@ -22,8 +53,9 @@ const pedidosService = {
         if (!item.productoId) throw new Error("Todos los ítems deben tener un producto seleccionado.");
         if (!item.cantidad || parseInt(item.cantidad) < 1) throw new Error("La cantidad de cada ítem debe ser mayor a 0.");
       }
-      return await pedidosApi.crearPedido({
+      const payload = {
         clienteId: parseInt(clienteId),
+        sedeId:     undefined,
         observaciones: observaciones?.trim() || undefined,
         items: items.map((item) => ({
           productoId: item.productoId,
@@ -31,7 +63,8 @@ const pedidosService = {
           ...(item.precioUnitario !== "" && item.precioUnitario != null
             ? { precioUnitario: parseFloat(item.precioUnitario) } : {}),
         })),
-      });
+      };
+      return await pedidosApi.crearPedido(payload);
     } catch (e) { console.error("pedidosService.crearPedido:", e); throw e; }
   },
   asignarEntregador: async (pedidoId, entregadorId) => {
@@ -51,5 +84,12 @@ const pedidosService = {
       return await pedidosApi.actualizarEstadoPedido(pedidoId, "Cancelado");
     } catch (e) { console.error("pedidosService.cancelarPedido:", e); throw e; }
   },
+  actualizarEstadoPedido: async (pedidoId, estado) => {
+    try {
+      if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
+      return await pedidosApi.actualizarEstadoPedido(pedidoId, estado);
+    } catch (e) { console.error("pedidosService.actualizarEstadoPedido:", e); throw e; }
+  },
 };
+
 export default pedidosService;

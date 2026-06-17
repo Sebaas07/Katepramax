@@ -1,341 +1,422 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import contabilidadService from "@/services/contabilidad.service";
-import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
-import Modal from "@/components/common/Modal/Modal";
-import { formatCOP, formatFecha, getSemanaISO } from "@/utils/formatters";
+import { getSemanaISO, formatFecha } from "@/utils/formatters";
+import {
+  construirPayloadContabilidad,
+  esCampoNumerico,
+  esCampoTexto,
+  normalizarNumeroInput,
+  normalizarSemana,
+  sanitizarTexto,
+  validarFormularioContabilidad,
+} from "@/utils/contabilidadForm";
+
+// ── Tabs
+import IngresosTab      from "../IngresosTab";
+import EgresosTab       from "../EgresosTab";
+import CarteraTab       from "../CarteraTab";
+import ProveedoresTab   from "../ProveedoresTab";
+import PanelGeneralTab  from "../PanelGeneralTab";
+import ArqueoSemanalTab from "../ArqueoSemanalTab";
+
+// ── Shared UI
+import { Spinner, EmptyState } from "../ContabilidadUI";
+import ContabilidadModal       from "../ContabilidadModal";
+import Modal                   from "@/components/common/Modal/Modal";
+
 import "./ContabilidadPage.css";
 
-// ─── Constantes ───────────────────────────────────────────────
-const HOY        = new Date().toISOString().split("T")[0];
-const SEM_ACTUAL = getSemanaISO(new Date());
+// ─────────────────────────────────────────────────────────────
+const HOY         = new Date().toISOString().split("T")[0];
+const SEM_ACTUAL  = getSemanaISO(new Date());
 
 const SEDES = [
-  { id: 1, nombre: "Bogotá"        },
+  { id: 1, nombre: "Bogota"        },
   { id: 2, nombre: "Cartagena"     },
   { id: 3, nombre: "Villavicencio" },
 ];
 
 const TABS = [
-  { key: "ingresos",  label: "Ingresos",      icon: "trending_up"    },
-  { key: "egresos",   label: "Egresos",        icon: "trending_down"  },
-  { key: "cartera",   label: "Cartera",        icon: "account_balance"},
-  { key: "arqueo",    label: "Arqueo Semanal", icon: "summarize"      },
+  { key: "ingresos",    label: "Ingresos Diarios", icon: "trending_up"    },
+  { key: "egresos",     label: "Egresos Diarios",  icon: "trending_down"  },
+  { key: "cartera",     label: "Cartera",           icon: "account_balance"},
+  { key: "proveedores", label: "Proveedores",       icon: "conveyor_belt"  },
+  { key: "panel",       label: "Panel General",     icon: "dashboard"      },
+  { key: "arqueo",      label: "Arqueo Semanal",    icon: "summarize"      },
 ];
 
-// ─── Spinner ──────────────────────────────────────────────────
-const Spinner = () => (
-  <div className="cont-spinner-wrap">
-    <div className="cont-spinner" />
-    <span>Cargando...</span>
-  </div>
-);
+const FORM_VACIO = {
+  fecha:        HOY,
+  sedeId:       "",
+  efectivo:     "",
+  cuentas:      "",
+  observacion:  "",
+  concepto:     "",
+  total:        "",
+  observaciones:"",
+  saldoDia:     "",
+  proveedorId:  "",
+  valorAbono:   "",
+  tipoAbono:    "abono_proveedor",
+};
 
-// ─── Tarjeta resumen ──────────────────────────────────────────
-const TarjetaResumen = ({ titulo, icono, color, filas, total }) => (
-  <div className="cont-resumen-card" style={{ "--card-accent": color }}>
-    <div className="cont-resumen-card__header">
-      <span className="material-symbols-outlined">{icono}</span>
-      <h4>{titulo}</h4>
-    </div>
-    <div className="cont-resumen-card__filas">
-      {filas.map((f, i) => (
-        <div key={i} className="cont-resumen-card__fila">
-          <span>{f.sede}</span>
-          <strong>{formatCOP(f.valor)}</strong>
-        </div>
-      ))}
-    </div>
-    <div className="cont-resumen-card__total">
-      <span>Total semana</span>
-      <span>{formatCOP(total)}</span>
-    </div>
-  </div>
-);
-
-// ─── Bloque de arqueo ─────────────────────────────────────────
-const ArqueoBloque = ({ numero, titulo, columnas, filas, totalFila }) => (
-  <div className="arqueo-bloque">
-    <h3 className="arqueo-bloque__titulo">
-      <span className="arqueo-bloque__num">{numero}</span>
-      {titulo}
-    </h3>
-    <div className="table-responsive">
-      <table className="arqueo-tabla">
-        <thead>
-          <tr>{columnas.map((c, i) => <th key={i}>{c}</th>)}</tr>
-        </thead>
-        <tbody>
-          {filas.map((fila, i) => (
-            <tr key={i}>
-              {fila.map((celda, j) => <td key={j}>{celda ?? "—"}</td>)}
-            </tr>
-          ))}
-          {totalFila && (
-            <tr className="arqueo-tabla__total">
-              {totalFila.map((c, i) => <td key={i}>{c}</td>)}
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
-
-// ═══════════════════════════════════════════════════════════════
-// PÁGINA PRINCIPAL
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────
 const ContabilidadPage = () => {
   const { usuario, esAdmin, esBodega } = useAuth();
   const sedeIdUsuario  = usuario?.sedeId ?? null;
   const puedeRegistrar = esAdmin || esBodega;
 
-  // ── Estado ─────────────────────────────────────────────────
-  const [tab,      setTab]      = useState("ingresos");
-  const [cargando, setCargando] = useState(false);
-  const [guardando, setGuardando] = useState(false);
+  // ── Estado de datos ───────────────────────────────────────
+  const [tab,         setTab]         = useState("ingresos");
+  const [cargando,    setCargando]    = useState(false);
+  const [ingresos,    setIngresos]    = useState([]);
+  const [egresos,     setEgresos]     = useState([]);
+  const [cartera,     setCartera]     = useState([]);
+  const [proveedores, setProveedores] = useState([]);
+  const [resumenProv, setResumenProv] = useState([]);
+  const [arqueo,      setArqueo]      = useState(null);
+  const [arqueoError, setArqueoError] = useState("");
+  const [panelGeneral,setPanelGeneral]= useState(null);
 
-  const [ingresos, setIngresos] = useState([]);
-  const [egresos,  setEgresos]  = useState([]);
-  const [cartera,  setCartera]  = useState([]);
-  const [arqueo,   setArqueo]   = useState(null);
+  // ── Filtros ───────────────────────────────────────────────
+  const [filtroSemana,  setFiltroSemana]   = useState(String(SEM_ACTUAL));
+  const [filtroSedeId,  setFiltroSedeId]   = useState(sedeIdUsuario ? String(sedeIdUsuario) : "");
+  const [filtroPanelF,  setFiltroPanelFecha] = useState(HOY);
 
-  // Filtros
-  const [filtroSemana, setFiltroSemana] = useState(String(SEM_ACTUAL));
-  const [filtroSedeId, setFiltroSedeId] = useState(
-    sedeIdUsuario ? String(sedeIdUsuario) : ""
-  );
+  // ── Estado del modal ──────────────────────────────────────
+  const [modalOpen,    setModalOpen]    = useState(false);
+  const [modalTipo,    setModalTipo]    = useState("");
+  const [itemEditar,   setItemEditar]   = useState(null);
+  const [itemEliminar, setItemEliminar] = useState(null);
+  const [eliminarTipo, setEliminarTipo] = useState("");
 
-  // Modales
-  const [modalIngAbierto,     setModalIngAbierto]     = useState(false);
-  const [modalEgrAbierto,     setModalEgrAbierto]     = useState(false);
-  const [modalCartAbierto,    setModalCartAbierto]    = useState(false);
-  const [modalConfirmAbierto, setModalConfirmAbierto] = useState(false);
-  const [itemEditar,          setItemEditar]          = useState(null);
-  const [itemEliminar,        setItemEliminar]        = useState(null);
-  const [tipoEliminar,        setTipoEliminar]        = useState("");
+  const [form, setForm] = useState(() => ({
+    ...FORM_VACIO,
+    sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "",
+  }));
 
-  // Forms
-  const formIngInicial  = { fecha: HOY, sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "", efectivo: "", cuentas: "", observacion: "" };
-  const formEgrInicial  = { fecha: HOY, sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "", concepto: "", total: "", observaciones: "" };
-  const formCartInicial = { fecha: HOY, sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "", saldoDia: "" };
+  const handleFormChange = useCallback((e) => {
+    const { name, value } = e.target;
+    if (esCampoNumerico(name)) {
+      setForm((prev) => ({ ...prev, [name]: normalizarNumeroInput(value) }));
+      return;
+    }
+    if (esCampoTexto(name)) {
+      setForm((prev) => ({ ...prev, [name]: sanitizarTexto(value, name === "concepto" ? 200 : 500) }));
+      return;
+    }
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }, []);
 
-  const [formIng,  setFormIng]  = useState(formIngInicial);
-  const [formEgr,  setFormEgr]  = useState(formEgrInicial);
-  const [formCart, setFormCart] = useState(formCartInicial);
+  const handleFiltroSemana = useCallback((valor) => {
+    setFiltroSemana(normalizarSemana(valor));
+  }, []);
 
-  // ── Carga ──────────────────────────────────────────────────
-  const filtrosBase = {
-    semana: filtroSemana || undefined,
-    sedeId: filtroSedeId || undefined,
-  };
-
+  // ── Carga de datos ────────────────────────────────────────
   const cargarDatos = useCallback(async () => {
     setCargando(true);
+    setArqueoError("");
     try {
-      if      (tab === "ingresos") setIngresos(await contabilidadService.obtenerIngresos(filtrosBase));
-      else if (tab === "egresos")  setEgresos(await contabilidadService.obtenerEgresos(filtrosBase));
-      else if (tab === "cartera")  setCartera(await contabilidadService.obtenerCartera(filtrosBase));
-      else if (tab === "arqueo")   setArqueo(await contabilidadService.obtenerArqueo(parseInt(filtroSemana) || SEM_ACTUAL));
+      const semanaNum = parseInt(filtroSemana, 10) || SEM_ACTUAL;
+      const fBase = { semana: filtroSemana || undefined, sedeId: filtroSedeId || undefined };
+      const fSem  = { semana: filtroSemana || undefined };
+
+      if (tab === "ingresos") {
+        setIngresos(await contabilidadService.obtenerIngresos(fBase));
+      } else if (tab === "egresos") {
+        setEgresos(await contabilidadService.obtenerEgresos(fBase));
+      } else if (tab === "cartera") {
+        setCartera(await contabilidadService.obtenerCartera(fBase));
+      } else if (tab === "proveedores") {
+        const [lista, resumen] = await Promise.all([
+          contabilidadService.obtenerProveedores(fBase),
+          contabilidadService.obtenerResumenProveedores(semanaNum),
+        ]);
+        setProveedores(lista);
+        setResumenProv(resumen);
+      } else if (tab === "arqueo") {
+        const [reporte, carteraSem, invSem] = await Promise.all([
+          contabilidadService.obtenerArqueo(semanaNum),
+          contabilidadService.obtenerCartera(fSem),
+          contabilidadService.obtenerInventarioSemanal(semanaNum),
+        ]);
+        if (reporte) {
+          setArqueo({ ...reporte, carteraSemana: carteraSem, inventarioSemana: invSem });
+        } else {
+          setArqueo(null);
+          setArqueoError("No se pudo cargar el arqueo. Verifica que existan registros para esta semana.");
+        }
+      } else if (tab === "panel") {
+        setPanelGeneral(await contabilidadService.obtenerPanelGeneral(filtroPanelF));
+      }
     } catch (err) {
-      toast.error("Error al cargar datos: " + err.message);
+      toast.error("Error al cargar datos: " + (err?.message || "desconocido"));
     } finally {
       setCargando(false);
     }
-  }, [tab, filtroSemana, filtroSedeId]);
+  }, [tab, filtroSemana, filtroSedeId, filtroPanelF]);
 
-  useEffect(() => { cargarDatos(); }, [cargarDatos]);
+  useEffect(() => {
+    const id = window.setTimeout(() => { void cargarDatos(); }, 0);
+    return () => window.clearTimeout(id);
+  }, [cargarDatos]);
 
-  // ── Total calculado en tiempo real ─────────────────────────
-  const totalIngreso = (parseFloat(formIng.efectivo) || 0) +
-                       (parseFloat(formIng.cuentas)  || 0);
+  // ── Datos mapeados (nombre de sede/proveedor inyectado) ───
+  const mapSede = useCallback((items) =>
+    items.map((i) => ({
+      ...i,
+      sede: i.sede?.nombre ?? SEDES.find((s) => s.id === i.sedeId)?.nombre ?? `Sede ${i.sedeId}`,
+      observaciones: i.observacion ?? i.observaciones ?? "",
+    })), []);
 
-  // ── Resúmenes por sede ─────────────────────────────────────
-  const mapSede = (items) => items.map((i) => ({
-    ...i,
-    sede: SEDES.find((s) => s.id === i.sedeId)?.nombre ?? `Sede ${i.sedeId}`,
-  }));
+  const mapProveedor = useCallback((items) =>
+    items.map((i) => ({
+      ...i,
+      sede:      i.sede?.nombre ?? SEDES.find((s) => s.id === i.sedeId)?.nombre ?? `Sede ${i.sedeId}`,
+      proveedor: i.proveedor?.nombre ?? i.proveedorNombre ?? `Proveedor ${i.proveedorId ?? ""}`.trim(),
+      observacion: i.observacion ?? "",
+    })), []);
 
-  const resumenPorSede = (items, campo) => SEDES.map((s) => ({
-    sede:  s.nombre,
-    valor: items.filter((i) => i.sedeId === s.id)
-                .reduce((sum, i) => sum + (parseFloat(i[campo]) || 0), 0),
-  }));
+  const ingresosMapeados  = useMemo(() => mapSede(ingresos),        [ingresos,    mapSede]);
+  const egresosMapeados   = useMemo(() => mapSede(egresos),         [egresos,     mapSede]);
+  const carteraMapeada    = useMemo(() => mapSede(cartera),         [cartera,     mapSede]);
+  const proveedoresMap    = useMemo(() => mapProveedor(proveedores),[proveedores, mapProveedor]);
 
-  const totalDeSede = (items, campo) =>
-    items.reduce((sum, i) => sum + (parseFloat(i[campo]) || 0), 0);
+  // ── Cálculo total del form ingreso ────────────────────────
+  const totalIngresoForm = useMemo(
+    () => (parseFloat(form.efectivo) || 0) + (parseFloat(form.cuentas) || 0),
+    [form.efectivo, form.cuentas]
+  );
 
-  // ── Handlers ───────────────────────────────────────────────
-  const hIng  = (e) => setFormIng((p)  => ({ ...p, [e.target.name]: e.target.value }));
-  const hEgr  = (e) => setFormEgr((p)  => ({ ...p, [e.target.name]: e.target.value }));
-  const hCart = (e) => setFormCart((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const semanaNumero = useMemo(() => parseInt(filtroSemana, 10) || SEM_ACTUAL, [filtroSemana]);
+  const erroresForm = useMemo(
+    () => validarFormularioContabilidad({ modalTipo, form }),
+    [modalTipo, form]
+  );
 
-  // ── Guardar ingreso ─────────────────────────────────────────
-  const handleGuardarIngreso = async () => {
-    setGuardando(true);
-    try {
-      if (itemEditar) {
-        await contabilidadService.editarIngreso(itemEditar.id, {
-          efectivo: parseFloat(formIng.efectivo) || 0,
-          cuentas:  parseFloat(formIng.cuentas)  || 0,
-          observacion: formIng.observacion,
-        });
-        toast.success("Ingreso actualizado.");
-      } else {
-        await contabilidadService.registrarIngreso(formIng);
-        toast.success("Ingreso registrado.");
-      }
-      setModalIngAbierto(false);
-      setItemEditar(null);
-      await cargarDatos();
-    } catch (err) { toast.error(err.message); }
-    finally      { setGuardando(false); }
-  };
+  // ── Handlers de modales ───────────────────────────────────
+  const resetForm = useCallback(() => ({
+    ...FORM_VACIO,
+    sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "",
+  }), [sedeIdUsuario]);
 
-  // ── Guardar egreso ──────────────────────────────────────────
-  const handleGuardarEgreso = async () => {
-    setGuardando(true);
-    try {
-      if (itemEditar) {
-        await contabilidadService.editarEgreso(itemEditar.id, {
-          concepto:     formEgr.concepto,
-          total:        parseFloat(formEgr.total) || 0,
-          observaciones: formEgr.observaciones,
-        });
-        toast.success("Egreso actualizado.");
-      } else {
-        await contabilidadService.registrarEgreso(formEgr);
-        toast.success("Egreso registrado.");
-      }
-      setModalEgrAbierto(false);
-      setItemEditar(null);
-      await cargarDatos();
-    } catch (err) { toast.error(err.message); }
-    finally      { setGuardando(false); }
-  };
-
-  // ── Guardar cartera ─────────────────────────────────────────
-  const handleGuardarCartera = async () => {
-    setGuardando(true);
-    try {
-      await contabilidadService.registrarCartera(formCart);
-      toast.success("Cartera registrada.");
-      setModalCartAbierto(false);
-      await cargarDatos();
-    } catch (err) { toast.error(err.message); }
-    finally      { setGuardando(false); }
-  };
-
-  // ── Eliminar ────────────────────────────────────────────────
-  const handleEliminar = async () => {
-    setGuardando(true);
-    try {
-      if (tipoEliminar === "ingreso") await contabilidadService.eliminarIngreso(itemEliminar.id);
-      else                            await contabilidadService.eliminarEgreso(itemEliminar.id);
-      toast.success("Registro eliminado.");
-      setModalConfirmAbierto(false);
-      await cargarDatos();
-    } catch (err) { toast.error(err.message); }
-    finally      { setGuardando(false); }
-  };
-
-  // ── Abrir modales ───────────────────────────────────────────
-  const abrirNuevo = () => {
-    setItemEditar(null);
-    if (tab === "ingresos") { setFormIng(formIngInicial);   setModalIngAbierto(true);  }
-    if (tab === "egresos")  { setFormEgr(formEgrInicial);   setModalEgrAbierto(true);  }
-    if (tab === "cartera")  { setFormCart(formCartInicial); setModalCartAbierto(true); }
-  };
-
-  const abrirEditar = (item, tipo) => {
+  // abrirEditarProv declarado primero — es referenciado en accsProveedores de ProveedoresTab
+  const abrirEditarProv = useCallback((item) => {
     setItemEditar(item);
-    if (tipo === "ingreso") {
-      setFormIng({ fecha: item.fecha?.split("T")[0] ?? HOY, sedeId: String(item.sedeId),
-        efectivo: String(item.efectivo ?? ""), cuentas: String(item.cuentas ?? ""),
-        observacion: item.observacion ?? "" });
-      setModalIngAbierto(true);
-    } else {
-      setFormEgr({ fecha: item.fecha?.split("T")[0] ?? HOY, sedeId: String(item.sedeId),
-        concepto: item.concepto ?? "", total: String(item.total ?? ""),
-        observaciones: item.observaciones ?? "" });
-      setModalEgrAbierto(true);
+    setModalTipo("abono");
+    setForm((prev) => ({
+      ...prev,
+      fecha:       HOY,
+      sedeId:      String(item.sedeId ?? sedeIdUsuario ?? ""),
+      proveedorId: String(item.proveedorId ?? ""),
+      valorAbono:  String(item.valorPagado ?? ""),
+      observacion: item.observacion ?? "",
+      tipoAbono:   "abono_proveedor",
+    }));
+    setModalOpen(true);
+  }, [sedeIdUsuario]);
+
+  const abrirAbono = useCallback((item) => {
+    setItemEditar(null);
+    setModalTipo("abono");
+    setForm((prev) => ({
+      ...prev,
+      fecha:       HOY,
+      sedeId:      String(item.sedeId ?? sedeIdUsuario ?? ""),
+      proveedorId: String(item.proveedorId ?? ""),
+      valorAbono:  "",
+      observacion: "",
+      tipoAbono:   "abono_proveedor",
+    }));
+    setModalOpen(true);
+  }, [sedeIdUsuario]);
+
+  const abrirNuevo = useCallback(() => {
+    setItemEditar(null);
+    setModalTipo(
+      tab === "cartera"     ? "cartera" :
+      tab === "proveedores" ? "abono"   : tab
+    );
+    setForm(resetForm());
+    setModalOpen(true);
+  }, [tab, resetForm]);
+
+  const abrirEditar = useCallback((item, tipo) => {
+    setItemEditar(item);
+    setModalTipo(tipo);
+    setForm((prev) => ({
+      ...prev,
+      fecha:         item.fecha?.split("T")[0] ?? HOY,
+      sedeId:        String(item.sedeId),
+      efectivo:      String(item.efectivo      ?? ""),
+      cuentas:       String(item.cuentas       ?? ""),
+      observacion:   item.observacion ?? "",
+      concepto:      item.concepto     ?? "",
+      total:         String(item.total ?? ""),
+      observaciones: item.observacion ?? item.observaciones ?? "",
+      saldoDia:      String(item.saldoDia ?? ""),
+      proveedorId:   String(item.proveedorId ?? ""),
+      valorAbono:    String(item.valorPagado ?? ""),
+    }));
+    setModalOpen(true);
+  }, []);
+
+  const abrirEliminar = useCallback((item, tipo) => {
+    setItemEliminar(item);
+    setEliminarTipo(tipo);
+  }, []);
+
+  const cerrarModal = useCallback(() => {
+    setModalOpen(false);
+    setItemEditar(null);
+  }, []);
+
+  // ── Submit del modal ──────────────────────────────────────
+  const handleSubmit = useCallback(async () => {
+    setCargando(true);
+    try {
+      const payload = construirPayloadContabilidad(modalTipo, form);
+
+      if (modalTipo === "ingreso") {
+        const datos = {
+          efectivo: payload.efectivo,
+          cuentas: payload.cuentas,
+          observacion: payload.observacion,
+        };
+        if (itemEditar) {
+          await contabilidadService.editarIngreso(itemEditar.id, datos);
+          toast.success("Ingreso actualizado.");
+        } else {
+          await contabilidadService.registrarIngreso(payload);
+          toast.success("Ingreso registrado.");
+        }
+      } else if (modalTipo === "egreso") {
+        const datos = {
+          concepto: payload.concepto,
+          total: payload.total,
+          observaciones: payload.observacion,
+        };
+        if (itemEditar) {
+          await contabilidadService.editarEgreso(itemEditar.id, datos);
+          toast.success("Egreso actualizado.");
+        } else {
+          await contabilidadService.registrarEgreso(payload);
+          toast.success("Egreso registrado.");
+        }
+      } else if (modalTipo === "cartera") {
+        const datos = {
+          fecha: payload.fecha,
+          semana: payload.semana,
+          sedeId: payload.sedeId,
+          saldoDia: payload.saldoDia,
+        };
+        if (itemEditar) {
+          await contabilidadService.editarCartera(itemEditar.id, datos);
+          toast.success("Cartera actualizada.");
+        } else {
+          await contabilidadService.registrarCartera(payload);
+          toast.success("Cartera registrada.");
+        }
+      } else if (modalTipo === "abono") {
+        const datos = {
+          valorPagado: payload.valorPagado,
+          observacion: payload.observacion,
+        };
+        if (itemEditar) {
+          await contabilidadService.editarPagoProveedor(itemEditar.id, datos);
+          toast.success("Abono actualizado.");
+        } else {
+          await contabilidadService.registrarPagoProveedor(payload);
+          toast.success("Abono registrado.");
+        }
+      } else {
+        throw new Error("Tipo de formulario no válido.");
+      }
+      setModalOpen(false);
+      setItemEditar(null);
+      await cargarDatos();
+    } catch (err) {
+      toast.error(err?.message || "No fue posible guardar el registro.");
+    } finally {
+      setCargando(false);
     }
-  };
+  }, [modalTipo, itemEditar, form, cargarDatos]);
 
-  const abrirEliminar = (item, tipo) => {
-    setItemEliminar(item); setTipoEliminar(tipo); setModalConfirmAbierto(true);
-  };
+  const handleEliminar = useCallback(async () => {
+    if (!itemEliminar) return;
+    setCargando(true);
+    try {
+      if (eliminarTipo === "ingreso") await contabilidadService.eliminarIngreso(itemEliminar.id);
+      else if (eliminarTipo === "egreso") await contabilidadService.eliminarEgreso(itemEliminar.id);
+      else if (eliminarTipo === "cartera") await contabilidadService.eliminarCartera(itemEliminar.id);
+      else if (eliminarTipo === "abono") await contabilidadService.eliminarPagoProveedor(itemEliminar.id);
+      else throw new Error("Tipo de registro no válido.");
+      toast.success("Registro eliminado.");
+    } catch (err) {
+      toast.error(err?.message || "No fue posible eliminar el registro.");
+    } finally {
+      setCargando(false);
+      setItemEliminar(null);
+      setEliminarTipo("");
+      await cargarDatos();
+    }
+  }, [eliminarTipo, itemEliminar, cargarDatos]);
 
-  // ── Columnas ────────────────────────────────────────────────
-  const colsIngresos = [
-    { campo: "fecha",      label: "Fecha",    tipo: "fecha"  },
-    { campo: "semana",     label: "Sem.",      tipo: "texto"  },
-    { campo: "sede",       label: "Sede",      tipo: "texto"  },
-    { campo: "efectivo",   label: "Efectivo",  tipo: "moneda" },
-    { campo: "cuentas",    label: "Cuentas",   tipo: "moneda" },
-    { campo: "total",      label: "Total",     tipo: "moneda" },
-    { campo: "observacion",label: "Obs.",      tipo: "texto"  },
-  ];
-  const colsEgresos = [
-    { campo: "fecha",         label: "Fecha",    tipo: "fecha"  },
-    { campo: "semana",        label: "Sem.",      tipo: "texto"  },
-    { campo: "sede",          label: "Sede",      tipo: "texto"  },
-    { campo: "concepto",      label: "Concepto",  tipo: "texto"  },
-    { campo: "total",         label: "Total",     tipo: "moneda" },
-    { campo: "observaciones", label: "Obs.",      tipo: "texto"  },
-  ];
-  const colsCartera = [
-    { campo: "fecha",         label: "Fecha",          tipo: "fecha"  },
-    { campo: "semana",        label: "Sem.",            tipo: "texto"  },
-    { campo: "sede",          label: "Sede",            tipo: "texto"  },
-    { campo: "saldoDia",      label: "Saldo del Día",   tipo: "moneda" },
-    { campo: "saldoAnterior", label: "Saldo Anterior",  tipo: "moneda" },
-    { campo: "variacion",     label: "Variación",       tipo: "moneda" },
-  ];
+  // ── UI derivada ───────────────────────────────────────────
+  const mostrarBotonRegistrar =
+    puedeRegistrar && ["ingresos", "egresos", "cartera", "proveedores"].includes(tab);
 
-  const accsIngresos = esAdmin ? (row) => [
-    { label: "Editar",   icon: "edit",   onClick: () => abrirEditar(row, "ingreso") },
-    { label: "Eliminar", icon: "delete", variante: "danger", onClick: () => abrirEliminar(row, "ingreso") },
-  ] : undefined;
+  const textoBotonNuevo = {
+    ingresos:    "Nuevo ingreso",
+    egresos:     "Nuevo egreso",
+    cartera:     "Registrar cartera",
+    proveedores: "Registrar abono",
+  }[tab] ?? "Nuevo";
 
-  const accsEgresos = esAdmin ? (row) => [
-    { label: "Editar",   icon: "edit",   onClick: () => abrirEditar(row, "egreso") },
-    { label: "Eliminar", icon: "delete", variante: "danger", onClick: () => abrirEliminar(row, "egreso") },
-  ] : undefined;
-
-  // ── Render ──────────────────────────────────────────────────
+  // ── RENDER ────────────────────────────────────────────────
   return (
     <div className="cont-page">
+
       {/* Header */}
       <div className="cont-page__header">
         <div>
-          <h1>Contabilidad</h1>
-          <p className="cont-subtitulo">Semana {filtroSemana}</p>
+          <h1 className="cont-page__title">Contabilidad</h1>
+          <p className="cont-subtitulo">
+            {tab === "panel" ? formatFecha(filtroPanelF) : `Semana ${filtroSemana || SEM_ACTUAL}`}
+          </p>
         </div>
         <div className="cont-page__acciones">
-          {esAdmin && (
+          {esAdmin && !["arqueo", "panel"].includes(tab) && (
             <div className="filter-group">
               <label htmlFor="cont-sede">Sede</label>
-              <select id="cont-sede" value={filtroSedeId}
-                onChange={(e) => setFiltroSedeId(e.target.value)} className="filter-select">
+              <select id="cont-sede" value={filtroSedeId} onChange={(e) => setFiltroSedeId(e.target.value)} className="filter-select">
                 <option value="">Todas</option>
                 {SEDES.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
               </select>
             </div>
           )}
-          <div className="filter-group">
-            <label htmlFor="cont-semana">Semana</label>
-            <input id="cont-semana" type="number" min="1" max="53"
-              value={filtroSemana} onChange={(e) => setFiltroSemana(e.target.value)}
-              className="filter-select" style={{ minWidth: 72 }} />
-          </div>
-          {puedeRegistrar && tab !== "arqueo" && (
-            <button className="btn-cta" type="button" onClick={abrirNuevo}>
+          {tab !== "panel" && (
+            <div className="filter-group">
+              <label htmlFor="cont-semana">Semana</label>
+              <input id="cont-semana" type="number" min="1" max="53"
+                value={filtroSemana} onChange={(e) => handleFiltroSemana(e.target.value)}
+                className="filter-select" style={{ minWidth: 72 }} />
+            </div>
+          )}
+          {tab === "panel" && (
+            <div className="filter-group">
+              <label htmlFor="cont-panel-fecha">Fecha panel</label>
+              <input id="cont-panel-fecha" type="date" max={HOY}
+                value={filtroPanelF} onChange={(e) => setFiltroPanelFecha(e.target.value)}
+                className="filter-select" />
+            </div>
+          )}
+          {mostrarBotonRegistrar && (
+            <button className="btn-primary" type="button" onClick={abrirNuevo}>
               <span className="material-symbols-outlined">add</span>
-              {tab === "ingresos" ? "Nuevo ingreso"
-                : tab === "egresos" ? "Nuevo egreso"
-                : "Registrar cartera"}
+              {textoBotonNuevo}
             </button>
           )}
         </div>
@@ -344,9 +425,11 @@ const ContabilidadPage = () => {
       {/* Tabs */}
       <div className="cont-tabs">
         {TABS.map((t) => (
-          <button key={t.key} type="button"
+          <button
+            key={t.key} type="button"
             className={`cont-tab-btn ${tab === t.key ? "cont-tab-btn--active" : ""}`}
-            onClick={() => setTab(t.key)}>
+            onClick={() => setTab(t.key)}
+          >
             <span className="material-symbols-outlined">{t.icon}</span>
             {t.label}
           </button>
@@ -357,294 +440,108 @@ const ContabilidadPage = () => {
       {cargando ? <Spinner /> : (
         <div className="cont-tab-body">
 
-          {/* ── INGRESOS ── */}
           {tab === "ingresos" && (
-            <>
-              {ingresos.length > 0 && (
-                <div className="cont-resumen-row">
-                  <TarjetaResumen titulo="Efectivo" icono="payments"
-                    color="var(--aged-gold)"
-                    filas={resumenPorSede(ingresos, "efectivo")}
-                    total={totalDeSede(ingresos, "efectivo")} />
-                  <TarjetaResumen titulo="Cuentas / Transferencias" icono="account_balance"
-                    color="var(--secondary)"
-                    filas={resumenPorSede(ingresos, "cuentas")}
-                    total={totalDeSede(ingresos, "cuentas")} />
-                  <TarjetaResumen titulo="Total Ingresos" icono="trending_up"
-                    color="#4ade80"
-                    filas={resumenPorSede(ingresos, "total")}
-                    total={totalDeSede(ingresos, "total")} />
-                </div>
-              )}
-              <div className="cont-tabla-wrap">
-                <TablaGenerica columnas={colsIngresos} datos={mapSede(ingresos)}
-                  filasPorPagina={10} mostrarBuscador
-                  buscarEnCampos={["sede", "observacion"]} paginacion
-                  renderAcciones={accsIngresos} />
-              </div>
-            </>
+            <IngresosTab
+              ingresos={ingresosMapeados}
+              sedes={SEDES}
+              esAdmin={esAdmin}
+              onEditar={abrirEditar}
+              onEliminar={abrirEliminar}
+            />
           )}
 
-          {/* ── EGRESOS ── */}
           {tab === "egresos" && (
-            <>
-              {egresos.length > 0 && (
-                <div className="cont-resumen-row">
-                  <TarjetaResumen titulo="Total Egresos" icono="trending_down"
-                    color="var(--error)"
-                    filas={resumenPorSede(egresos, "total")}
-                    total={totalDeSede(egresos, "total")} />
-                </div>
-              )}
-              <div className="cont-tabla-wrap">
-                <TablaGenerica columnas={colsEgresos} datos={mapSede(egresos)}
-                  filasPorPagina={10} mostrarBuscador
-                  buscarEnCampos={["sede", "concepto", "observaciones"]} paginacion
-                  renderAcciones={accsEgresos} />
-              </div>
-            </>
+            <EgresosTab
+              egresos={egresosMapeados}
+              sedes={SEDES}
+              esAdmin={esAdmin}
+              onEditar={abrirEditar}
+              onEliminar={abrirEliminar}
+            />
           )}
 
-          {/* ── CARTERA ── */}
           {tab === "cartera" && (
-            <>
-              {cartera.length > 0 && (
-                <div className="cont-resumen-row">
-                  <TarjetaResumen titulo="Cartera Actual por Sede" icono="account_balance"
-                    color="var(--primary)"
-                    filas={SEDES.map((s) => {
-                      const reg = [...cartera].filter((c) => c.sedeId === s.id)
-                        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
-                      return { sede: s.nombre, valor: reg?.saldoDia ?? 0 };
-                    })}
-                    total={cartera.reduce((s, c) => s + (parseFloat(c.saldoDia) || 0), 0)} />
-                </div>
-              )}
-              <div className="cont-tabla-wrap">
-                <TablaGenerica columnas={colsCartera} datos={mapSede(cartera)}
-                  filasPorPagina={10} mostrarBuscador
-                  buscarEnCampos={["sede"]} paginacion />
-              </div>
-            </>
+            <CarteraTab
+              cartera={carteraMapeada}
+              sedes={SEDES}
+              esAdmin={esAdmin}
+              onEditar={abrirEditar}
+              onEliminar={abrirEliminar}
+            />
           )}
 
-          {/* ── ARQUEO ── */}
+          {tab === "proveedores" && (
+            <ProveedoresTab
+              proveedores={proveedoresMap}
+              resumenProv={resumenProv}
+              esAdmin={esAdmin}
+              onAbonar={abrirAbono}
+              onEditar={abrirEditarProv}
+              onEliminar={abrirEliminar}
+            />
+          )}
+
+          {tab === "panel" && !panelGeneral && (
+            <EmptyState
+              icono="dashboard"
+              titulo={`No hay datos del panel general para ${formatFecha(filtroPanelF)}.`}
+              detalle="Revisa que existan ingresos, egresos, cartera o stock para la fecha seleccionada."
+            />
+          )}
+
+          {tab === "panel" && panelGeneral && (
+            <PanelGeneralTab
+              panelGeneral={{ ...panelGeneral, _sedes: SEDES }}
+              fecha={filtroPanelF}
+              semanaNumero={semanaNumero}
+            />
+          )}
+
           {tab === "arqueo" && (
-            !arqueo ? (
-              <div className="cont-empty">
-                <span className="material-symbols-outlined">summarize</span>
-                <p>No hay datos de arqueo para la semana {filtroSemana}.</p>
-                <span className="cont-empty__hint">
-                  El arqueo estará disponible cuando el backend implemente{" "}
-                  <code>GET /contabilidad/arqueo</code>
-                </span>
-              </div>
-            ) : (
-              <div className="cont-arqueo">
-                <div className="cont-arqueo-header">
-                  <h2>Arqueo Semana {arqueo.semana ?? filtroSemana}</h2>
-                  {arqueo.fechaInicio && (
-                    <span className="cont-arqueo-rango">
-                      {formatFecha(arqueo.fechaInicio)} → {formatFecha(arqueo.fechaFin)}
-                    </span>
-                  )}
-                </div>
-                <ArqueoBloque numero={1} titulo="Ingresos de la Semana"
-                  columnas={["Sede", "Efectivo", "Cuentas", "Total"]}
-                  filas={(arqueo.ingresos ?? []).map((r) => [r.sede, formatCOP(r.efectivo), formatCOP(r.cuentas), formatCOP(r.total)])}
-                  totalFila={["TOTAL",
-                    formatCOP(arqueo.ingresos?.reduce((s, r) => s + (r.efectivo ?? 0), 0)),
-                    formatCOP(arqueo.ingresos?.reduce((s, r) => s + (r.cuentas   ?? 0), 0)),
-                    formatCOP(arqueo.ingresos?.reduce((s, r) => s + (r.total     ?? 0), 0))]} />
-                <ArqueoBloque numero={2} titulo="Egresos de la Semana"
-                  columnas={["Sede", "Egresos", "Proveedores", "Total"]}
-                  filas={(arqueo.egresos ?? []).map((r) => [r.sede, formatCOP(r.egresos), formatCOP(r.proveedores), formatCOP((r.egresos ?? 0) + (r.proveedores ?? 0))])}
-                  totalFila={["TOTAL",
-                    formatCOP(arqueo.egresos?.reduce((s, r) => s + (r.egresos     ?? 0), 0)),
-                    formatCOP(arqueo.egresos?.reduce((s, r) => s + (r.proveedores ?? 0), 0)),
-                    formatCOP(arqueo.egresos?.reduce((s, r) => s + (r.egresos ?? 0) + (r.proveedores ?? 0), 0))]} />
-                <ArqueoBloque numero={3} titulo="Saldo Neto"
-                  columnas={["Sede", "Ingresos", "Egresos", "Saldo Neto"]}
-                  filas={(arqueo.saldoNeto ?? []).map((r) => [r.sede, formatCOP(r.ingresos), formatCOP(r.egresos), formatCOP(r.saldoNeto)])}
-                  totalFila={["TOTAL",
-                    formatCOP(arqueo.saldoNeto?.reduce((s, r) => s + (r.ingresos  ?? 0), 0)),
-                    formatCOP(arqueo.saldoNeto?.reduce((s, r) => s + (r.egresos   ?? 0), 0)),
-                    formatCOP(arqueo.saldoNeto?.reduce((s, r) => s + (r.saldoNeto ?? 0), 0))]} />
-                <ArqueoBloque numero={4} titulo="Proveedores de la Semana"
-                  columnas={["Concepto", "Valor"]}
-                  filas={[
-                    ["Deuda registrada",   formatCOP(arqueo.proveedores?.deuda)],
-                    ["Pagado",             formatCOP(arqueo.proveedores?.pagado)],
-                    ["Saldo pendiente",    formatCOP(arqueo.proveedores?.pendiente)],
-                  ]} />
-                <ArqueoBloque numero={5} titulo="Variación de Cartera"
-                  columnas={["Sede", "Saldo Inicio", "Saldo Cierre"]}
-                  filas={(arqueo.cartera ?? []).map((r) => [r.sede, formatCOP(r.saldoInicio), formatCOP(r.saldoCierre)])}
-                  totalFila={["TOTAL",
-                    formatCOP(arqueo.cartera?.reduce((s, r) => s + (r.saldoInicio ?? 0), 0)),
-                    formatCOP(arqueo.cartera?.reduce((s, r) => s + (r.saldoCierre ?? 0), 0))]} />
-                <ArqueoBloque numero={6} titulo="Variación de Inventario"
-                  columnas={["Sede", "Cant. Cierre", "Costo Cierre"]}
-                  filas={(arqueo.inventario ?? []).map((r) => [r.sede,
-                    new Intl.NumberFormat("es-CO").format(r.cantCierre ?? 0),
-                    formatCOP(r.costoCierre)])}
-                  totalFila={["TOTAL",
-                    new Intl.NumberFormat("es-CO").format(arqueo.inventario?.reduce((s, r) => s + (r.cantCierre ?? 0), 0)),
-                    formatCOP(arqueo.inventario?.reduce((s, r) => s + (r.costoCierre ?? 0), 0))]} />
-              </div>
-            )
+            <ArqueoSemanalTab
+              arqueo={arqueo}
+              arqueoError={arqueoError}
+              filtroSemana={filtroSemana}
+              onFiltroSemanaChange={handleFiltroSemana}
+              sedes={SEDES}
+            />
           )}
 
         </div>
       )}
 
-      {/* ── MODAL INGRESO ── */}
-      <Modal isOpen={modalIngAbierto}
-        onClose={() => { setModalIngAbierto(false); setItemEditar(null); }}
-        titulo={itemEditar ? "Editar Ingreso" : "Registrar Ingreso"}
-        textoBotonConfirmar={guardando ? "Guardando..." : "Guardar"}
-        onConfirmar={handleGuardarIngreso} mostrarCancelar>
-        <div className="cont-modal-form">
-          {!itemEditar && (
-            <>
-              <div className="cont-form-group">
-                <label>Fecha *</label>
-                <input type="date" name="fecha" value={formIng.fecha}
-                  onChange={hIng} className="cont-input" max={HOY} />
-              </div>
-              {esAdmin && (
-                <div className="cont-form-group">
-                  <label>Sede *</label>
-                  <select name="sedeId" value={formIng.sedeId}
-                    onChange={hIng} className="cont-input cont-select">
-                    <option value="">— Selecciona —</option>
-                    {SEDES.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                  </select>
-                </div>
-              )}
-            </>
-          )}
-          <div className="cont-form-group">
-            <label>Efectivo (COP)</label>
-            <input type="number" name="efectivo" value={formIng.efectivo}
-              onChange={hIng} className="cont-input" min="0" step="1000" placeholder="0" />
-          </div>
-          <div className="cont-form-group">
-            <label>Cuentas / Transferencias (COP)</label>
-            <input type="number" name="cuentas" value={formIng.cuentas}
-              onChange={hIng} className="cont-input" min="0" step="1000" placeholder="0" />
-          </div>
-          <div className="cont-total-display">
-            <span>Total calculado</span>
-            <span className="cont-total-valor">{formatCOP(totalIngreso)}</span>
-          </div>
-          <div className="cont-form-group">
-            <label>Observaciones</label>
-            <input type="text" name="observacion" value={formIng.observacion}
-              onChange={hIng} className="cont-input"
-              placeholder="Ej: Ingreso dominical, cobro cartera..." />
-          </div>
-        </div>
-      </Modal>
+      {/* Modal unificado de formularios */}
+      <ContabilidadModal
+        isOpen={modalOpen}
+        onClose={cerrarModal}
+        onConfirmar={handleSubmit}
+        modalTipo={modalTipo}
+        itemEditar={itemEditar}
+        form={form}
+        onFormChange={handleFormChange}
+        totalIngresoForm={totalIngresoForm}
+        esAdmin={esAdmin}
+        sedes={SEDES}
+        proveedores={proveedoresMap}
+        errores={erroresForm}
+        cargando={cargando}
+      />
 
-      {/* ── MODAL EGRESO ── */}
-      <Modal isOpen={modalEgrAbierto}
-        onClose={() => { setModalEgrAbierto(false); setItemEditar(null); }}
-        titulo={itemEditar ? "Editar Egreso" : "Registrar Egreso"}
-        textoBotonConfirmar={guardando ? "Guardando..." : "Guardar"}
-        onConfirmar={handleGuardarEgreso} mostrarCancelar>
-        <div className="cont-modal-form">
-          {!itemEditar && (
-            <>
-              <div className="cont-form-group">
-                <label>Fecha *</label>
-                <input type="date" name="fecha" value={formEgr.fecha}
-                  onChange={hEgr} className="cont-input" max={HOY} />
-              </div>
-              {esAdmin && (
-                <div className="cont-form-group">
-                  <label>Sede *</label>
-                  <select name="sedeId" value={formEgr.sedeId}
-                    onChange={hEgr} className="cont-input cont-select">
-                    <option value="">— Selecciona —</option>
-                    {SEDES.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                  </select>
-                </div>
-              )}
-            </>
-          )}
-          <div className="cont-form-group">
-            <label>Concepto *</label>
-            <input type="text" name="concepto" value={formEgr.concepto}
-              onChange={hEgr} className="cont-input"
-              placeholder="Gastos, Salarios, Arriendo..." />
-          </div>
-          <div className="cont-form-group">
-            <label>Total (COP) *</label>
-            <input type="number" name="total" value={formEgr.total}
-              onChange={hEgr} className="cont-input" min="0" step="1000" placeholder="0" />
-            {formEgr.total && (
-              <span className="cont-input-hint">{formatCOP(formEgr.total)}</span>
-            )}
-          </div>
-          <div className="cont-form-group">
-            <label>Observaciones</label>
-            <textarea name="observaciones" value={formEgr.observaciones}
-              onChange={hEgr} className="cont-input cont-textarea" rows={3}
-              placeholder="Ej: SUELDO POLLO Y PAGO NUÑEZ, ARRIENDO..." />
-          </div>
-        </div>
-      </Modal>
-
-      {/* ── MODAL CARTERA ── */}
-      <Modal isOpen={modalCartAbierto}
-        onClose={() => setModalCartAbierto(false)}
-        titulo="Registrar Saldo de Cartera"
-        textoBotonConfirmar={guardando ? "Guardando..." : "Guardar"}
-        onConfirmar={handleGuardarCartera} mostrarCancelar>
-        <div className="cont-modal-form">
-          <div className="cont-form-group">
-            <label>Fecha *</label>
-            <input type="date" name="fecha" value={formCart.fecha}
-              onChange={hCart} className="cont-input" max={HOY} />
-          </div>
-          {esAdmin && (
-            <div className="cont-form-group">
-              <label>Sede *</label>
-              <select name="sedeId" value={formCart.sedeId}
-                onChange={hCart} className="cont-input cont-select">
-                <option value="">— Selecciona —</option>
-                {SEDES.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="cont-form-group">
-            <label>Saldo del Día (COP) *</label>
-            <input type="number" name="saldoDia" value={formCart.saldoDia}
-              onChange={hCart} className="cont-input" min="0" step="1000" placeholder="0" />
-            {formCart.saldoDia && (
-              <span className="cont-input-hint">{formatCOP(formCart.saldoDia)}</span>
-            )}
-          </div>
-          <div className="cont-nota-info">
-            <span className="material-symbols-outlined">info</span>
-            <p>Ingresa solo el saldo del día. La variación respecto al día anterior
-               se calcula automáticamente en el backend.</p>
-          </div>
-        </div>
-      </Modal>
-
-      {/* ── MODAL CONFIRMAR ELIMINAR ── */}
-      <Modal isOpen={modalConfirmAbierto}
-        onClose={() => setModalConfirmAbierto(false)}
+      {/* Modal confirmar eliminar */}
+      <Modal
+        isOpen={!!itemEliminar}
+        onClose={() => { setItemEliminar(null); setEliminarTipo(""); }}
         titulo="Eliminar registro"
-        textoBotonConfirmar={guardando ? "Eliminando..." : "Sí, eliminar"}
-        onConfirmar={handleEliminar} mostrarCancelar>
+        textoBotonConfirmar="Si, eliminar"
+        onConfirmar={handleEliminar}
+        mostrarCancelar
+      >
         <div className="cont-confirm-body">
           <span className="material-symbols-outlined">warning</span>
           <p>¿Eliminar este registro? Esta acción no se puede deshacer.</p>
         </div>
       </Modal>
+
     </div>
   );
 };

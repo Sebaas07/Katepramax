@@ -165,40 +165,6 @@ button, input, select, textarea {
   border-radius: var(--radius-lg);
 }
 
-/* Botón CTA gradiente */
-.btn-cta {
-  background: var(--gradient-cta);
-  color: #ffffff;
-  border: none;
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: var(--radius-lg);
-  padding: 0.75rem 1.5rem;
-  transition: all var(--transition-base);
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-cta:hover:not(:disabled) {
-  box-shadow: 0 4px 20px var(--aged-gold-glow);
-  transform: translateY(-1px);
-}
-
-.btn-cta:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.btn-cta:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 
 /* Botón secundario (borde dorado) */
 .btn-outline-gold {

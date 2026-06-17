@@ -306,3 +306,21 @@ model Abono {
   @@index([sedeId])
   @@map("abonos")
 }
+
+model Cartera {
+  id             Int      @id @default(autoincrement())
+  fecha          DateTime @db.Date
+  semana         Int
+  saldoDia       Decimal  @map("saldo_dia") @db.Decimal(15, 2)
+  saldoAnterior  Decimal  @default(0.00) @map("saldo_anterior") @db.Decimal(15, 2)
+  variacion      Decimal  @default(0.00) @db.Decimal(15, 2)
+  creadoEn       DateTime @default(now()) @map("creado_en")
+
+  sedeId         Int      @map("sede_id")
+  sede           Sede     @relation(fields: [sedeId], references: [id])
+
+  @@unique([sedeId, fecha])
+  @@index([semana])
+  @@index([fecha])
+  @@map("cartera")
+}
