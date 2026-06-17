@@ -12,6 +12,7 @@ const inventarioService = {
     }
   },
 
+
   obtenerProductoPorCodigo: async (codigo) => {
     try {
       if (!codigo) throw new Error("Se requiere el código del producto.");
@@ -85,6 +86,7 @@ const inventarioService = {
       throw e;
     }
   },
+
 
   listarEntradas: async (filtros = {}) => {
     try {
