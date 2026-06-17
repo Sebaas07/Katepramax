@@ -14,16 +14,16 @@ import {
 } from "@/utils/contabilidadForm";
 
 // ── Tabs
-import IngresosTab      from "../../IngresosTab";
-import EgresosTab       from "../../EgresosTab";
-import CarteraTab       from "../../CarteraTab";
-import ProveedoresTab   from "../../ProveedoresTab";
-import PanelGeneralTab  from "../../PanelGeneralTab";
-import ArqueoSemanalTab from "../../ArqueoSemanalTab";
+import IngresosTab      from "../IngresosTab";
+import EgresosTab       from "../EgresosTab";
+import CarteraTab       from "../CarteraTab";
+import ProveedoresTab   from "../ProveedoresTab";
+import PanelGeneralTab  from "../PanelGeneralTab";
+import ArqueoSemanalTab from "../ArqueoSemanalTab";
 
 // ── Shared UI
-import { Spinner, EmptyState } from "../../ContabilidadUI";
-import ContabilidadModal       from "../../ContabilidadModal";
+import { Spinner, EmptyState } from "../ContabilidadUI";
+import ContabilidadModal       from "../ContabilidadModal";
 import Modal                   from "@/components/common/Modal/Modal";
 
 import "./ContabilidadPage.css";
@@ -414,7 +414,7 @@ const ContabilidadPage = () => {
             </div>
           )}
           {mostrarBotonRegistrar && (
-            <button className="btn-cta" type="button" onClick={abrirNuevo}>
+            <button className="btn-primary" type="button" onClick={abrirNuevo}>
               <span className="material-symbols-outlined">add</span>
               {textoBotonNuevo}
             </button>
