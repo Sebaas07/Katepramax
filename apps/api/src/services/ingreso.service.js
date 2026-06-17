@@ -1,24 +1,26 @@
-
-
 const repo     = require("../repositories/ingreso.repository");
 const AppError = require("../errors/AppError");
+const { fechaValida, numero, sanitizarTexto, semanaValida } = require("../utils/contabilidad");
 
 async function registrar(app, body) {
+  const fecha = fechaValida(body.fecha);
+  const semana = semanaValida(body.semana);
+  const efectivo = numero(body.efectivo ?? 0, "valor de efectivo");
+  const cuentas = numero(body.cuentas ?? 0, "valor de cuentas");
+  if (efectivo <= 0 && cuentas <= 0) throw new AppError("Ingresa al menos un valor en efectivo o cuentas.", 422);
+
+  if (!body.sedeId) throw new AppError("Selecciona la sede.", 422);
   const sede = await app.prisma.sede.findUnique({ where: { id: body.sedeId } });
   if (!sede) throw new AppError(`Sede ${body.sedeId} no encontrada`, 404);
 
-  // total siempre calculado en servidor
-  const efectivo = Number(body.efectivo ?? 0);
-  const cuentas  = Number(body.cuentas  ?? 0);
-
   return repo.crear(app.prisma, {
-    fecha:       new Date(body.fecha),
-    semana:      body.semana,
-    sedeId:      body.sedeId,
+    fecha,
+    semana,
+    sedeId: body.sedeId,
     efectivo,
     cuentas,
-    total:       efectivo + cuentas,
-    observacion: body.observacion ?? null,
+    total: efectivo + cuentas,
+    observacion: sanitizarTexto(body.observacion) || null,
   });
 }
 
@@ -40,14 +42,13 @@ async function editar(app, id, body) {
   const actual = await obtenerPorId(app, id);
   const data   = {};
 
-  if (body.efectivo    !== undefined) data.efectivo    = Number(body.efectivo);
-  if (body.cuentas     !== undefined) data.cuentas     = Number(body.cuentas);
-  if (body.observacion !== undefined) data.observacion = body.observacion;
+  if (body.efectivo !== undefined) data.efectivo = numero(body.efectivo, "valor de efectivo");
+  if (body.cuentas !== undefined) data.cuentas = numero(body.cuentas, "valor de cuentas");
+  if (body.observacion !== undefined) data.observacion = sanitizarTexto(body.observacion) || null;
 
-  // Recalcular total si cambió alguno de los dos
   if (data.efectivo !== undefined || data.cuentas !== undefined) {
-    data.total = (data.efectivo ?? Number(actual.efectivo)) +
-                 (data.cuentas  ?? Number(actual.cuentas));
+    data.total = (data.efectivo ?? Number(actual.efectivo)) + (data.cuentas ?? Number(actual.cuentas));
+    if (data.efectivo <= 0 && data.cuentas <= 0) throw new AppError("Ingresa al menos un valor en efectivo o cuentas.", 422);
   }
 
   return repo.actualizar(app.prisma, id, data);
@@ -59,7 +60,7 @@ async function borrar(app, id) {
 }
 
 async function resumenPorSede(app, semana) {
-  const filas = await repo.resumenPorSede(app.prisma, semana);
+  const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana));
   const sedes = await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapa  = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
 
@@ -67,9 +68,9 @@ async function resumenPorSede(app, semana) {
     sede:      mapa[f.sedeId] ?? `Sede ${f.sedeId}`,
     sedeId:    f.sedeId,
     registros: f._count.id,
-    efectivo:  f._sum.efectivo,
-    cuentas:   f._sum.cuentas,
-    total:     f._sum.total,
+    efectivo:  Number(f._sum.efectivo),
+    cuentas:   Number(f._sum.cuentas),
+    total:     Number(f._sum.total),
   }));
 
   const totalGeneral = porSede.reduce(
@@ -85,7 +86,7 @@ async function resumenPorSede(app, semana) {
 }
 
 async function totalesPorDia(app, semana) {
-  return repo.totalesPorDia(app.prisma, semana);
+  return repo.totalesPorDia(app.prisma, semanaValida(semana));
 }
 
 module.exports = { registrar, obtenerLista, obtenerPorId, editar, borrar, resumenPorSede, totalesPorDia };

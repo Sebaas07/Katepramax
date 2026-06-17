@@ -26,7 +26,7 @@ const crearAbono = {
       semana:      { type: "integer", minimum: 1, maximum: 53 },
       proveedorId: { type: "integer" },
       sedeId:      { type: "integer" },
-      valorPagado: { type: "number", minimum: 0 },
+      valorPagado: { type: "number", minimum: 0.01 },
       observacion: { type: "string", maxLength: 500 },
     },
     additionalProperties: false,
@@ -76,7 +76,7 @@ const editarAbono = {
   body: {
     type: "object",
     properties: {
-      valorPagado: { type: "number", minimum: 0 },
+      valorPagado: { type: "number", minimum: 0.01 },
       observacion: { type: "string", maxLength: 500 },
     },
     minProperties: 1,

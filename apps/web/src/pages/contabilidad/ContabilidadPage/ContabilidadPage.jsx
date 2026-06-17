@@ -3,6 +3,15 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import contabilidadService from "@/services/contabilidad.service";
 import { getSemanaISO, formatFecha } from "@/utils/formatters";
+import {
+  construirPayloadContabilidad,
+  esCampoNumerico,
+  esCampoTexto,
+  normalizarNumeroInput,
+  normalizarSemana,
+  sanitizarTexto,
+  validarFormularioContabilidad,
+} from "@/utils/contabilidadForm";
 
 // ── Tabs
 import IngresosTab      from "../../IngresosTab";
@@ -90,7 +99,19 @@ const ContabilidadPage = () => {
 
   const handleFormChange = useCallback((e) => {
     const { name, value } = e.target;
+    if (esCampoNumerico(name)) {
+      setForm((prev) => ({ ...prev, [name]: normalizarNumeroInput(value) }));
+      return;
+    }
+    if (esCampoTexto(name)) {
+      setForm((prev) => ({ ...prev, [name]: sanitizarTexto(value, name === "concepto" ? 200 : 500) }));
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const handleFiltroSemana = useCallback((valor) => {
+    setFiltroSemana(normalizarSemana(valor));
   }, []);
 
   // ── Carga de datos ────────────────────────────────────────
@@ -131,7 +152,7 @@ const ContabilidadPage = () => {
         setPanelGeneral(await contabilidadService.obtenerPanelGeneral(filtroPanelF));
       }
     } catch (err) {
-      toast.error("Error al cargar datos: " + err.message);
+      toast.error("Error al cargar datos: " + (err?.message || "desconocido"));
     } finally {
       setCargando(false);
     }
@@ -142,18 +163,20 @@ const ContabilidadPage = () => {
     return () => window.clearTimeout(id);
   }, [cargarDatos]);
 
-  // ── Datos mapeados (nombre de sede inyectado) ─────────────
+  // ── Datos mapeados (nombre de sede/proveedor inyectado) ───
   const mapSede = useCallback((items) =>
     items.map((i) => ({
       ...i,
-      sede: SEDES.find((s) => s.id === i.sedeId)?.nombre ?? `Sede ${i.sedeId}`,
+      sede: i.sede?.nombre ?? SEDES.find((s) => s.id === i.sedeId)?.nombre ?? `Sede ${i.sedeId}`,
+      observaciones: i.observacion ?? i.observaciones ?? "",
     })), []);
 
   const mapProveedor = useCallback((items) =>
     items.map((i) => ({
       ...i,
       sede:      i.sede?.nombre ?? SEDES.find((s) => s.id === i.sedeId)?.nombre ?? `Sede ${i.sedeId}`,
-      proveedor: i.proveedor?.nombre ?? `Proveedor ${i.proveedorId ?? ""}`.trim(),
+      proveedor: i.proveedor?.nombre ?? i.proveedorNombre ?? `Proveedor ${i.proveedorId ?? ""}`.trim(),
+      observacion: i.observacion ?? "",
     })), []);
 
   const ingresosMapeados  = useMemo(() => mapSede(ingresos),        [ingresos,    mapSede]);
@@ -168,6 +191,10 @@ const ContabilidadPage = () => {
   );
 
   const semanaNumero = useMemo(() => parseInt(filtroSemana, 10) || SEM_ACTUAL, [filtroSemana]);
+  const erroresForm = useMemo(
+    () => validarFormularioContabilidad({ modalTipo, form }),
+    [modalTipo, form]
+  );
 
   // ── Handlers de modales ───────────────────────────────────
   const resetForm = useCallback(() => ({
@@ -192,7 +219,7 @@ const ContabilidadPage = () => {
   }, [sedeIdUsuario]);
 
   const abrirAbono = useCallback((item) => {
-    setItemEditar(item);
+    setItemEditar(null);
     setModalTipo("abono");
     setForm((prev) => ({
       ...prev,
@@ -200,7 +227,7 @@ const ContabilidadPage = () => {
       sedeId:      String(item.sedeId ?? sedeIdUsuario ?? ""),
       proveedorId: String(item.proveedorId ?? ""),
       valorAbono:  "",
-      observacion: item.observacion ?? "",
+      observacion: "",
       tipoAbono:   "abono_proveedor",
     }));
     setModalOpen(true);
@@ -225,11 +252,13 @@ const ContabilidadPage = () => {
       sedeId:        String(item.sedeId),
       efectivo:      String(item.efectivo      ?? ""),
       cuentas:       String(item.cuentas       ?? ""),
-      observacion:   item.observacion  ?? "",
+      observacion:   item.observacion ?? "",
       concepto:      item.concepto     ?? "",
-      total:         "",
-      observaciones: item.observaciones ?? "",
+      total:         String(item.total ?? ""),
+      observaciones: item.observacion ?? item.observaciones ?? "",
       saldoDia:      String(item.saldoDia ?? ""),
+      proveedorId:   String(item.proveedorId ?? ""),
+      valorAbono:    String(item.valorPagado ?? ""),
     }));
     setModalOpen(true);
   }, []);
@@ -248,58 +277,85 @@ const ContabilidadPage = () => {
   const handleSubmit = useCallback(async () => {
     setCargando(true);
     try {
+      const payload = construirPayloadContabilidad(modalTipo, form);
+
       if (modalTipo === "ingreso") {
+        const datos = {
+          efectivo: payload.efectivo,
+          cuentas: payload.cuentas,
+          observacion: payload.observacion,
+        };
         if (itemEditar) {
-          await contabilidadService.editarIngreso(itemEditar.id, {
-            efectivo:    parseFloat(form.efectivo) || 0,
-            cuentas:     parseFloat(form.cuentas)  || 0,
-            observacion: form.observacion,
-          });
+          await contabilidadService.editarIngreso(itemEditar.id, datos);
           toast.success("Ingreso actualizado.");
         } else {
-          await contabilidadService.registrarIngreso(form);
+          await contabilidadService.registrarIngreso(payload);
           toast.success("Ingreso registrado.");
         }
       } else if (modalTipo === "egreso") {
+        const datos = {
+          concepto: payload.concepto,
+          total: payload.total,
+          observaciones: payload.observacion,
+        };
         if (itemEditar) {
-          await contabilidadService.editarEgreso(itemEditar.id, {
-            concepto:      form.concepto,
-            total:         parseFloat(form.total) || 0,
-            observaciones: form.observaciones,
-          });
+          await contabilidadService.editarEgreso(itemEditar.id, datos);
           toast.success("Egreso actualizado.");
         } else {
-          await contabilidadService.registrarEgreso(form);
+          await contabilidadService.registrarEgreso(payload);
           toast.success("Egreso registrado.");
         }
       } else if (modalTipo === "cartera") {
-        await contabilidadService.registrarCartera(form);
-        toast.success("Cartera registrada.");
+        const datos = {
+          fecha: payload.fecha,
+          semana: payload.semana,
+          sedeId: payload.sedeId,
+          saldoDia: payload.saldoDia,
+        };
+        if (itemEditar) {
+          await contabilidadService.editarCartera(itemEditar.id, datos);
+          toast.success("Cartera actualizada.");
+        } else {
+          await contabilidadService.registrarCartera(payload);
+          toast.success("Cartera registrada.");
+        }
       } else if (modalTipo === "abono") {
-        await contabilidadService.registrarPagoProveedor({
-          ...form,
-          valorAbono: parseFloat(form.valorAbono) || 0,
-        });
-        toast.success("Abono registrado.");
+        const datos = {
+          valorPagado: payload.valorPagado,
+          observacion: payload.observacion,
+        };
+        if (itemEditar) {
+          await contabilidadService.editarPagoProveedor(itemEditar.id, datos);
+          toast.success("Abono actualizado.");
+        } else {
+          await contabilidadService.registrarPagoProveedor(payload);
+          toast.success("Abono registrado.");
+        }
+      } else {
+        throw new Error("Tipo de formulario no válido.");
       }
       setModalOpen(false);
       setItemEditar(null);
       await cargarDatos();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err?.message || "No fue posible guardar el registro.");
     } finally {
       setCargando(false);
     }
   }, [modalTipo, itemEditar, form, cargarDatos]);
 
   const handleEliminar = useCallback(async () => {
+    if (!itemEliminar) return;
     setCargando(true);
     try {
       if (eliminarTipo === "ingreso") await contabilidadService.eliminarIngreso(itemEliminar.id);
-      else                            await contabilidadService.eliminarEgreso(itemEliminar.id);
+      else if (eliminarTipo === "egreso") await contabilidadService.eliminarEgreso(itemEliminar.id);
+      else if (eliminarTipo === "cartera") await contabilidadService.eliminarCartera(itemEliminar.id);
+      else if (eliminarTipo === "abono") await contabilidadService.eliminarPagoProveedor(itemEliminar.id);
+      else throw new Error("Tipo de registro no válido.");
       toast.success("Registro eliminado.");
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err?.message || "No fue posible eliminar el registro.");
     } finally {
       setCargando(false);
       setItemEliminar(null);
@@ -328,7 +384,7 @@ const ContabilidadPage = () => {
         <div>
           <h1 className="cont-page__title">Contabilidad</h1>
           <p className="cont-subtitulo">
-            {tab === "panel" ? formatFecha(filtroPanelF) : `Semana ${filtroSemana}`}
+            {tab === "panel" ? formatFecha(filtroPanelF) : `Semana ${filtroSemana || SEM_ACTUAL}`}
           </p>
         </div>
         <div className="cont-page__acciones">
@@ -345,7 +401,7 @@ const ContabilidadPage = () => {
             <div className="filter-group">
               <label htmlFor="cont-semana">Semana</label>
               <input id="cont-semana" type="number" min="1" max="53"
-                value={filtroSemana} onChange={(e) => setFiltroSemana(e.target.value)}
+                value={filtroSemana} onChange={(e) => handleFiltroSemana(e.target.value)}
                 className="filter-select" style={{ minWidth: 72 }} />
             </div>
           )}
@@ -408,6 +464,9 @@ const ContabilidadPage = () => {
             <CarteraTab
               cartera={carteraMapeada}
               sedes={SEDES}
+              esAdmin={esAdmin}
+              onEditar={abrirEditar}
+              onEliminar={abrirEliminar}
             />
           )}
 
@@ -415,8 +474,10 @@ const ContabilidadPage = () => {
             <ProveedoresTab
               proveedores={proveedoresMap}
               resumenProv={resumenProv}
+              esAdmin={esAdmin}
               onAbonar={abrirAbono}
               onEditar={abrirEditarProv}
+              onEliminar={abrirEliminar}
             />
           )}
 
@@ -441,7 +502,7 @@ const ContabilidadPage = () => {
               arqueo={arqueo}
               arqueoError={arqueoError}
               filtroSemana={filtroSemana}
-              onFiltroSemanaChange={setFiltroSemana}
+              onFiltroSemanaChange={handleFiltroSemana}
               sedes={SEDES}
             />
           )}
@@ -461,7 +522,9 @@ const ContabilidadPage = () => {
         totalIngresoForm={totalIngresoForm}
         esAdmin={esAdmin}
         sedes={SEDES}
-        proveedores={proveedores}
+        proveedores={proveedoresMap}
+        errores={erroresForm}
+        cargando={cargando}
       />
 
       {/* Modal confirmar eliminar */}

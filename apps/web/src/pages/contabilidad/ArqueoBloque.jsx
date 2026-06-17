@@ -10,12 +10,12 @@ const ArqueoBloque = memo(({ numero, titulo, columnas, filas, totalFila }) => (
       <table className="arqueo-tabla">
         <thead>
           <tr>
-            {columnas.map((col) => <th key={col}>{col}</th>)}
+            {columnas.map((col, i) => <th key={i}>{col}</th>)}
           </tr>
         </thead>
         <tbody>
           {filas.map((fila, i) => (
-            <tr key={`${fila[0] ?? ""}-${i}`}>
+            <tr key={i}>
               {fila.map((celda, j) => <td key={j}>{celda}</td>)}
             </tr>
           ))}

@@ -11,7 +11,7 @@ const COLUMNAS = [
   { campo: "variacion",    label: "Variacion",      tipo: "moneda" },
 ];
 
-const CarteraTab = memo(({ cartera, sedes }) => {
+const CarteraTab = memo(({ cartera, sedes, esAdmin, onEditar, onEliminar }) => {
   const resumenSedes = useMemo(() =>
     sedes.map((s) => {
       const regs = [...cartera]
@@ -21,9 +21,18 @@ const CarteraTab = memo(({ cartera, sedes }) => {
     }), [cartera, sedes]);
 
   const totalCartera = useMemo(
-    () => cartera.reduce((s, c) => s + Number(c.saldoDia ?? 0), 0),
-    [cartera]
+    () => resumenSedes.reduce((s, r) => s + Number(r.valor ?? 0), 0),
+    [resumenSedes]
   );
+
+  const acciones = useMemo(() =>
+    esAdmin
+      ? (row) => [
+          { label: "Editar",   icon: "edit",   onClick: () => onEditar(row, "cartera") },
+          { label: "Eliminar", icon: "delete", variante: "danger", onClick: () => onEliminar(row, "cartera") },
+        ]
+      : undefined,
+  [esAdmin, onEditar, onEliminar]);
 
   return (
     <>
@@ -46,10 +55,10 @@ const CarteraTab = memo(({ cartera, sedes }) => {
           mostrarBuscador
           buscarEnCampos={["sede"]}
           paginacion
+          renderAcciones={acciones}
           renderCeldaCustom={(fila, col) => {
             if (col.campo === "variacion") {
-              const tieneBackend = fila.variacion != null && fila.variacion !== "";
-              const num = Number(tieneBackend ? fila.variacion : (Number(fila.saldoDia ?? 0) - Number(fila.saldoAnterior ?? 0)));
+              const num = Number(fila.variacion ?? (Number(fila.saldoDia ?? 0) - Number(fila.saldoAnterior ?? 0)));
               return (
                 <span className={num >= 0 ? "cont-val-positivo" : "cont-val-negativo"}>
                   {num.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })}

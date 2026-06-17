@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import { TarjetaResumen, TarjetaResumenProveedor, DeudaBadge } from "./ContabilidadUI";
 
@@ -22,14 +22,20 @@ const COLUMNAS = [
   { campo: "observacion", label: "Obs.",      tipo: "texto"  },
 ];
 
-const ProveedoresTab = ({ proveedores, resumenProv, onAbonar, onEditar }) => {
+const ProveedoresTab = memo(({ proveedores, resumenProv, esAdmin, onAbonar, onEditar, onEliminar }) => {
   const totalPagado  = useMemo(() => resumenProv.reduce((t, p) => t + toNumber(p.totalPagado), 0), [resumenProv]);
   const totalAbonos  = useMemo(() => resumenProv.reduce((t, p) => t + toNumber(p.abonos),     0), [resumenProv]);
 
-  const acciones = useMemo(() => (row) => [
-    { label: "Abonar", icon: "payments", variante: "success", onClick: () => onAbonar(row) },
-    { label: "Editar", icon: "edit",                          onClick: () => onEditar(row) },
-  ], [onAbonar, onEditar]);
+  const acciones = useMemo(() => (row) => {
+    const base = [
+      { label: "Abonar", icon: "payments", variante: "success", onClick: () => onAbonar(row) },
+      { label: "Editar", icon: "edit",                          onClick: () => onEditar(row) },
+    ];
+    if (esAdmin) {
+      base.push({ label: "Eliminar", icon: "delete", variante: "danger", onClick: () => onEliminar(row, "abono") });
+    }
+    return base;
+  }, [esAdmin, onAbonar, onEditar, onEliminar]);
 
   return (
     <>
@@ -67,6 +73,6 @@ const ProveedoresTab = ({ proveedores, resumenProv, onAbonar, onEditar }) => {
       </div>
     </>
   );
-};
+});
 
 export default ProveedoresTab;

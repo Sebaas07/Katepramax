@@ -6,8 +6,8 @@ const TarjetaKpi = memo(({ titulo, icono, color, valor, subtitulo }) => (
       <span className="material-symbols-outlined" aria-hidden="true">{icono}</span>
     </div>
     <div className="panel-kpi-card__body">
-      <span className="panel-kpi-card__valor">{valor}</span>
       <span className="panel-kpi-card__titulo">{titulo}</span>
+      <span className="panel-kpi-card__valor">{valor}</span>
       {subtitulo && <span className="panel-kpi-card__sub">{subtitulo}</span>}
     </div>
   </div>

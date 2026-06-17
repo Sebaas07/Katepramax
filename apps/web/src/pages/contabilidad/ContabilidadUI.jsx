@@ -6,7 +6,7 @@ export const Spinner = memo(({ texto = "Cargando..." }) => (
     <div className="cont-spinner" />
     <span>{texto}</span>
   </div>
-);
+));
 
 // ── Empty state ───────────────────────────────────────────────
 export const EmptyState = memo(({ icono, titulo, detalle }) => (
@@ -65,6 +65,27 @@ export const TarjetaResumenProveedor = memo(({ titulo, icono, color, filas, tota
   </div>
 ));
 
+const ESTADOS_DEUDA = {
+  vencida: {
+    label: "Vencida",
+    color: "var(--error)",
+    bg: "rgba(244, 63, 94, 0.12)",
+    border: "rgba(244, 63, 94, 0.35)",
+  },
+  pendiente: {
+    label: "Pendiente",
+    color: "#facc15",
+    bg: "rgba(250, 204, 21, 0.12)",
+    border: "rgba(250, 204, 21, 0.35)",
+  },
+  al_dia: {
+    label: "Al día",
+    color: "#4ade80",
+    bg: "rgba(74, 222, 128, 0.12)",
+    border: "rgba(74, 222, 128, 0.35)",
+  },
+};
+
 export const DeudaBadge = memo(({ estado }) => {
   const cfg = ESTADOS_DEUDA[estado] ?? ESTADOS_DEUDA.pendiente;
   return (
@@ -76,15 +97,3 @@ export const DeudaBadge = memo(({ estado }) => {
     </span>
   );
 });
-
-export const DeudaBadge = ({ estado }) => {
-  const cfg = ESTADOS_DEUDA[estado] ?? ESTADOS_DEUDA.pendiente;
-  return (
-    <span
-      className="cont-estado-badge"
-      style={{ color: cfg.color, backgroundColor: cfg.bg, borderColor: cfg.border }}
-    >
-      {cfg.label}
-    </span>
-  );
-};

@@ -28,7 +28,7 @@ const crearEgreso = {
       semana:      { type: "integer", minimum: 1, maximum: 53 },
       sedeId:      { type: "integer" },
       concepto:    { type: "string", maxLength: 200 },
-      total:       { type: "number", minimum: 0 },
+      total:       { type: "number", minimum: 0.01 },
       observacion: { type: "string", maxLength: 500 },
     },
     additionalProperties: false,
@@ -54,7 +54,7 @@ const listarEgresos = {
 };
 
 const obtenerEgreso  = { summary: "Obtener egreso por ID",  tags: ["Egresos"], security: [{ bearerAuth: [] }], params: { type: "object", required: ["id"], properties: { id: { type: "integer" } } }, response: { 200: egresoBase, 404: { type: "object", properties: { error: { type: "string" } } } } };
-const editarEgreso   = { summary: "Editar egreso",          tags: ["Egresos"], security: [{ bearerAuth: [] }], params: { type: "object", required: ["id"], properties: { id: { type: "integer" } } }, body: { type: "object", properties: { concepto: { type: "string" }, total: { type: "number", minimum: 0 }, observacion: { type: "string" } }, minProperties: 1, additionalProperties: false }, response: { 200: egresoBase } };
+const editarEgreso   = { summary: "Editar egreso",          tags: ["Egresos"], security: [{ bearerAuth: [] }], params: { type: "object", required: ["id"], properties: { id: { type: "integer" } } }, body: { type: "object", properties: { concepto: { type: "string" },       total: { type: "number", minimum: 0.01 }, observacion: { type: "string" } }, minProperties: 1, additionalProperties: false }, response: { 200: egresoBase } };
 const eliminarEgreso = { summary: "Eliminar egreso",        tags: ["Egresos"], security: [{ bearerAuth: [] }], params: { type: "object", required: ["id"], properties: { id: { type: "integer" } } }, response: { 200: { type: "object", properties: { mensaje: { type: "string" } } } } };
 
 const resumenSemanalEgreso = {

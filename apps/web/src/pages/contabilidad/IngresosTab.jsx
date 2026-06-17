@@ -1,4 +1,4 @@
-import { useMemo, memo } from "react";
+import { useMemo } from "react";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import { TarjetaResumen } from "./ContabilidadUI";
 
@@ -12,7 +12,7 @@ const COLUMNAS = [
   { campo: "observacion", label: "Obs.",     tipo: "texto"  },
 ];
 
-const IngresosTab = memo(({ ingresos, sedes, esAdmin, onEditar, onEliminar }) => {
+const IngresosTab = ({ ingresos, sedes, esAdmin, onEditar, onEliminar }) => {
   const resumenEfectivo = useMemo(() => sedes.map((s) => ({
     sede: s.nombre,
     valor: ingresos.filter((i) => i.sedeId === s.id).reduce((sum, i) => sum + Number(i.efectivo ?? 0), 0),

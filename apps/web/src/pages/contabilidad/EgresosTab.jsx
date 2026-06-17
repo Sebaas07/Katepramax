@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import { TarjetaResumen } from "./ContabilidadUI";
 
@@ -12,13 +12,13 @@ const etiquetaEgreso = (concepto) => {
   if (!concepto) return null;
   const c = concepto.toLowerCase();
   if (c.includes("proveedor") || c.includes("pollo") || c.includes("insumo") || c.includes("mercado"))
-    return { label: "Proveedores", color: "#e9c349" };
+    return { label: "Proveedores", color: "var(--aged-gold)" };
   if (c.includes("arriendo") || c.includes("servicio") || c.includes("nomina") || c.includes("sueldo"))
     return { label: "Operativo", color: "#60a5fa" };
   return { label: "General", color: "#c4b5fd" };
 };
 
-const CeldaConcepto = ({ concepto }) => {
+const CeldaConcepto = memo(({ concepto }) => {
   const et = etiquetaEgreso(concepto);
   if (!et) return concepto ?? "—";
   return (
@@ -29,7 +29,7 @@ const CeldaConcepto = ({ concepto }) => {
       </span>
     </span>
   );
-};
+});
 
 const COLUMNAS = [
   { campo: "fecha",        label: "Fecha",    tipo: "fecha"  },
@@ -40,7 +40,7 @@ const COLUMNAS = [
   { campo: "observaciones",label: "Obs.",     tipo: "texto"  },
 ];
 
-const EgresosTab = ({ egresos, sedes, esAdmin, onEditar, onEliminar }) => {
+const EgresosTab = memo(({ egresos, sedes, esAdmin, onEditar, onEliminar }) => {
   const resumenPorSedeData = useMemo(() => resumenPorSede(egresos, "total", sedes), [egresos, sedes]);
   const totalEgr = useMemo(() => egresos.reduce((s, i) => s + Number(i.total ?? 0), 0), [egresos]);
 
@@ -76,6 +76,6 @@ const EgresosTab = ({ egresos, sedes, esAdmin, onEditar, onEliminar }) => {
       </div>
     </>
   );
-};
+});
 
 export default EgresosTab;

@@ -1,17 +1,5 @@
 import { clienteApi } from "./axiosConfig";
 
-/**
- * contabilidadApi.js — Katepramax
- *
- * El schema Prisma tiene el modelo Ingreso.
- * El backend aún NO tiene rutas /contabilidad/* implementadas.
- * Todos los métodos fallan silenciosamente (service retorna []).
- *
- * Contratos listos para cuando el backend los implemente:
- *   Ingreso: { fecha, semana, sedeId, efectivo, cuentas, total, observacion? }
- *   Egreso:  { fecha, semana, sedeId, concepto, total, observaciones?, dia? }
- *   Cartera: { fecha, semana, sedeId, saldoDia }
- */
 const contabilidadApi = {
   // ── INGRESOS ──────────────────────────────────────────────
   obtenerIngresos: async (filtros = {}) => {
@@ -20,22 +8,22 @@ const contabilidadApi = {
       if (v !== undefined && v !== null && v !== "") params.append(k, v);
     });
     const qs = params.toString();
-    const r = await clienteApi.get(qs ? `/contabilidad/ingresos?${qs}` : "/contabilidad/ingresos");
+    const r = await clienteApi.get(qs ? `/ingresos?${qs}` : "/ingresos");
     return r.data;
   },
 
   registrarIngreso: async (data) => {
-    const r = await clienteApi.post("/contabilidad/ingresos", data);
+    const r = await clienteApi.post("/ingresos", data);
     return r.data;
   },
 
   editarIngreso: async (id, data) => {
-    const r = await clienteApi.patch(`/contabilidad/ingresos/${id}`, data);
+    const r = await clienteApi.patch(`/ingresos/${id}`, data);
     return r.data;
   },
 
   eliminarIngreso: async (id) => {
-    const r = await clienteApi.delete(`/contabilidad/ingresos/${id}`);
+    const r = await clienteApi.delete(`/ingresos/${id}`);
     return r.data;
   },
 
@@ -46,22 +34,22 @@ const contabilidadApi = {
       if (v !== undefined && v !== null && v !== "") params.append(k, v);
     });
     const qs = params.toString();
-    const r = await clienteApi.get(qs ? `/contabilidad/egresos?${qs}` : "/contabilidad/egresos");
+    const r = await clienteApi.get(qs ? `/egresos?${qs}` : "/egresos");
     return r.data;
   },
 
   registrarEgreso: async (data) => {
-    const r = await clienteApi.post("/contabilidad/egresos", data);
+    const r = await clienteApi.post("/egresos", data);
     return r.data;
   },
 
   editarEgreso: async (id, data) => {
-    const r = await clienteApi.patch(`/contabilidad/egresos/${id}`, data);
+    const r = await clienteApi.patch(`/egresos/${id}`, data);
     return r.data;
   },
 
   eliminarEgreso: async (id) => {
-    const r = await clienteApi.delete(`/contabilidad/egresos/${id}`);
+    const r = await clienteApi.delete(`/egresos/${id}`);
     return r.data;
   },
 
@@ -72,12 +60,22 @@ const contabilidadApi = {
       if (v !== undefined && v !== null && v !== "") params.append(k, v);
     });
     const qs = params.toString();
-    const r = await clienteApi.get(qs ? `/contabilidad/cartera?${qs}` : "/contabilidad/cartera");
+    const r = await clienteApi.get(qs ? `/cartera?${qs}` : "/cartera");
     return r.data;
   },
 
   registrarCartera: async (data) => {
     const r = await clienteApi.post("/contabilidad/cartera", data);
+    return r.data;
+  },
+
+  editarCartera: async (id, data) => {
+    const r = await clienteApi.patch(`/contabilidad/cartera/${id}`, data);
+    return r.data;
+  },
+
+  eliminarCartera: async (id) => {
+    const r = await clienteApi.delete(`/contabilidad/cartera/${id}`);
     return r.data;
   },
 
@@ -94,6 +92,16 @@ const contabilidadApi = {
 
   registrarPagoProveedor: async (data) => {
     const r = await clienteApi.post("/abonos", data);
+    return r.data;
+  },
+
+  editarPagoProveedor: async (id, data) => {
+    const r = await clienteApi.patch(`/abonos/${id}`, data);
+    return r.data;
+  },
+
+  eliminarPagoProveedor: async (id) => {
+    const r = await clienteApi.delete(`/abonos/${id}`);
     return r.data;
   },
 

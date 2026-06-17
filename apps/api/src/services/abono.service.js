@@ -1,7 +1,6 @@
-
-
 const repo     = require("../repositories/abono.repository");
 const AppError = require("../errors/AppError");
+const { fechaValida, numeroPositivo, sanitizarTexto, semanaValida } = require("../utils/contabilidad");
 
 async function registrar(app, body) {
   const proveedor = await app.prisma.proveedor.findUnique({ where: { id: body.proveedorId } });
@@ -12,12 +11,12 @@ async function registrar(app, body) {
   if (!sede) throw new AppError(`Sede ${body.sedeId} no encontrada`, 404);
 
   return repo.crear(app.prisma, {
-    fecha:       new Date(body.fecha),
-    semana:      body.semana,
+    fecha: fechaValida(body.fecha),
+    semana: semanaValida(body.semana),
     proveedorId: body.proveedorId,
-    sedeId:      body.sedeId,
-    valorPagado: body.valorPagado,
-    observacion: body.observacion ?? null,
+    sedeId: body.sedeId,
+    valorPagado: numeroPositivo(body.valorPagado, "valor de abono"),
+    observacion: sanitizarTexto(body.observacion) || null,
   });
 }
 
@@ -39,8 +38,8 @@ async function obtenerPorId(app, id) {
 async function editar(app, id, body) {
   await obtenerPorId(app, id);
   const data = {};
-  if (body.valorPagado !== undefined) data.valorPagado = body.valorPagado;
-  if (body.observacion !== undefined) data.observacion = body.observacion;
+  if (body.valorPagado !== undefined) data.valorPagado = numeroPositivo(body.valorPagado, "valor de abono");
+  if (body.observacion !== undefined) data.observacion = sanitizarTexto(body.observacion) || null;
   return repo.actualizar(app.prisma, id, data);
 }
 
@@ -50,25 +49,25 @@ async function borrar(app, id) {
 }
 
 async function resumenPorProveedor(app, semana) {
-  const filas = await repo.resumenPorProveedor(app.prisma, semana);
+  const filas = await repo.resumenPorProveedor(app.prisma, semanaValida(semana));
   const proveedores = await app.prisma.proveedor.findMany({ select: { id: true, nombre: true } });
   const mapa = Object.fromEntries(proveedores.map((p) => [p.id, p.nombre]));
   return filas.map((f) => ({
     proveedor:   mapa[f.proveedorId] ?? `Proveedor ${f.proveedorId}`,
     proveedorId: f.proveedorId,
     abonos:      f._count.id,
-    totalPagado: f._sum.valorPagado,
+    totalPagado: Number(f._sum.valorPagado),
   }));
 }
 
 async function resumenPorSede(app, semana) {
-  const filas = await repo.resumenPorSede(app.prisma, semana);
+  const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana));
   const sedes = await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapa  = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
   return filas.map((f) => ({
     sede:        mapa[f.sedeId] ?? `Sede ${f.sedeId}`,
     sedeId:      f.sedeId,
-    totalPagado: f._sum.valorPagado,
+    totalPagado: Number(f._sum.valorPagado),
   }));
 }
 
