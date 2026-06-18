@@ -12,7 +12,6 @@ const inventarioService = {
     }
   },
 
-
   obtenerProductoPorCodigo: async (codigo) => {
     try {
       if (!codigo) throw new Error("Se requiere el código del producto.");
@@ -25,19 +24,21 @@ const inventarioService = {
 
   crearProducto: async (producto) => {
     try {
-      const { codigo, nombre, departamento, precioDetal, stockMinimo, sedeId, proveedorId } = producto;
+      const { codigo, nombre, precioCosto, precioVenta, proveedorId } =
+        producto;
       if (!codigo) throw new Error("El código es obligatorio.");
       if (!nombre) throw new Error("El nombre es obligatorio.");
-      if (!departamento) throw new Error("Selecciona un departamento.");
-      return await inventarioApi.crearProducto({
+
+      const payload = {
         codigo,
-        nombre,
-        departamento,
-        precioDetal: parseFloat(precioDetal),
-        stockMinimo: parseInt(stockMinimo),
-        sedeId: parseInt(sedeId),
-        proveedorId: proveedorId ? parseInt(proveedorId) : undefined,
-      });
+        descripcion: nombre,
+        precioCosto: precioCosto !== undefined ? parseFloat(precioCosto) : 0,
+        precioVenta: precioVenta !== undefined ? parseFloat(precioVenta) : 0,
+      };
+
+      if (proveedorId) payload.proveedorId = parseInt(proveedorId);
+
+      return await inventarioApi.crearProducto(payload);
     } catch (e) {
       console.error("inventarioService.crearProducto:", e);
       throw e;
@@ -64,22 +65,30 @@ const inventarioService = {
     }
   },
 
-  // ─── Entradas ───────────────────────────────────────────────────────────
-  registrarEntrada: async ({ fecha, semana, sedeId, productoId, cantidadIngresada, costo }) => {
+  // ─── Entradas de Inventario (usando /inventario) ───────────────────────────
+  // Backend: POST /inventario → Admin, Bodega
+  registrarEntrada: async ({
+    fecha,
+    semana,
+    sedeId,
+    productoId,
+    cantidadIngresada,
+    costo,
+  }) => {
     try {
       if (!fecha) throw new Error("La fecha es obligatoria.");
       if (!sedeId) throw new Error("Selecciona la sede.");
       if (!productoId) throw new Error("Selecciona un producto.");
-      if (!cantidadIngresada || cantidadIngresada <= 0) throw new Error("La cantidad debe ser mayor a 0.");
-      if (costo === undefined || costo === null || costo < 0) throw new Error("El costo debe ser un valor válido.");
-      const semanaFinal = semana ?? getSemanaISO(new Date(fecha));
-      return await inventarioApi.crearEntrada({
-        fecha,
-        semana: semanaFinal,
+      if (!cantidadIngresada || cantidadIngresada <= 0)
+        throw new Error("La cantidad debe ser mayor a 0.");
+
+      return await inventarioApi.crearEntradaDiaria({
         sedeId: parseInt(sedeId),
         productoId,
         cantidadIngresada: parseInt(cantidadIngresada),
-        costo: parseFloat(costo),
+        fecha,
+        semana: semana ?? getSemanaISO(new Date(fecha)),
+        costo: costo !== undefined ? parseFloat(costo) : undefined,
       });
     } catch (e) {
       console.error("inventarioService.registrarEntrada:", e);
@@ -87,73 +96,85 @@ const inventarioService = {
     }
   },
 
-
+  // Backend: GET /inventario → Admin, Bodega
   listarEntradas: async (filtros = {}) => {
     try {
-      return await inventarioApi.listarEntradas(filtros);
+      return await inventarioApi.listarInventario(filtros);
     } catch (e) {
       console.error("inventarioService.listarEntradas:", e);
       throw e;
     }
   },
 
+  // Backend: PATCH /inventario/:id → Admin, Bodega
   editarEntrada: async (id, datos) => {
     try {
       if (!id) throw new Error("Se requiere el ID del registro.");
-      return await inventarioApi.editarEntrada(id, datos);
+      return await inventarioApi.editarInventario(id, datos);
     } catch (e) {
       console.error("inventarioService.editarEntrada:", e);
       throw e;
     }
   },
 
+  // Backend: DELETE /inventario/:id → solo Admin
   eliminarEntrada: async (id) => {
     try {
       if (!id) throw new Error("Se requiere el ID del registro.");
-      return await inventarioApi.eliminarEntrada(id);
+      return await inventarioApi.eliminarInventario(id);
     } catch (e) {
       console.error("inventarioService.eliminarEntrada:", e);
       throw e;
     }
   },
 
-  // ─── Movimientos ───────────────────────────────────────────────────────
-  registrarMovimiento: async ({ tipo, productoId, cantidad, nota, sedeId, fecha }) => {
+  // ─── Stock Bajo ───────────────────────────────────────────────────────────
+  obtenerStockBajo: async () => {
     try {
-      if (!tipo) throw new Error("Selecciona el tipo de movimiento.");
-      if (!productoId) throw new Error("Selecciona un producto.");
-      if (!cantidad || cantidad === 0) throw new Error("La cantidad es obligatoria.");
-      if (!sedeId) throw new Error("Selecciona la sede.");
-      const fechaFinal = fecha ?? new Date().toISOString().split("T")[0];
-      return await inventarioApi.crearMovimiento({
-        tipo,
-        productoId,
-        cantidad: parseInt(cantidad),
-        nota: nota || "",
-        sedeId: parseInt(sedeId),
-        fecha: fechaFinal,
-      });
+      return await inventarioApi.obtenerStockBajo();
     } catch (e) {
-      console.error("inventarioService.registrarMovimiento:", e);
+      console.error("inventarioService.obtenerStockBajo:", e);
       throw e;
     }
   },
 
+  // ─── Aliases para InventarioPage ─────────────────────────────────────────
+  // InventarioPage usa estos nombres; internamente delegan a los métodos reales.
   listarMovimientos: async (filtros = {}) => {
     try {
-      return await inventarioApi.listarMovimientos(filtros);
+      return await inventarioApi.listarInventario(filtros);
     } catch (e) {
       console.error("inventarioService.listarMovimientos:", e);
       throw e;
     }
   },
 
-  // ─── Stock Bajo ─────────────────────────────────────────────────────────
-  obtenerStockBajo: async () => {
+  registrarMovimiento: async ({
+    tipo,
+    productoId,
+    cantidad,
+    nota,
+    sedeId,
+    fecha,
+  }) => {
     try {
-      return await inventarioApi.obtenerStockBajo();
+      if (!productoId) throw new Error("Selecciona un producto.");
+      if (!cantidad || cantidad <= 0)
+        throw new Error("La cantidad debe ser mayor a 0.");
+      if (!sedeId) throw new Error("Selecciona la sede.");
+      if (!fecha) throw new Error("La fecha es obligatoria.");
+
+      return await inventarioApi.crearEntradaDiaria({
+        productoId,
+        cantidadIngresada: parseInt(cantidad),
+        sedeId: parseInt(sedeId),
+        fecha,
+        semana: getSemanaISO(new Date(fecha)),
+        ...(nota ? { nota } : {}),
+        ...(tipo ? { tipo } : {}),
+      });
     } catch (e) {
-      console.error("inventarioService.obtenerStockBajo:", e);
+      console.error("inventarioService.registrarMovimiento:", e);
       throw e;
     }
   },

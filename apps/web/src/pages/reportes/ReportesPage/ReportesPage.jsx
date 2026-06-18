@@ -8,7 +8,6 @@ import {
   XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
-import EmptyState from "@/components/common/EmptyState/EmptyState";
 import "./ReportesPage.css";
 
 // ─── Sedes ──────────────────────────────────────────────────────
@@ -32,6 +31,14 @@ const TABS = [
 const CHART_COLORS = [
   "#e9c349", "#4ade80", "#ddb7ff", "#ffb4ab", "#60a5fa", "#f97316",
 ];
+
+const EmptyState = ({ icono, titulo, detalle }) => (
+  <div className="rep-empty">
+    <span className="material-symbols-outlined" aria-hidden="true">{icono}</span>
+    <p>{titulo}</p>
+    {detalle && <span>{detalle}</span>}
+  </div>
+);
 
 // ───────────────────────────────────────────────────────────────
 const ReportesPage = () => {
@@ -543,7 +550,8 @@ const ReportesPage = () => {
     return (
       <div className="rep-tab-body">
         {datos.length === 0 ? (
-          <EmptyState icono="inventory_2" titulo="Sin productos con stock bajo" detalle="Todos los productos tienen inventario suficiente." />
+          <>  </>
+          //<EmptyState icono="inventory_2" titulo="Sin productos con stock bajo" detalle="Todos los productos tienen inventario suficiente." />
         ) : (
           <div className="rep-tabla-wrap">
             <TablaGenerica

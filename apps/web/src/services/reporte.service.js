@@ -1,16 +1,13 @@
 import reportesApi from "@/api/reportesApi";
+import pedidosApi from "@/api/pedidosApi";
 
-/**
- * reporte.service.js — Katepramax
- * Capa de servicio para el módulo de reportes.
- * Normaliza parámetros, transforma respuestas y maneja errores.
- */
 
 const reporteService = {
-  // ─── Resumen general ─────────────────────────────────────────────────
+  // ─── Panel general (KPIs del día/semana) ─────────────────────────────
+  // Reemplaza: obtenerResumenGeneral, obtenerVentasPorPeriodo, obtenerResumenDia
   obtenerResumenGeneral: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerResumenGeneral(filtros);
+      const datos = await reportesApi.obtenerPanelGeneral(filtros);
       return {
         kpis: datos?.kpis ?? datos ?? null,
         tendencia: Array.isArray(datos?.tendencia) ? datos.tendencia : [],
@@ -22,10 +19,9 @@ const reporteService = {
     }
   },
 
-  // ─── Ventas por período ───────────────────────────────────────────────
   obtenerVentasPorPeriodo: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerVentasPorPeriodo(filtros);
+      const datos = await reportesApi.obtenerPanelGeneral(filtros);
       return {
         resumen: datos?.resumen ?? datos,
         detalle: Array.isArray(datos?.detalle) ? datos.detalle : [],
@@ -37,10 +33,11 @@ const reporteService = {
     }
   },
 
-  // ─── Corte de caja ────────────────────────────────────────────────────
+  // ─── Arqueo semanal ──────────────────────────────────────────────────
+  // Reemplaza: obtenerCorteCaja
   obtenerCorteCaja: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerCorteCaja(filtros);
+      const datos = await reportesApi.obtenerArqueo(filtros);
       return {
         resumen: datos?.resumen ?? datos,
         movimientos: Array.isArray(datos?.movimientos) ? datos.movimientos : [],
@@ -51,13 +48,35 @@ const reporteService = {
     }
   },
 
-  // ─── Cobros por entregador ────────────────────────────────────────────
+  obtenerArqueo: async (filtros = {}) => {
+    try {
+      return await reportesApi.obtenerArqueo(filtros);
+    } catch (e) {
+      console.error("reporteService.obtenerArqueo:", e);
+      throw e;
+    }
+  },
+
+  // ─── Historial semanal ───────────────────────────────────────────────
+  obtenerHistorialSemanal: async () => {
+    try {
+      const datos = await reportesApi.obtenerHistorialSemanal();
+      return Array.isArray(datos) ? datos : [];
+    } catch (e) {
+      console.error("reporteService.obtenerHistorialSemanal:", e);
+      throw e;
+    }
+  },
+
+  // ─── Cobros por entregador → historial semanal (contiene entregas) ───
   obtenerCobrosEntregador: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerCobrosEntregador(filtros);
+      const datos = await reportesApi.obtenerPanelGeneral(filtros);
       return {
         resumen: datos?.resumen ?? datos,
-        detalle: Array.isArray(datos?.detalle) ? datos.detalle : [],
+        detalle: Array.isArray(datos?.cobrosEntregador)
+          ? datos.cobrosEntregador
+          : [],
       };
     } catch (e) {
       console.error("reporteService.obtenerCobrosEntregador:", e);
@@ -65,24 +84,24 @@ const reporteService = {
     }
   },
 
-  // ─── Stock bajo ───────────────────────────────────────────────────────
+  // ─── Stock bajo → panel-general incluye alertasInventario ────────────
   obtenerStockBajo: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerStockBajo(filtros);
-      return Array.isArray(datos) ? datos : [];
+      const datos = await reportesApi.obtenerPanelGeneral(filtros);
+      return Array.isArray(datos?.stockBajo) ? datos.stockBajo : [];
     } catch (e) {
       console.error("reporteService.obtenerStockBajo:", e);
       throw e;
     }
   },
 
-  // ─── Deuda clientes ───────────────────────────────────────────────────
+  // ─── Deuda clientes → panel-general incluye cartera ──────────────────
   obtenerDeudaClientes: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerDeudaClientes(filtros);
+      const datos = await reportesApi.obtenerPanelGeneral(filtros);
       return {
         resumen: datos?.resumen ?? datos,
-        detalle: Array.isArray(datos?.detalle) ? datos.detalle : [],
+        detalle: Array.isArray(datos?.deudaClientes) ? datos.deudaClientes : [],
       };
     } catch (e) {
       console.error("reporteService.obtenerDeudaClientes:", e);
@@ -93,16 +112,21 @@ const reporteService = {
   // ─── KPIs del día (compatibilidad Dashboard) ──────────────────────────
   obtenerResumenDia: async (sedeId) => {
     try {
-      return await reportesApi.obtenerResumenDia(sedeId);
+      const filtros = sedeId ? { sedeId } : {};
+      return await reportesApi.obtenerPanelGeneral(filtros);
     } catch (e) {
       console.error("reporteService.obtenerResumenDia:", e);
       throw e;
     }
   },
 
+  // ─── Últimos pedidos (compatibilidad Dashboard) ───────────────────────
   obtenerUltimosPedidos: async (sedeId, limite = 5) => {
     try {
-      return await reportesApi.obtenerUltimosPedidos(sedeId, limite);
+      const filtros = sedeId ? { sedeId, limit: limite } : { limit: limite };
+      const data = await pedidosApi.obtenerPedidos(filtros);
+      const lista = Array.isArray(data) ? data : (data?.data ?? []);
+      return lista.slice(0, limite);
     } catch (e) {
       console.error("reporteService.obtenerUltimosPedidos:", e);
       throw e;
