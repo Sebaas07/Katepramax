@@ -333,11 +333,12 @@ const InventarioPage = () => {
                     { campo: "producto", label: "Producto", tipo: "texto" },
                     { campo: "sede", label: "Sede", tipo: "texto" },
                     { campo: "cantidad", label: "Cantidad", tipo: "texto" },
-                    { campo: "costo", label: "Costo", tipo: "moneda" },
+                    { campo: "costo", label: "Costo Unit.", tipo: "moneda" },
+                    { campo: "cantidadIngresada", label: "Cant.", tipo: "texto" },
                   ]}
                   datos={entradas.map((e) => ({
                     ...e,
-                    producto: e.producto?.descripcion || e.productoId,
+                    producto: e.producto?.descripcion || e.producto?.nombre || String(e.productoId || "—"),
                     sede: e.sede?.nombre || `Sede ${e.sedeId}`,
                   }))}
                   filasPorPagina={15}

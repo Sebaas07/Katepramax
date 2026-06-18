@@ -33,7 +33,7 @@ const PanelGeneralTab = ({ panelGeneral, fecha, semanaNumero }) => {
 
   return (
     <div className="panel-general">
-      <div className="panel-kpis">
+      <div className="panel-kpis mt-3">
         <TarjetaKpi
           titulo="Ingresos del dia"
           icono="trending_up"

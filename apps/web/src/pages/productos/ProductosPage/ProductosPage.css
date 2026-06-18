@@ -167,9 +167,9 @@ textarea.form-control {
 /* ─── Stats del catálogo ─────────────────────────────────────*/
 .prod-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.875rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
   width: 100%;
 }
 
@@ -177,55 +177,91 @@ textarea.form-control {
   background: var(--surface-container);
   border: 1px solid var(--outline-variant);
   border-radius: var(--radius-lg);
-  padding: 1rem 1.25rem;
+  padding: 1.5rem 1.75rem;
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  transition: border-color var(--transition-fast), transform var(--transition-fast);
+  gap: 1.25rem;
+  transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+  position: relative;
+  overflow: hidden;
 }
 
+.prod-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--outline-variant);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.prod-stat-card--total::before { background: var(--primary); }
+.prod-stat-card--danger::before { background: var(--error); }
+.prod-stat-card--gold::before { background: var(--aged-gold); }
+
 .prod-stat-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   border-color: var(--aged-gold-border);
 }
 
+.prod-stat-card__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--outline-variant);
+  flex-shrink: 0;
+}
+
 .prod-stat-card .material-symbols-outlined {
-  font-size: 24px;
+  font-size: 28px;
   color: var(--on-surface-variant);
   flex-shrink: 0;
 }
 
-.prod-stat-card--gold .material-symbols-outlined  { color: var(--aged-gold); }
+.prod-stat-card--gold  .material-symbols-outlined { color: var(--aged-gold); }
 .prod-stat-card--total .material-symbols-outlined { color: var(--primary); }
 .prod-stat-card--danger .material-symbols-outlined { color: var(--error); }
-.prod-stat-card--danger { border-color: rgba(255, 180, 171, 0.3); }
-
-.prod-stat-card--gold  { border-color: var(--aged-gold-border); }
-.prod-stat-card--total { border-color: rgba(255, 170, 243, 0.2); }
+.prod-stat-card--danger { border-color: rgba(255, 180, 171, 0.25); }
+.prod-stat-card--gold   { border-color: var(--aged-gold-border); }
+.prod-stat-card--total  { border-color: rgba(255, 170, 243, 0.2); }
 
 .prod-stat-card > div {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .prod-stat-valor {
   font-family: var(--font-headline);
-  font-size: 1.375rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--on-surface);
   line-height: 1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .prod-stat-card--gold  .prod-stat-valor { color: var(--aged-gold); }
 .prod-stat-card--total .prod-stat-valor { color: var(--primary); }
+.prod-stat-card--danger .prod-stat-valor { color: var(--error); }
 
 .prod-stat-label {
   font-family: var(--font-label);
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--on-surface-variant);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 /* ─── Tabla ──────────────────────────────────────────────────*/
@@ -579,7 +615,7 @@ textarea.form-control {
 @media (max-width: 767.98px) {
   .page-header      { flex-direction: column; align-items: flex-start; }
   .filters          { width: 100%; flex-direction: column; align-items: stretch; }
-  .prod-stats       { grid-template-columns: 1fr 1fr; }
+  .prod-stats       { grid-template-columns: 1fr; gap: 0.875rem; }
   .form-row         { grid-template-columns: 1fr; }
   .stock-alerta     { width: 100%; justify-content: flex-start; }
 }

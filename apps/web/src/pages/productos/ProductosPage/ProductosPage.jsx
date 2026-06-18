@@ -495,27 +495,27 @@ const ProductosPage = () => {
 
       <div className="prod-stats" aria-label="Resumen del catálogo">
         <div className="prod-stat-card prod-stat-card--total">
-          <span className="material-symbols-outlined" aria-hidden="true">
-            inventory_2
-          </span>
+          <div className="prod-stat-card__icon-wrap">
+            <span className="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+          </div>
           <div>
             <span className="prod-stat-valor">{totalProductos}</span>
             <span className="prod-stat-label">Total Productos</span>
           </div>
         </div>
         <div className="prod-stat-card prod-stat-card--danger">
-          <span className="material-symbols-outlined" aria-hidden="true">
-            warning
-          </span>
+          <div className="prod-stat-card__icon-wrap">
+            <span className="material-symbols-outlined" aria-hidden="true">warning</span>
+          </div>
           <div>
             <span className="prod-stat-valor">{productosStockBajo}</span>
             <span className="prod-stat-label">Stock Bajo</span>
           </div>
         </div>
         <div className="prod-stat-card prod-stat-card--gold">
-          <span className="material-symbols-outlined" aria-hidden="true">
-            attach_money
-          </span>
+          <div className="prod-stat-card__icon-wrap">
+            <span className="material-symbols-outlined" aria-hidden="true">attach_money</span>
+          </div>
           <div>
             <span className="prod-stat-valor">{formatCOP(valorInventario)}</span>
             <span className="prod-stat-label">Valor Inventario</span>

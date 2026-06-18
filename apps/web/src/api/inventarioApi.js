@@ -77,7 +77,7 @@ const inventarioApi = {
   },
 
   crearMovimiento: async (datos) => {
-    const response = await clienteApi.post("/movimientos", datos);
+    const response = await clienteApi.post("/inventario/movimientos", datos);
     return response.data;
   },
 

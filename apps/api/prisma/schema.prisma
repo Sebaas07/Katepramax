@@ -45,6 +45,7 @@ model Sede {
   stockSedes  StockSede[]
   egresos     Egreso[]
   abonos      Abono[]
+  carteras    Cartera[]
 
   @@map("sedes")
 }
@@ -140,6 +141,8 @@ model Producto {
   precioVenta        Decimal  @default(0.00) @map("precio_venta") @db.Decimal(12, 2)
   precioMayoreo      Decimal? @map("precio_mayoreo") @db.Decimal(12, 2)
   porcentajeGanancia Decimal  @default(0.00) @map("porcentaje_ganancia") @db.Decimal(5, 2)
+  departamento       String?  @default("Otros") @db.VarChar(100)
+  stockMinimo        Int      @default(0) @map("stock_minimo")
   activo             Boolean  @default(true)
   creadoEn           DateTime @default(now()) @map("creado_en")
   actualizadoEn      DateTime @updatedAt @map("actualizado_en")

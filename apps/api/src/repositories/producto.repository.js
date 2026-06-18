@@ -20,6 +20,7 @@ async function listar(prisma, { descripcion, activo, proveedorId, skip = 0, take
   if (activo !== undefined) where.activo = activo;
   if (proveedorId)          where.proveedorId = proveedorId;
   if (descripcion)          where.descripcion = { contains: descripcion };
+  if (filtros && filtros.departamento) where.departamento = filtros.departamento;
 
   return prisma.producto.findMany({
     where,
