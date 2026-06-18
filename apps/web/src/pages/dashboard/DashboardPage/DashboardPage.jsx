@@ -1,14 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "react-hot-toast";
 import reportesApi from "@/api/reportesApi";
+import pedidosApi from "@/api/pedidosApi";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import { formatCOP, formatFechaHora } from "@/utils/formatters";
-
-// Mocks como fallback mientras el backend del Sprint 4-5 no tenga reportes
-import * as mocksBogota        from "@/mocks/datos.mock";
-import * as mocksCartagena     from "@/mocks/datosCartagena.mock";
-import * as mocksVillavicencio from "@/mocks/datosVillavicencio.mock";
 
 import "./DashboardPage.css";
 
@@ -46,78 +41,82 @@ const KPI_CONFIG = [
 ];
 
 // ─── Spinner compacto ─────────────────────────────────────────
-const SpinnerKPI = () => (
-  <div className="kpi-spinner" />
-);
+const SpinnerKPI = () => <div className="kpi-spinner" />;
+
+const obtenerFechaISOHoy = () => {
+  const ahora = new Date();
+  const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000);
+  return local.toISOString().split("T")[0];
+};
 
 // ─── Componente ───────────────────────────────────────────────
 const DashboardPage = () => {
   const { usuario } = useAuth();
 
-  const [kpis,          setKpis]          = useState(null);
-  const [pedidos,       setPedidos]       = useState([]);
-  const [cargandoKpis,  setCargandoKpis]  = useState(true);
+  const [kpis, setKpis] = useState(null);
+  const [pedidos, setPedidos] = useState([]);
+  const [cargandoKpis, setCargandoKpis] = useState(true);
   const [cargandoTabla, setCargandoTabla] = useState(true);
-  const [usandoMocks,   setUsandoMocks]   = useState(false);
+  const [errorKpis, setErrorKpis] = useState(false);
 
   // Determinar sede del usuario
-  const sedeNombre = typeof usuario?.sede === "object"
-    ? usuario.sede.nombre
-    : usuario?.sede ?? "Bogotá";
+  const sedeNombre =
+    typeof usuario?.sede === "object"
+      ? usuario.sede.nombre
+      : (usuario?.sede ?? "Bogotá");
   const sedeId = usuario?.sedeId ?? null;
 
-  // Seleccionar mocks por sede
-  const mocks =
-    sedeNombre === "Cartagena"     ? mocksCartagena :
-    sedeNombre === "Villavicencio" ? mocksVillavicencio :
-    mocksBogota;
-
   // Saludo según hora
-  const hora    = new Date().getHours();
-  const saludo  = hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
-  const nombre  = usuario?.nombreCompleto?.split(" ")[0] || "Usuario";
-  const fecha   = new Date().toLocaleDateString("es-CO", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  const hora = new Date().getHours();
+  const saludo =
+    hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
+  const nombre = usuario?.nombreCompleto?.split(" ")[0] || "Usuario";
+  const fecha = new Date().toLocaleDateString("es-CO", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
-  // ── Carga KPIs ────────────────────────────────────────────
+  // ── Carga KPIs desde panel-general ────────────────────────
   const cargarKpis = useCallback(async () => {
     setCargandoKpis(true);
+    setErrorKpis(false);
     try {
-      const data = await reportesApi.obtenerResumenDia(sedeId);
+      const filtros = { fecha: obtenerFechaISOHoy() };
+      const data = await reportesApi.obtenerPanelGeneral(filtros);
+      // panel-general devuelve { pedidosPendientes, entregasEnRuta, ventasHoy, alertasInventario, ... }
       setKpis(data);
-      setUsandoMocks(false);
     } catch {
-      // Fallback a mocks — el endpoint de reportes llega en Sprint 5
-      setKpis(mocks.KPI_MOCK);
-      setUsandoMocks(true);
+      setErrorKpis(true);
+      setKpis(null);
     } finally {
       setCargandoKpis(false);
     }
-  }, [sedeId, mocks]);
+  }, []);
 
-  // ── Carga últimos pedidos ─────────────────────────────────
+  // ── Carga últimos 5 pedidos ───────────────────────────────
   const cargarPedidos = useCallback(async () => {
     setCargandoTabla(true);
     try {
-      const data = await reportesApi.obtenerUltimosPedidos(sedeId, 5);
-      setPedidos(Array.isArray(data) ? data.slice(0, 5) : []);
-      setUsandoMocks(false);
+      const filtros = sedeId ? { sedeId, limit: 5 } : { limit: 5 };
+      const data = await pedidosApi.obtenerPedidos(filtros);
+      // El backend devuelve array o { data: [...] }
+      const lista = Array.isArray(data) ? data : (data?.data ?? []);
+      setPedidos(lista.slice(0, 5));
     } catch {
-      // Fallback a mocks filtrados por sede
-      const filtrados = mocks.PEDIDOS_MOCK
-        .filter((p) => !sedeNombre || p.sede === sedeNombre)
-        .slice(0, 5);
-      setPedidos(filtrados);
-      setUsandoMocks(true);
+      setPedidos([]);
     } finally {
       setCargandoTabla(false);
     }
-  }, [sedeId, sedeNombre, mocks]);
+  }, [sedeId]);
 
   useEffect(() => {
-    cargarKpis();
-    cargarPedidos();
+    const id = window.setTimeout(() => {
+      cargarKpis();
+      cargarPedidos();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [cargarKpis, cargarPedidos]);
 
   // ── Render ────────────────────────────────────────────────
@@ -132,8 +131,8 @@ const DashboardPage = () => {
           <div className="dashboard-header__sede">
             <span className="material-symbols-outlined">location_on</span>
             <span>Sede {sedeNombre}</span>
-            {usandoMocks && (
-              <span className="dashboard-badge-mock">Demo</span>
+            {errorKpis && (
+              <span className="dashboard-badge-mock">Sin conexión</span>
             )}
           </div>
         </div>
@@ -145,8 +144,14 @@ const DashboardPage = () => {
         {KPI_CONFIG.map((kpi) => (
           <div className="col-12 col-sm-6 col-xl-3" key={kpi.key}>
             <div className="kpi-card">
-              <div className="kpi-card__icon" style={{ backgroundColor: kpi.iconBg }}>
-                <span className="material-symbols-outlined" style={{ color: kpi.iconColor }}>
+              <div
+                className="kpi-card__icon"
+                style={{ backgroundColor: kpi.iconBg }}
+              >
+                <span
+                  className="material-symbols-outlined"
+                  style={{ color: kpi.iconColor }}
+                >
                   {kpi.icon}
                 </span>
               </div>
@@ -174,9 +179,7 @@ const DashboardPage = () => {
             <span className="material-symbols-outlined">history</span>
             Últimos pedidos
           </h6>
-          <span className="dashboard-tabla__badge">
-            {usandoMocks ? "Datos de demostración" : "Datos en tiempo real"}
-          </span>
+          <span className="dashboard-tabla__badge">Datos en tiempo real</span>
         </div>
 
         <div className="table-responsive">
@@ -196,7 +199,10 @@ const DashboardPage = () => {
               {cargandoTabla ? (
                 <tr>
                   <td colSpan={7} className="dashboard-tabla__cargando">
-                    <div className="kpi-spinner" style={{ margin: "1.5rem auto" }} />
+                    <div
+                      className="kpi-spinner"
+                      style={{ margin: "1.5rem auto" }}
+                    />
                   </td>
                 </tr>
               ) : pedidos.length === 0 ? (
@@ -211,7 +217,8 @@ const DashboardPage = () => {
                     <td className="dashboard-tabla__num">#{pedido.id}</td>
                     <td>
                       <span className="dashboard-tabla__codigo">
-                        {pedido.codigo ?? `KP-${String(pedido.id).padStart(4, "0")}`}
+                        {pedido.codigo ??
+                          `KP-${String(pedido.id).padStart(4, "0")}`}
                       </span>
                     </td>
                     <td className="dashboard-tabla__cliente">
@@ -219,7 +226,9 @@ const DashboardPage = () => {
                     </td>
                     <td>
                       <span className="dashboard-tabla__sede">
-                        <span className="material-symbols-outlined">location_on</span>
+                        <span className="material-symbols-outlined">
+                          location_on
+                        </span>
                         {pedido.sede?.nombre ?? pedido.sede ?? sedeNombre}
                       </span>
                     </td>

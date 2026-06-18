@@ -1,4 +1,4 @@
-import { postLogin, getMe } from "../api/authApi";
+import { postLogin, getMe, postLogout } from "../api/authApi";
 import { USUARIOS_MOCK } from "../mocks/datos.mock";
 import { guardarTokens, guardarSesion, cerrarSesion } from "@/utils/sessionHelper";
 
@@ -65,8 +65,15 @@ export const obtenerUsuarioActual = async (options = {}) => {
     };
   }
 };
-export const cerrarSesionUsuario = () => {
-  cerrarSesion();
-  return { exitoso: true, mensaje: "Sesión cerrada correctamente" };
 
+export const cerrarSesionUsuario = async () => {
+  try {
+    await postLogout();
+  } catch (error) {
+    console.warn("Error en logout backend:", error.message);
+  } finally {
+    cerrarSesion();
+  }
+
+  return { exitoso: true, mensaje: "Sesión cerrada correctamente" };
 };

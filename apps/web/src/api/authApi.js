@@ -11,3 +11,6 @@ export const postRefresh = (refreshToken) =>
 
 export const putCambiarClave = (body) =>
   clienteApi.patch("/auth/clave", body);
+
+export const postLogout = () =>
+  clienteApi.post("/auth/logout");

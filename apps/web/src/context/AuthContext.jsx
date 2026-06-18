@@ -8,6 +8,7 @@ import {
 import {
   iniciarSesion as loginService,
   obtenerUsuarioActual,
+  cerrarSesionUsuario,
 } from "@/services/auth.service";
 
 import { AuthContext } from "@/hooks/useAuth";
@@ -113,8 +114,8 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const logout = useCallback(() => {
-    cerrarSesion();
+  const logout = useCallback(async () => {
+    await cerrarSesionUsuario();
     setUsuario(null);
     setIsAuthenticated(false);
     setIsSessionChecked(true);

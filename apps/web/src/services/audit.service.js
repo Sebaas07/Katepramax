@@ -1,36 +1,27 @@
-import auditApi from "@/api/auditApi";
+import { clienteApi } from "@/api/axiosConfig";
 
 const auditService = {
-  obtenerLogs: async (filtros = {}) => {
-    try {
-      return await auditApi.obtenerAuditLogs(filtros);
-    } catch {
-      return [];
-    }
-  },
+  // Backend no tiene /audit-log - método eliminado
+  obtenerLogs: async () => [],
 
+  // Backend: GET /usuarios → solo Admin
   obtenerUsuarios: async () => {
     try {
-      return await auditApi.obtenerUsuariosAudit();
+      const { data } = await clienteApi.get("/usuarios");
+      return data;
     } catch {
       return [];
     }
   },
 
+  // Backend no tiene /audit-log/modulos - usa valores estáticos
   obtenerModulos: async () => {
-    try {
-      return await auditApi.obtenerModulosDisponibles();
-    } catch {
-      return [];
-    }
+    return ["pedidos", "inventario", "clientes", "proveedores", "contabilidad", "usuarios", "auth"];
   },
 
+  // Backend no tiene /audit-log/acciones - usa valores estáticos
   obtenerAcciones: async () => {
-    try {
-      return await auditApi.obtenerAccionesDisponibles();
-    } catch {
-      return [];
-    }
+    return ["crear", "leer", "actualizar", "eliminar", "login", "logout"];
   },
 };
 
