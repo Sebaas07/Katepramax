@@ -1,6 +1,11 @@
 import inventarioApi from "@/api/inventarioApi";
 import { getSemanaISO } from "@/utils/formatters";
 
+const toNumber = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+
 const inventarioService = {
   // ─── Productos ────────────────────────────────────────────────────────────
   obtenerProductos: async (filtros = {}) => {
@@ -11,7 +16,6 @@ const inventarioService = {
       throw e;
     }
   },
-
 
   obtenerProductoPorCodigo: async (codigo) => {
     try {
@@ -25,18 +29,31 @@ const inventarioService = {
 
   crearProducto: async (producto) => {
     try {
-      const { codigo, nombre, departamento, precioDetal, stockMinimo, sedeId, proveedorId } = producto;
-      if (!codigo) throw new Error("El código es obligatorio.");
-      if (!nombre) throw new Error("El nombre es obligatorio.");
-      if (!departamento) throw new Error("Selecciona un departamento.");
-      return await inventarioApi.crearProducto({
+      const {
         codigo,
         nombre,
+        descripcion,
         departamento,
-        precioDetal: parseFloat(precioDetal),
-        stockMinimo: parseInt(stockMinimo),
-        sedeId: parseInt(sedeId),
-        proveedorId: proveedorId ? parseInt(proveedorId) : undefined,
+        precioDetal,
+        precioCosto,
+        stockMinimo,
+        sedeId,
+        proveedorId,
+      } = producto;
+
+      if (!codigo) throw new Error("El código es obligatorio.");
+      if (!nombre && !descripcion) throw new Error("El nombre es obligatorio.");
+      if (!departamento) throw new Error("Selecciona un departamento.");
+
+      return await inventarioApi.crearProducto({
+        codigo,
+        descripcion: nombre || descripcion,
+        departamento,
+        precioCosto: toNumber(precioCosto ?? precioDetal, 0),
+        precioVenta: toNumber(precioDetal, 0),
+        stockMinimo: toNumber(stockMinimo, 0),
+        sedeId: sedeId ? Number(sedeId) : undefined,
+        proveedorId: proveedorId ? Number(proveedorId) : undefined,
       });
     } catch (e) {
       console.error("inventarioService.crearProducto:", e);
@@ -47,7 +64,23 @@ const inventarioService = {
   actualizarProducto: async (codigo, datos) => {
     try {
       if (!codigo) throw new Error("Se requiere el código del producto.");
-      return await inventarioApi.actualizarProducto(codigo, datos);
+
+      const payload = {
+        descripcion: datos.nombre || datos.descripcion,
+        departamento: datos.departamento,
+        precioVenta: datos.precioDetal ?? datos.precioVenta,
+        stockMinimo: datos.stockMinimo,
+        sedeId: datos.sedeId,
+        proveedorId: datos.proveedorId ? Number(datos.proveedorId) : null,
+      };
+
+      if (payload.descripcion === undefined) delete payload.descripcion;
+      if (payload.departamento === undefined) delete payload.departamento;
+      if (payload.precioVenta === undefined) delete payload.precioVenta;
+      if (payload.stockMinimo === undefined) delete payload.stockMinimo;
+      if (payload.sedeId === undefined || payload.sedeId === "") delete payload.sedeId;
+
+      return await inventarioApi.actualizarProducto(codigo, payload);
     } catch (e) {
       console.error("inventarioService.actualizarProducto:", e);
       throw e;
@@ -86,7 +119,6 @@ const inventarioService = {
       throw e;
     }
   },
-
 
   listarEntradas: async (filtros = {}) => {
     try {

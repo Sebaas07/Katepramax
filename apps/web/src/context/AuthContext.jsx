@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   obtenerSesion,
   estaLogueado,
   cerrarSesion,
   guardarSesion,
-  tieneRol,
 } from "@/utils/sessionHelper";
 import {
   iniciarSesion as loginService,
@@ -13,64 +12,99 @@ import {
 
 import { AuthContext } from "@/hooks/useAuth";
 
+const AUTH_VERIFY_TIMEOUT_MS = 2500;
+
+const verificarUsuarioConBackend = async () => {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(
+    () => controller.abort(),
+    AUTH_VERIFY_TIMEOUT_MS,
+  );
+
+  try {
+    return await obtenerUsuarioActual({ signal: controller.signal });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      console.warn("Tiempo de verificación de sesión excedido; se mantiene la sesión local.");
+      return { exitoso: true };
+    }
+
+    console.warn("No se pudo validar sesión con backend:", error);
+    return { exitoso: false, mensaje: error?.message || "Error al validar sesión" };
+  } finally {
+    window.clearTimeout(timeout);
+  }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [usuario, setUsuario] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [usuario, setUsuario] = useState(() => obtenerSesion());
+  const [isAuthenticated, setIsAuthenticated] = useState(() =>
+    estaLogueado() && Boolean(obtenerSesion()),
+  );
+  const [isSessionChecked, setIsSessionChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Cargar sesión al iniciar
   useEffect(() => {
+    let mounted = true;
+
     const cargarSesion = async () => {
-      try {
-        const logueado = estaLogueado();
-        const sesionGuardada = obtenerSesion();
+      const sesionGuardada = obtenerSesion();
+      const tieneSesionLocal = estaLogueado() && Boolean(sesionGuardada);
 
-        if (logueado && sesionGuardada) {
-          setUsuario(sesionGuardada);
-          setIsAuthenticated(true);
-
-          try {
-            const response = await obtenerUsuarioActual();
-            if (response.exitoso) {
-              if (
-                JSON.stringify(response.datos) !==
-                JSON.stringify(sesionGuardada)
-              ) {
-                guardarSesion(response.datos);
-                setUsuario(response.datos);
-              }
-            }
-          } catch (err) {
-            console.warn("No se pudo validar sesión con backend:", err);
-          }
-        }
-      } catch (err) {
-        console.error("Error cargando sesión:", err);
+      if (tieneSesionLocal) {
+        setUsuario(sesionGuardada);
+        setIsAuthenticated(true);
+      } else {
         cerrarSesion();
-      } finally {
-        setIsLoading(false);
+        setUsuario(null);
+        setIsAuthenticated(false);
+      }
+
+      if (tieneSesionLocal) {
+        const response = await verificarUsuarioConBackend();
+
+        if (!mounted) return;
+
+        if (response.exitoso && response.datos) {
+          if (JSON.stringify(response.datos) !== JSON.stringify(sesionGuardada)) {
+            guardarSesion(response.datos);
+            setUsuario(response.datos);
+          }
+        } else if (response.mensaje) {
+          setError(response.mensaje);
+        }
       }
     };
 
-    cargarSesion();
+    cargarSesion().finally(() => {
+      if (mounted) {
+        setIsSessionChecked(true);
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const login = useCallback(async (usuario, contrasena) => {
+  const login = useCallback(async (usuarioInput, contrasena) => {
     setError(null);
     setIsLoading(true);
 
     try {
-      const result = await loginService(usuario, contrasena);
+      const result = await loginService(usuarioInput, contrasena);
 
       if (result.exitoso) {
         setUsuario(result.datos);
         setIsAuthenticated(true);
+        setIsSessionChecked(true);
         return true;
-      } else {
-        setError(result.mensaje || "Error al iniciar sesión");
-        return false;
       }
+
+      setError(result.mensaje || "Error al iniciar sesión");
+      return false;
     } catch (err) {
       setError(err.message || "Error de conexión");
       return false;
@@ -83,29 +117,33 @@ export const AuthProvider = ({ children }) => {
     cerrarSesion();
     setUsuario(null);
     setIsAuthenticated(false);
+    setIsSessionChecked(true);
     setError(null);
   }, []);
 
   const verificarRol = useCallback(
     (roles) => {
-      if (!isAuthenticated) return false;
-      return tieneRol(...(Array.isArray(roles) ? roles : [roles]));
+      const rolesPermitidos = Array.isArray(roles) ? roles : [roles];
+      return rolesPermitidos.includes(usuario?.rol);
     },
-    [isAuthenticated],
+    [usuario],
   );
 
   const value = {
     usuario,
     isAuthenticated,
+    isSessionChecked,
     isLoading,
     error,
     login,
     logout,
     verificarRol,
     esAdmin: usuario?.rol === "Admin",
-    esBodega: usuario?.rol === "Bodega",
+    esBodega: usuario?.rol === "Bodega" || usuario?.rol === "AdminBogota",
     esEntregador: usuario?.rol === "Entregador",
-    esBodegaBogota: usuario?.rol === "Admin" && usuario?.sede === "Bogotá",
+    esBodegaBogota:
+      usuario?.rol === "AdminBogota" ||
+      usuario?.esBogota === true,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

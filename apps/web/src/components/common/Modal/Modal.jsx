@@ -10,7 +10,9 @@ const Modal = ({
    textoBotonCancelar = "Cancelar",
    onConfirmar,
    mostrarCancelar = true,
-   disabled = false
+   disabled = false,
+   className = "",
+   maxWidth
  }) => {
   const [isConfirmed, setIsConfirmed] = useState(false);
 
@@ -42,7 +44,8 @@ const Modal = ({
     <>
       <div className="modal-backdrop" onClick={handleCancelar}>
         <div 
-          className="modal-content"
+          className={`modal-content ${className}`}
+          style={maxWidth ? { maxWidth } : undefined}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="modal-header">

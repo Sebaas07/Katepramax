@@ -3,8 +3,8 @@ import { clienteApi } from "./axiosConfig";
 export const postLogin = (credenciales) =>
   clienteApi.post("/auth/login", credenciales);
 
-export const getMe = () =>
-  clienteApi.get("/auth/me");
+export const getMe = (options = {}) =>
+  clienteApi.get("/auth/me", options);
 
 export const postRefresh = (refreshToken) =>
   clienteApi.post("/auth/refresh", { refreshToken });

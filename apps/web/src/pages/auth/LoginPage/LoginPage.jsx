@@ -9,6 +9,7 @@ const LoginPage = () => {
     login,
     isAuthenticated,
     isLoading: authLoading,
+    isSessionChecked,
     error: authError,
   } = useAuth();
 
@@ -36,13 +37,13 @@ const LoginPage = () => {
 
   // Si ya está autenticado, redirigir
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
+    if (isAuthenticated && isSessionChecked) {
       const sesion = JSON.parse(localStorage.getItem("usuario") || "{}");
       const redirectPath =
         sesion?.rol === "Entregador" ? "/entregas" : "/dashboard";
       navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, isSessionChecked, navigate]);
 
   const manejarCambio = (e) => {
     setErrorLocal("");
@@ -335,17 +336,10 @@ const LoginPage = () => {
                 )}
               </button>
             </form>
-
-            <div className="login__card-footer">
-              <p>¿Problemas con el acceso?</p>
-              <button className="login__support-btn" type="button">
-                Contactar Soporte IT
-              </button>
-            </div>
           </div>
 
           <div className="login__legal">
-            <span>© 2025 Katepramax</span>
+            <span>© 2026 Katepramax</span>
             <div className="login__legal-links">
               <a href="#">Privacidad</a>
               <a href="#">Términos</a>

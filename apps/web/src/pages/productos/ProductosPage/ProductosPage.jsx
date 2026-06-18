@@ -1,31 +1,123 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
-import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
+import ProveedorSelect from "@/components/common/ProveedorSelect/ProveedorSelect";
 import { formatCOP } from "@/utils/formatters";
 import "./ProductosPage.css";
 
-// ─── Spinner ──────────────────────────────────────────────────
+const SEDES = [
+  { id: 1, nombre: "Bogotá" },
+  { id: 2, nombre: "Cartagena" },
+  { id: 3, nombre: "Villavicencio" },
+];
+
+const DEPARTAMENTOS = [
+  "Abastecimiento",
+  "Lácteos",
+  "Abarrotes",
+  "Congelados",
+  "Limpieza",
+  "Otros",
+];
+
+const INVENTARIO_ACTUALIZADO_EVENT = "katepramax:inventario-actualizado";
+
+const toNumber = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+
+const obtenerStock = (producto, sedeId) => {
+  const stockSedes = Array.isArray(producto.stockSedes) ? producto.stockSedes : [];
+  const stockPorSede = stockSedes.find(
+    (stock) => String(stock.sedeId) === String(sedeId),
+  );
+
+  if (stockPorSede) {
+    return toNumber(stockPorSede.stockActual ?? stockPorSede.existencia, 0);
+  }
+
+  if (sedeId) {
+    return toNumber(producto.existencia ?? producto.stockActual, 0);
+  }
+
+  if (stockSedes.length && producto.existencia == null) {
+    return stockSedes.reduce(
+      (total, stock) => total + toNumber(stock.stockActual ?? stock.existencia, 0),
+      0,
+    );
+  }
+
+  return toNumber(producto.existencia ?? producto.stockActual, 0);
+};
+
+const normalizarProducto = (producto, sedeId) => {
+  const stockSedes = Array.isArray(producto.stockSedes) ? producto.stockSedes : [];
+  const stockSede = stockSedes.find(
+    (stock) => String(stock.sedeId) === String(sedeId),
+  );
+  const existencia = obtenerStock(producto, sedeId);
+  const stockMinimo = toNumber(
+    producto.stockMinimo ?? producto.stockMinimoSede ?? producto.stockMin ?? 0,
+    0,
+  );
+  const sede =
+    stockSede?.sede?.nombre ||
+    producto.sede?.nombre ||
+    producto.sedeNombre ||
+    (sedeId ? SEDES.find((s) => String(s.id) === String(sedeId))?.nombre : null) ||
+    `Sede ${producto.sedeId || sedeId || ""}`.trim();
+
+  return {
+    ...producto,
+    id: producto.id ?? producto.codigo,
+    codigo: producto.codigo,
+    nombre: producto.nombre || producto.descripcion || "Sin nombre",
+    descripcion: producto.descripcion || producto.nombre || "",
+    departamento: producto.departamento || producto.categoria || "Otros",
+    precioDetal: toNumber(
+      producto.precioDetal ?? producto.precioVenta ?? producto.precio,
+      0,
+    ),
+    precioVenta: toNumber(producto.precioVenta ?? producto.precioDetal ?? 0, 0),
+    existencia,
+    stockMinimo,
+    proveedor:
+      producto.proveedor?.nombre ||
+      producto.proveedorNombre ||
+      (producto.proveedorId ? `Proveedor ${producto.proveedorId}` : "—"),
+    sede: sede || "—",
+    activo: producto.activo ?? true,
+    esStockBajo: stockMinimo > 0 && existencia <= stockMinimo,
+  };
+};
+
 const Spinner = () => (
   <div className="prod-spinner-wrap">
-    <div className="prod-spinner" />
+    <div className="prod-spinner" aria-hidden="true" />
     <span>Cargando productos...</span>
   </div>
 );
 
-// ─── Badge de stock bajo ──────────────────────────────────────
 const StockBadge = ({ cantidad, stockMinimo }) => {
-  const esBajo = cantidad <= stockMinimo;
+  const esBajo = stockMinimo > 0 && cantidad <= stockMinimo;
+
   return esBajo ? (
     <span className="stock-badge stock-badge--bajo">
-      <span className="material-symbols-outlined">warning</span>
-      ¡Stock bajo!
+      <span className="material-symbols-outlined" aria-hidden="true">
+        warning
+      </span>
+      <strong>{cantidad}</strong>
+      <small>mín. {stockMinimo}</small>
     </span>
   ) : (
-    <span className="stock-badge stock-badge--ok">{cantidad}</span>
+    <span className="stock-badge stock-badge--ok">
+      <strong>{cantidad}</strong>
+      {stockMinimo > 0 && <small>mín. {stockMinimo}</small>}
+    </span>
   );
 };
 
@@ -37,18 +129,14 @@ const ProductosPage = () => {
   const [productos, setProductos] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [cargando, setCargando] = useState(false);
-  const [busqueda, setBusqueda] = useState("");
   const [filtroSede, setFiltroSede] = useState("");
   const [filtroDepto, setFiltroDepto] = useState("");
   const [filtroStockBajo, setFiltroStockBajo] = useState(false);
-
-  // Modal Nuevo Producto
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
   const [modalHistorial, setModalHistorial] = useState(false);
   const [productoSel, setProductoSel] = useState(null);
-
-  // Formulario
+  const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState({
     codigo: "",
     nombre: "",
@@ -58,157 +146,219 @@ const ProductosPage = () => {
     sedeId: "",
     proveedorId: "",
   });
-  const [guardando, setGuardando] = useState(false);
 
-  // ── Carga de productos ─────────────────────────────────────
+  const sedeActivaId = esAdmin ? filtroSede : String(sedeIdUsuario ?? "");
+
   const cargarProductos = useCallback(async () => {
     setCargando(true);
     try {
-      const filtros = {};
-      if (filtroSede && esAdmin) filtros.sedeId = filtroSede;
-      if (filtroDepto) filtros.departamento = filtroDepto;
-      if (filtroStockBajo) filtros.stockBajo = true;
-      filtros.activo = "true";
-      const data = await inventarioService.obtenerProductos(filtros);
-      setProductos(data);
+      const data = await inventarioService.obtenerProductos({
+        activo: "true",
+        take: 200,
+      });
+      setProductos(Array.isArray(data) ? data : []);
     } catch (err) {
-      toast.error("Error al cargar productos: " + err.message);
+      toast.error("Error al cargar productos: " + (err?.message || "desconocido"));
     } finally {
       setCargando(false);
     }
-  }, [filtroSede, filtroDepto, filtroStockBajo, esAdmin]);
+  }, []);
 
-  useEffect(() => { cargarProductos(); }, [cargarProductos]);
-
-  // ── Carga de movimientos para historial ───────────────────
   const cargarMovimientos = useCallback(async () => {
     try {
       const data = await inventarioService.listarMovimientos({});
-      setMovimientos(data);
+      setMovimientos(Array.isArray(data) ? data : []);
     } catch (err) {
-      toast.error("Error al cargar movimientos: " + err.message);
+      toast.error("Error al cargar movimientos: " + (err?.message || "desconocido"));
     }
   }, []);
 
-  // ── Filtrado local por búsqueda ────────────────────────────
-  const productosFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return productos;
-    const termino = busqueda.toLowerCase().trim();
-    return productos.filter((p) =>
-      [p.codigo, p.nombre, p.departamento]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(termino))
-    );
-  }, [productos, busqueda]);
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      void cargarProductos();
+    }, 0);
 
-  // ── Departamentos únicos ───────────────────────────────────
-  const departamentos = useMemo(() => {
-    const uniques = [...new Set(productos.map((p) => p.departamento).filter(Boolean))];
-    return uniques.sort();
-  }, [productos]);
+    return () => window.clearTimeout(id);
+  }, [cargarProductos]);
 
-  // ── Stats ───────────────────────────────────────────────────
-  const totalProductos = productos.length;
-  const productosStockBajo = productos.filter((p) => p.existencia <= p.stockMinimo).length;
-  const valorInventario = productos.reduce(
-    (sum, p) => sum + (parseFloat(p.precioDetal) || 0) * (p.existencia || 0),
-    0
-  );
+  useEffect(() => {
+    const recargar = () => {
+      void cargarProductos();
+      void cargarMovimientos();
+    };
 
-  // ── Handlers formulario ───────────────────────────────────
-  const handleCambioForm = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+    window.addEventListener(INVENTARIO_ACTUALIZADO_EVENT, recargar);
+    window.addEventListener("focus", recargar);
 
-  const abrirModalNuevo = () => {
-    setForm({
+    return () => {
+      window.removeEventListener(INVENTARIO_ACTUALIZADO_EVENT, recargar);
+      window.removeEventListener("focus", recargar);
+    };
+  }, [cargarProductos, cargarMovimientos]);
+
+  const handleCambioForm = useCallback((e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const resetForm = useCallback(
+    () => ({
       codigo: "",
       nombre: "",
       departamento: "",
       precioDetal: "",
       stockMinimo: "",
-      sedeId: esAdmin ? "" : String(sedeIdUsuario),
+      sedeId: esAdmin ? "" : String(sedeIdUsuario ?? ""),
       proveedorId: "",
-    });
+    }),
+    [esAdmin, sedeIdUsuario],
+  );
+
+  const abrirModalNuevo = useCallback(() => {
+    setForm(resetForm());
+    setProductoSel(null);
     setModalNuevo(true);
-  };
+  }, [resetForm]);
 
   const abrirModalEditar = useCallback((prod) => {
-    setProductoSel(prod);
+    const producto = normalizarProducto(prod, prod.sedeId ?? sedeIdUsuario ?? "");
+    setProductoSel(producto);
     setForm({
-      codigo: prod.codigo,
-      nombre: prod.nombre || prod.descripcion || "",
-      departamento: prod.departamento || "",
-      precioDetal: prod.precioDetal || prod.precioVenta || "",
-      stockMinimo: prod.stockMinimo || "",
-      sedeId: prod.sedeId ? String(prod.sedeId) : "",
-      proveedorId: prod.proveedorId ? String(prod.proveedorId) : "",
+      codigo: producto.codigo,
+      nombre: producto.nombre,
+      departamento: producto.departamento,
+      precioDetal: String(producto.precioDetal || ""),
+      stockMinimo: String(producto.stockMinimo || ""),
+      sedeId: producto.sedeId ? String(producto.sedeId) : String(sedeIdUsuario ?? ""),
+      proveedorId: producto.proveedorId ? String(producto.proveedorId) : "",
     });
     setModalEditar(true);
-  }, []);
+  }, [sedeIdUsuario]);
 
-  const abrirHistorial = useCallback(async (prod) => {
-    setProductoSel(prod);
-    await cargarMovimientos();
-    setModalHistorial(true);
-  }, [cargarMovimientos]);
+  const abrirHistorial = useCallback(
+    async (prod) => {
+      setProductoSel(normalizarProducto(prod, sedeActivaId));
+      await cargarMovimientos();
+      setModalHistorial(true);
+    },
+    [cargarMovimientos, sedeActivaId],
+  );
 
-  const handleGuardar = async () => {
+  const handleGuardar = useCallback(async () => {
     setGuardando(true);
     try {
-      await inventarioService.crearProducto(form);
+      await inventarioService.crearProducto({
+        ...form,
+        sedeId: form.sedeId || String(sedeIdUsuario ?? ""),
+      });
       toast.success("Producto creado correctamente.");
       setModalNuevo(false);
+      setForm(resetForm());
       await cargarProductos();
     } catch (err) {
-      toast.error("Error al crear producto: " + err.message);
+      toast.error("Error al crear producto: " + (err?.message || "desconocido"));
     } finally {
       setGuardando(false);
     }
-  };
+  }, [cargarProductos, form, resetForm, sedeIdUsuario]);
 
-  const handleActualizar = async () => {
+  const handleActualizar = useCallback(async () => {
     setGuardando(true);
     try {
       await inventarioService.actualizarProducto(form.codigo, {
         nombre: form.nombre,
         departamento: form.departamento,
-        precioDetal: parseFloat(form.precioDetal),
-        stockMinimo: parseInt(form.stockMinimo),
-        proveedorId: form.proveedorId ? parseInt(form.proveedorId) : null,
+        precioDetal: form.precioDetal,
+        stockMinimo: form.stockMinimo,
+        proveedorId: form.proveedorId,
       });
       toast.success("Producto actualizado correctamente.");
       setModalEditar(false);
+      setForm(resetForm());
       await cargarProductos();
     } catch (err) {
-      toast.error("Error al actualizar producto: " + err.message);
+      toast.error("Error al actualizar producto: " + (err?.message || "desconocido"));
     } finally {
       setGuardando(false);
     }
-  };
+  }, [cargarProductos, form, resetForm]);
 
-  const handleDesactivar = useCallback(async (prod) => {
-    if (!window.confirm(`¿Desactivar producto "${prod.nombre || prod.descripcion}"?`)) return;
-    try {
-      await inventarioService.desactivarProducto(prod.codigo);
-      toast.success("Producto desactivado correctamente.");
-      await cargarProductos();
-    } catch (err) {
-      toast.error("Error al desactivar: " + err.message);
-    }
-  }, [cargarProductos]);
+  const handleDesactivar = useCallback(
+    async (prod) => {
+      if (!window.confirm(`¿Desactivar producto "${prod.nombre}"?`)) return;
 
-  // ── Columnas tabla ───────────────────────────────────────
-  const columnas = [
-    { campo: "codigo", label: "Código", tipo: "texto" },
-    { campo: "nombre", label: "Nombre", tipo: "texto" },
-    { campo: "precioDetal", label: "Precio", tipo: "moneda" },
-    { campo: "existencia", label: "Existencia", tipo: "texto" },
-    { campo: "departamento", label: "Departamento", tipo: "texto" },
-    { campo: "proveedor", label: "Proveedor", tipo: "texto" },
-    { campo: "sede", label: "Sede", tipo: "texto" },
-    { campo: "activo", label: "Estado", tipo: "booleano" },
-  ];
+      try {
+        await inventarioService.desactivarProducto(prod.codigo);
+        toast.success("Producto desactivado correctamente.");
+        window.dispatchEvent(new Event(INVENTARIO_ACTUALIZADO_EVENT));
+        await cargarProductos();
+      } catch (err) {
+        toast.error("Error al desactivar: " + (err?.message || "desconocido"));
+      }
+    },
+    [cargarProductos],
+  );
+
+  const productosNormalizados = useMemo(
+    () => productos.map((producto) => normalizarProducto(producto, sedeActivaId)),
+    [productos, sedeActivaId],
+  );
+
+  const departamentos = useMemo(() => {
+    const unicos = [...new Set(productosNormalizados.map((p) => p.departamento).filter(Boolean))];
+    return unicos.sort((a, b) => a.localeCompare(b));
+  }, [productosNormalizados]);
+
+  const productosFiltrados = useMemo(() => {
+    if (!filtroDepto && !filtroStockBajo) return productosNormalizados;
+
+    return productosNormalizados.filter((producto) => {
+      if (filtroDepto && producto.departamento !== filtroDepto) return false;
+      if (filtroStockBajo && !producto.esStockBajo) return false;
+      return true;
+    });
+  }, [filtroDepto, filtroStockBajo, productosNormalizados]);
+
+  const datosTabla = useMemo(
+    () =>
+      productosFiltrados.map((producto) => ({
+        ...producto,
+        precioDetal: producto.precioDetal,
+        existencia: (
+          <StockBadge
+            cantidad={producto.existencia}
+            stockMinimo={producto.stockMinimo}
+          />
+        ),
+        stockMinimo: producto.stockMinimo || "—",
+        proveedor: producto.proveedor,
+        sede: producto.sede,
+        activo: producto.activo,
+      })),
+    [productosFiltrados],
+  );
+
+  const totalProductos = productosNormalizados.length;
+  const productosStockBajo = productosNormalizados.filter((p) => p.esStockBajo).length;
+  const valorInventario = productosNormalizados.reduce(
+    (suma, producto) => suma + producto.precioDetal * producto.existencia,
+    0,
+  );
+
+  const columnas = useMemo(
+    () => [
+      { campo: "codigo", label: "Código", tipo: "texto" },
+      { campo: "nombre", label: "Nombre", tipo: "texto" },
+      { campo: "precioDetal", label: "Precio", tipo: "moneda" },
+      { campo: "existencia", label: "Existencia", tipo: "texto" },
+      { campo: "stockMinimo", label: "Mínimo", tipo: "texto" },
+      { campo: "departamento", label: "Departamento", tipo: "texto" },
+      { campo: "proveedor", label: "Proveedor", tipo: "texto" },
+      { campo: "sede", label: "Sede", tipo: "texto" },
+      { campo: "activo", label: "Estado", tipo: "booleano" },
+    ],
+    [],
+  );
 
   const acciones = useCallback(
     (prod) => [
@@ -225,50 +375,40 @@ const ProductosPage = () => {
           ]
         : []),
     ],
-    [puedeEditar, abrirModalEditar, abrirHistorial, handleDesactivar]
+    [puedeEditar, abrirModalEditar, abrirHistorial, handleDesactivar],
   );
 
-  // Mapeados para tabla
-  const datosTabla = useMemo(
-    () =>
-      productosFiltrados.map((p) => ({
-        ...p,
-        nombre: p.nombre || p.descripcion,
-        precioDetal: p.precioDetal || p.precioVenta,
-        proveedor: p.proveedor?.nombre || p.proveedor || "—",
-        sede: p.sede?.nombre || p.sede || `Sede ${p.sedeId}`,
-        existencia: (
-          <StockBadge
-            cantidad={p.existencia || 0}
-            stockMinimo={p.stockMinimo || 0}
-          />
-        ),
-      })),
-    [productosFiltrados]
-  );
-
-  // Movimientos del producto seleccionado
   const movimientosProducto = useMemo(
-    () => movimientos.filter((m) => m.productoId === productoSel?.id),
-    [movimientos, productoSel]
+    () =>
+      movimientos
+        .filter(
+          (movimiento) =>
+            String(movimiento.productoId) === String(productoSel?.id) ||
+            movimiento.producto?.codigo === productoSel?.codigo,
+        )
+        .map((movimiento) => ({
+          ...movimiento,
+          fecha: movimiento.fecha,
+          tipo: movimiento.tipo,
+          cantidad: movimiento.cantidad,
+          nota: movimiento.nota || "—",
+        })),
+    [movimientos, productoSel],
   );
 
-  // ── Render ───────────────────────────────────────────────────
   return (
     <div className="productos-page">
-      {/* Header */}
       <div className="page-header">
         <div>
           <h1>Catálogo de Productos</h1>
           <p className="productos-subtitulo">
-            Gestión completa de productos, precios y stock
+            Gestión completa de productos, precios, stock y proveedores
           </p>
         </div>
 
-        {/* Alerta stock bajo destacada */}
         {productosStockBajo > 0 && (
-          <div className="stock-alerta">
-            <span className="stock-alerta__icon">
+          <div className="stock-alerta" role="status">
+            <span className="stock-alerta__icon" aria-hidden="true">
               <span className="material-symbols-outlined">warning</span>
             </span>
             <span className="stock-alerta__text">
@@ -295,9 +435,11 @@ const ProductosPage = () => {
                 className="filter-select"
               >
                 <option value="">Todas</option>
-                <option value="1">Bogotá</option>
-                <option value="2">Cartagena</option>
-                <option value="3">Villavicencio</option>
+                {SEDES.map((sede) => (
+                  <option key={sede.id} value={sede.id}>
+                    {sede.nombre}
+                  </option>
+                ))}
               </select>
             </div>
           )}
@@ -311,9 +453,9 @@ const ProductosPage = () => {
               className="filter-select"
             >
               <option value="">Todos</option>
-              {departamentos.map((d) => (
-                <option key={d} value={d}>
-                  {d}
+              {departamentos.map((depto) => (
+                <option key={depto} value={depto}>
+                  {depto}
                 </option>
               ))}
             </select>
@@ -328,7 +470,11 @@ const ProductosPage = () => {
                 onChange={(e) => setFiltroStockBajo(e.target.checked)}
               />
               <span className="checkbox-text">
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                <span
+                  className="material-symbols-outlined"
+                  aria-hidden="true"
+                  style={{ fontSize: 16 }}
+                >
                   warning
                 </span>
                 Solo stock bajo
@@ -338,31 +484,38 @@ const ProductosPage = () => {
 
           {puedeEditar && (
             <button className="btn-primary" onClick={abrirModalNuevo} type="button">
-              <span className="material-symbols-outlined">add</span>
+              <span className="material-symbols-outlined" aria-hidden="true">
+                add
+              </span>
               Nuevo Producto
             </button>
           )}
         </div>
       </div>
 
-      {/* Stats del catálogo */}
-      <div className="prod-stats">
+      <div className="prod-stats" aria-label="Resumen del catálogo">
         <div className="prod-stat-card prod-stat-card--total">
-          <span className="material-symbols-outlined">inventory_2</span>
+          <span className="material-symbols-outlined" aria-hidden="true">
+            inventory_2
+          </span>
           <div>
             <span className="prod-stat-valor">{totalProductos}</span>
             <span className="prod-stat-label">Total Productos</span>
           </div>
         </div>
         <div className="prod-stat-card prod-stat-card--danger">
-          <span className="material-symbols-outlined">warning</span>
+          <span className="material-symbols-outlined" aria-hidden="true">
+            warning
+          </span>
           <div>
             <span className="prod-stat-valor">{productosStockBajo}</span>
             <span className="prod-stat-label">Stock Bajo</span>
           </div>
         </div>
         <div className="prod-stat-card prod-stat-card--gold">
-          <span className="material-symbols-outlined">attach_money</span>
+          <span className="material-symbols-outlined" aria-hidden="true">
+            attach_money
+          </span>
           <div>
             <span className="prod-stat-valor">{formatCOP(valorInventario)}</span>
             <span className="prod-stat-label">Valor Inventario</span>
@@ -370,7 +523,6 @@ const ProductosPage = () => {
         </div>
       </div>
 
-      {/* Tabla */}
       <div className="tab-content">
         {cargando ? (
           <Spinner />
@@ -380,14 +532,13 @@ const ProductosPage = () => {
             datos={datosTabla}
             filasPorPagina={15}
             mostrarBuscador
-            buscarEnCampos={["codigo", "nombre"]}
+            buscarEnCampos={["codigo", "nombre", "departamento", "proveedor", "sede"]}
             paginacion
             renderAcciones={acciones}
           />
         )}
       </div>
 
-      {/* Modal — Nuevo Producto */}
       <Modal
         isOpen={modalNuevo}
         onClose={() => setModalNuevo(false)}
@@ -396,19 +547,42 @@ const ProductosPage = () => {
         onConfirmar={handleGuardar}
         mostrarCancelar
         disabled={guardando}
+        className="modal-content--producto"
+        maxWidth="680px"
       >
-        <div className="modal-form">
-          <div className="form-group">
-            <label htmlFor="prod-codigo">Código *</label>
-            <input
-              id="prod-codigo"
-              name="codigo"
-              type="text"
-              value={form.codigo}
-              onChange={handleCambioForm}
-              className="form-control"
-              placeholder="PROD-XXX"
-            />
+        <div className="modal-form modal-form--producto">
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="prod-codigo">Código *</label>
+              <input
+                id="prod-codigo"
+                name="codigo"
+                type="text"
+                value={form.codigo}
+                onChange={handleCambioForm}
+                className="form-control"
+                placeholder="PROD-XXX"
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="prod-depto">Departamento *</label>
+              <select
+                id="prod-depto"
+                name="departamento"
+                value={form.departamento}
+                onChange={handleCambioForm}
+                className="form-control"
+              >
+                <option value="">— Selecciona —</option>
+                {DEPARTAMENTOS.map((depto) => (
+                  <option key={depto} value={depto}>
+                    {depto}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="form-group">
@@ -421,26 +595,8 @@ const ProductosPage = () => {
               onChange={handleCambioForm}
               className="form-control"
               placeholder="Nombre del producto"
+              autoComplete="off"
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="prod-depto">Departamento *</label>
-            <select
-              id="prod-depto"
-              name="departamento"
-              value={form.departamento}
-              onChange={handleCambioForm}
-              className="form-control"
-            >
-              <option value="">— Selecciona —</option>
-              <option value="Abastecimiento">Abastecimiento</option>
-              <option value="Lácteos">Lácteos</option>
-              <option value="Abarrotes">Abarrotes</option>
-              <option value="Congelados">Congelados</option>
-              <option value="Limpieza">Limpieza</option>
-              <option value="Otros">Otros</option>
-            </select>
           </div>
 
           <div className="form-row">
@@ -486,29 +642,28 @@ const ProductosPage = () => {
                 className="form-control"
               >
                 <option value="">— Selecciona —</option>
-                <option value="1">Bogotá</option>
-                <option value="2">Cartagena</option>
-                <option value="3">Villavicencio</option>
+                {SEDES.map((sede) => (
+                  <option key={sede.id} value={sede.id}>
+                    {sede.nombre}
+                  </option>
+                ))}
               </select>
             </div>
           )}
 
           <div className="form-group">
-            <label htmlFor="prod-proveedor">Proveedor (Opcional)</label>
-            <input
-              id="prod-proveedor"
-              name="proveedorId"
-              type="text"
+            <label htmlFor="prod-proveedor">Proveedor</label>
+            <ProveedorSelect
               value={form.proveedorId}
-              onChange={handleCambioForm}
-              className="form-control"
-              placeholder="ID del proveedor"
+              onChange={(proveedorId) =>
+                setForm((prev) => ({ ...prev, proveedorId }))
+              }
+              disabled={guardando}
             />
           </div>
         </div>
       </Modal>
 
-      {/* Modal — Editar Producto */}
       <Modal
         isOpen={modalEditar}
         onClose={() => setModalEditar(false)}
@@ -517,19 +672,40 @@ const ProductosPage = () => {
         onConfirmar={handleActualizar}
         mostrarCancelar
         disabled={guardando}
+        className="modal-content--producto"
+        maxWidth="680px"
       >
-        <div className="modal-form">
-          <div className="form-group">
-            <label htmlFor="edit-codigo">Código</label>
-            <input
-              id="edit-codigo"
-              name="codigo"
-              type="text"
-              value={form.codigo}
-              className="form-control"
-              readOnly
-              style={{ opacity: 0.6, cursor: "not-allowed" }}
-            />
+        <div className="modal-form modal-form--producto">
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="edit-codigo">Código</label>
+              <input
+                id="edit-codigo"
+                name="codigo"
+                type="text"
+                value={form.codigo}
+                className="form-control form-control--readonly"
+                readOnly
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="edit-depto">Departamento *</label>
+              <select
+                id="edit-depto"
+                name="departamento"
+                value={form.departamento}
+                onChange={handleCambioForm}
+                className="form-control"
+              >
+                <option value="">— Selecciona —</option>
+                {DEPARTAMENTOS.map((depto) => (
+                  <option key={depto} value={depto}>
+                    {depto}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="form-group">
@@ -542,26 +718,8 @@ const ProductosPage = () => {
               onChange={handleCambioForm}
               className="form-control"
               placeholder="Nombre del producto"
+              autoComplete="off"
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="edit-depto">Departamento *</label>
-            <select
-              id="edit-depto"
-              name="departamento"
-              value={form.departamento}
-              onChange={handleCambioForm}
-              className="form-control"
-            >
-              <option value="">— Selecciona —</option>
-              <option value="Abastecimiento">Abastecimiento</option>
-              <option value="Lácteos">Lácteos</option>
-              <option value="Abarrotes">Abarrotes</option>
-              <option value="Congelados">Congelados</option>
-              <option value="Limpieza">Limpieza</option>
-              <option value="Otros">Otros</option>
-            </select>
           </div>
 
           <div className="form-row">
@@ -596,45 +754,71 @@ const ProductosPage = () => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="edit-proveedor">Proveedor</label>
-            <input
-              id="edit-proveedor"
-              name="proveedorId"
-              type="text"
-              value={form.proveedorId}
-              onChange={handleCambioForm}
-              className="form-control"
-              placeholder="ID del proveedor"
-            />
+          <div className="form-row">
+            {esAdmin && (
+              <div className="form-group">
+                <label htmlFor="edit-sede">Sede</label>
+                <select
+                  id="edit-sede"
+                  name="sedeId"
+                  value={form.sedeId}
+                  onChange={handleCambioForm}
+                  className="form-control"
+                >
+                  {SEDES.map((sede) => (
+                    <option key={sede.id} value={sede.id}>
+                      {sede.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label htmlFor="edit-proveedor">Proveedor</label>
+              <ProveedorSelect
+                value={form.proveedorId}
+                onChange={(proveedorId) =>
+                  setForm((prev) => ({ ...prev, proveedorId }))
+                }
+                disabled={guardando}
+              />
+            </div>
           </div>
         </div>
       </Modal>
 
-      {/* Modal — Historial del Producto */}
       <Modal
         isOpen={modalHistorial}
         onClose={() => setModalHistorial(false)}
-        titulo={`Historial: ${productoSel?.nombre || productoSel?.descripcion}`}
+        titulo={`Historial: ${productoSel?.nombre || "Producto"}`}
         mostrarCancelar={false}
         textoBotonConfirmar="Cerrar"
         onConfirmar={() => setModalHistorial(false)}
+        className="modal-content--producto"
+        maxWidth="680px"
       >
         {productoSel && (
           <div className="historial-producto">
             <div className="historial-header">
               <span className="historial-codigo">{productoSel.codigo}</span>
-              <EstadoBadge estado={productoSel.activo ? "activo" : "inactivo"} />
+              <span className="historial-meta">
+                {productoSel.sede} · {productoSel.proveedor}
+              </span>
             </div>
 
             <div className="historial-stats">
               <div className="historial-stat">
                 <span>Stock actual</span>
-                <strong>{productoSel.existencia || 0}</strong>
+                <strong>{productoSel.existencia}</strong>
               </div>
               <div className="historial-stat">
                 <span>Mínimo</span>
-                <strong>{productoSel.stockMinimo || 0}</strong>
+                <strong>{productoSel.stockMinimo}</strong>
+              </div>
+              <div className="historial-stat">
+                <span>Precio</span>
+                <strong>{formatCOP(productoSel.precioDetal)}</strong>
               </div>
             </div>
 
@@ -646,17 +830,16 @@ const ProductosPage = () => {
                   { campo: "cantidad", label: "Cantidad", tipo: "texto" },
                   { campo: "nota", label: "Nota", tipo: "texto" },
                 ]}
-                datos={movimientosProducto.map((m) => ({
-                  ...m,
-                  tipo: m.tipo,
-                }))}
+                datos={movimientosProducto}
                 filasPorPagina={10}
                 mostrarBuscador={false}
                 paginacion={false}
               />
             ) : (
               <div className="historial-empty">
-                <span className="material-symbols-outlined">history</span>
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  history
+                </span>
                 <span>No hay movimientos registrados para este producto.</span>
               </div>
             )}

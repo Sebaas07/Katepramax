@@ -30,6 +30,7 @@ const InventarioPage = () => {
 
   const [activeTab, setActiveTab] = useState("productos");
   const [productos, setProductos] = useState([]);
+  const [entradas, setEntradas] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [guardandoMov, setGuardandoMov] = useState(false);
@@ -73,7 +74,7 @@ const InventarioPage = () => {
       if (filtrosMov.productoId) params.productoId = filtrosMov.productoId;
       if (filtrosMov.tipo) params.tipo = filtrosMov.tipo;
       const data = await inventarioService.listarMovimientos(params);
-      setMovimientos(data);
+      setMovimientos(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Error al cargar movimientos: " + err.message);
     } finally {
@@ -81,10 +82,27 @@ const InventarioPage = () => {
     }
   }, [filtrosMov.sedeId, filtrosMov.productoId, filtrosMov.tipo, esAdmin]);
 
+  const cargarEntradas = useCallback(async () => {
+    setCargando(true);
+    try {
+      const data = await inventarioService.listarEntradas({});
+      setEntradas(Array.isArray(data) ? data : []);
+    } catch (err) {
+      toast.error("Error al cargar entradas: " + err.message);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (activeTab === "productos") cargarProductos();
-    if (activeTab === "movimientos") cargarMovimientos();
-  }, [activeTab, cargarProductos, cargarMovimientos]);
+    const id = window.setTimeout(() => {
+      if (activeTab === "productos") void cargarProductos();
+      if (activeTab === "movimientos") void cargarMovimientos();
+      if (activeTab === "entradas") void cargarEntradas();
+    }, 0);
+
+    return () => window.clearTimeout(id);
+  }, [activeTab, cargarProductos, cargarMovimientos, cargarEntradas]);
 
   // ── Handlers formulario ──────────────────────────────────────
   const handleCambioForm = (e) => {
@@ -115,9 +133,11 @@ const InventarioPage = () => {
         fecha: form.fecha,
       });
       toast.success("Movimiento registrado correctamente.");
+      window.dispatchEvent(new Event("katepramax:inventario-actualizado"));
       setModalMovAbierto(false);
       if (activeTab === "movimientos") await cargarMovimientos();
       if (activeTab === "productos") await cargarProductos();
+      if (activeTab === "entradas") await cargarEntradas();
     } catch (err) {
       toast.error("Error al registrar: " + err.message);
     } finally {

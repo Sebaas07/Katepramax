@@ -138,6 +138,51 @@ button, input, select, textarea {
   font-family: inherit;
 }
 
+/* ─── Loading global de autenticación ─────────────────────────*/
+.auth-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background:
+    radial-gradient(circle at 50% 25%, rgba(197, 179, 88, 0.12), transparent 32rem),
+    var(--surface);
+  color: var(--on-surface);
+  font-family: var(--font-headline);
+}
+
+.auth-loading div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.auth-loading strong {
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.auth-loading span {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+}
+
+.auth-loading__orb {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 3px solid var(--outline-variant);
+  border-top-color: var(--secondary);
+  animation: auth-spin 0.8s linear infinite;
+  box-shadow: 0 0 24px rgba(233, 195, 73, 0.18);
+}
+
+@keyframes auth-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ─── Clases utilitarias globales ────────────────────────────────────────────*/
 
 /* Glassmorphism estándar */

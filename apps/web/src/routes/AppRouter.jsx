@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { RequireAuth, RequireRole, PublicRoute } from "./ProtectedRoutes";
+import { RequireAuth, RequireRole, PublicRoute, AuthLoading } from "./ProtectedRoutes";
 
 // Layout
 import MainLayout from "@/components/layout/MainLayout";
@@ -37,28 +37,10 @@ const ROLES = {
   ENTREGADOR: ["Entregador"],
 };
 
-// ─── Spinner ──────────────────────────────────────────────────
-const Cargando = () => (
-  <div style={{
-    display: "flex", alignItems: "center", justifyContent: "center",
-    minHeight: "60vh", color: "var(--on-surface-variant)",
-    fontFamily: "var(--font-label)", fontSize: 13, gap: "0.75rem",
-  }}>
-    <div style={{
-      width: 28, height: 28,
-      border: "3px solid var(--outline-variant)",
-      borderTopColor: "var(--aged-gold)",
-      borderRadius: "50%",
-      animation: "spin 0.8s linear infinite",
-    }} />
-    Cargando...
-  </div>
-);
-
 // ─── Redirección inteligente desde raíz ───────────────────────
 const RootRedirect = () => {
-  const { isAuthenticated, usuario, isLoading } = useAuth();
-  if (isLoading)        return <Cargando />;
+  const { isAuthenticated, isSessionChecked, usuario } = useAuth();
+  if (!isSessionChecked) return <AuthLoading />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (usuario?.rol === "Entregador") return <Navigate to="/entregas" replace />;
   return <Navigate to="/dashboard" replace />;

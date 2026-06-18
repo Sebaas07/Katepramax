@@ -1,18 +1,13 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
-// Spinner de carga
-const LoadingSpinner = () => (
-  <div
-    style={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "100vh",
-      backgroundColor: "var(--surface)",
-    }}
-  >
-    <div className="login__spinner" style={{ width: "32px", height: "32px" }} />
+export const AuthLoading = () => (
+  <div className="auth-loading">
+    <div className="auth-loading__orb" aria-hidden="true" />
+    <div>
+      <strong>Verificando sesión</strong>
+      <span>Preparando el acceso seguro a Katepramax...</span>
+    </div>
   </div>
 );
 
@@ -21,10 +16,10 @@ const LoadingSpinner = () => (
  * Si no está logueado -> redirige a login
  */
 export const RequireAuth = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isSessionChecked } = useAuth();
 
-  if (isLoading) {
-    return <LoadingSpinner />;
+  if (!isSessionChecked) {
+    return <AuthLoading />;
   }
 
   if (!isAuthenticated) {
@@ -39,10 +34,10 @@ export const RequireAuth = () => {
  * @param {string|string[]} roles - Rol o roles permitidos
  */
 export const RequireRole = ({ roles }) => {
-  const { isAuthenticated, isLoading, verificarRol } = useAuth();
+  const { isAuthenticated, isSessionChecked, verificarRol } = useAuth();
 
-  if (isLoading) {
-    return <LoadingSpinner />;
+  if (!isSessionChecked) {
+    return <AuthLoading />;
   }
 
   if (!isAuthenticated) {
@@ -61,14 +56,13 @@ export const RequireRole = ({ roles }) => {
  * Si ya está logueado -> redirige según su rol
  */
 export const PublicRoute = () => {
-  const { isAuthenticated, isLoading, usuario } = useAuth();
+  const { isAuthenticated, isSessionChecked, usuario } = useAuth();
 
-  if (isLoading) {
-    return <LoadingSpinner />;
+  if (!isSessionChecked) {
+    return <AuthLoading />;
   }
 
   if (isAuthenticated) {
-    // Redirigir según el rol del usuario
     const redirectPath =
       usuario?.rol === "Entregador" ? "/entregas" : "/dashboard";
     return <Navigate to={redirectPath} replace />;

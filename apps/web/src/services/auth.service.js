@@ -52,11 +52,12 @@ export const iniciarSesion = async (usuario, contrasena) => {
   }
 };
 
-export const obtenerUsuarioActual = async () => {
+export const obtenerUsuarioActual = async (options = {}) => {
   try {
-    const response = await getMe();
+    const response = await getMe(options);
     return { exitoso: true, datos: response.data };
   } catch (error) {
+    if (error?.name === "AbortError") throw error;
     console.error("Error al obtener usuario:", error);
     return {
       exitoso: false,

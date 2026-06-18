@@ -82,12 +82,95 @@
   color: var(--on-surface);
 }
 
+/* ─── Formularios de modal ───────────────────────────────────*/
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.form-group label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--aged-gold);
+}
+
+.form-control {
+  padding: 0.625rem 0.875rem;
+  background: var(--surface-container-lowest);
+  border: none;
+  border-bottom: 2px solid var(--outline-variant);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  font-family: var(--font-headline);
+  font-size: 14px;
+  color: var(--on-surface);
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-control:focus {
+  border-bottom-color: var(--secondary);
+  box-shadow: 0 2px 0 0 rgba(233, 195, 73, 0.15);
+}
+
+.form-control::placeholder {
+  color: rgba(151, 141, 157, 0.4);
+}
+
+.form-control--readonly,
+.form-control[readOnly] {
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  cursor: not-allowed;
+}
+
+.form-control.select,
+select.form-control {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23978d9d' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;
+}
+
+select.form-control option {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
+.form-control.textarea,
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.modal-form--producto {
+  gap: 1.125rem;
+}
+
+.modal-form--producto .form-row {
+  align-items: flex-end;
+}
+
 /* ─── Stats del catálogo ─────────────────────────────────────*/
 .prod-stats {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 0.875rem;
   margin-bottom: 1.5rem;
+  width: 100%;
 }
 
 .prod-stat-card {
@@ -330,6 +413,9 @@
 
 /* ─── Stock Badge ─────────────────────────────────────────────*/
 .stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   font-family: var(--font-label);
   font-size: 12px;
   font-weight: 600;
@@ -337,10 +423,17 @@
   border-radius: var(--radius-full);
 }
 
+.stock-badge strong {
+  font-family: var(--font-headline);
+  font-size: 13px;
+}
+
+.stock-badge small {
+  font-size: 10px;
+  opacity: 0.75;
+}
+
 .stock-badge--bajo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
   background: rgba(255, 180, 171, 0.15);
   color: var(--error);
 }
@@ -420,6 +513,13 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.historial-meta {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
 }
 
 .historial-codigo {
@@ -481,9 +581,11 @@
   .filters          { width: 100%; flex-direction: column; align-items: stretch; }
   .prod-stats       { grid-template-columns: 1fr 1fr; }
   .form-row         { grid-template-columns: 1fr; }
+  .stock-alerta     { width: 100%; justify-content: flex-start; }
 }
 
 @media (max-width: 480px) {
   .prod-stats { grid-template-columns: 1fr; }
   .historial-stats { flex-direction: column; gap: 0.75rem; }
+  .modal-content--producto { max-width: 100%; }
 }

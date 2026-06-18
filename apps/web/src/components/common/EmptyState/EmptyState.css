@@ -1,0 +1,13 @@
+.rep-empty__titulo {
+  font-family: var(--font-headline);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.rep-empty__detalle {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  max-width: 320px;
+}

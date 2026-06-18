@@ -157,6 +157,10 @@
 }
 
 /* ─── Responsive ─────────────────────────────────────────────*/
+.modal-content--producto {
+  max-width: 680px;
+}
+
 @media (max-width: 575.98px) {
   .modal-content {
     max-width: 100%;
