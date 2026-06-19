@@ -120,7 +120,7 @@ model Inventario {
   fecha             DateTime @map("fecha")
   semana            Int
   cantidadIngresada Int      @default(0) @map("cantidad_ingresada")
-  costo             Decimal  @default(0.00) @db.Decimal(12, 2)
+ costoUnitario     Decimal  @default(0.00) @map("costo_unitario") @db.Decimal(12, 2)
   creadoEn          DateTime @default(now()) @map("creado_en")
 
   sedeId     Int    @map("sede_id")

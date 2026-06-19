@@ -19,7 +19,12 @@ async function buildApp() {
 
   // ── Plugins ───────────────────────────────────────────────────────────────────
   app.register(require("./plugins/env.plugin"));
-  app.register(cors, { origin: process.env.CORS_ORIGIN || "*" });
+  app.register(cors, {
+    origin: process.env.CORS_ORIGIN || "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  });
   app.register(require("./plugins/prisma.plugin"));
   app.register(require("./plugins/jwt.plugin"));
 
@@ -45,7 +50,9 @@ async function buildApp() {
       await registrarError(app, error, request);
 
       return reply.code(status).send({
-        error: isDev ? `${error.name}: ${error.message}` : "Error interno del servidor",
+        error: isDev
+          ? `${error.name}: ${error.message}`
+          : "Error interno del servidor",
         ...(isDev && { details: errorInfo }),
       });
     }

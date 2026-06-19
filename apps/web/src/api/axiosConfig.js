@@ -6,7 +6,8 @@ import {
   cerrarSesion,
 } from "@/utils/sessionHelper";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 /**
  * Instancia principal de Axios.
@@ -32,7 +33,7 @@ clienteApi.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // ─── Interceptor de RESPONSE ──────────────────────────────────────────────────
@@ -59,6 +60,7 @@ clienteApi.interceptors.response.use(
 
     // Sin respuesta = servidor caído o sin internet
     if (!response) {
+      if (axios.isCancel(error)) return Promise.reject(error);
       console.warn("Sin conexión al servidor:", error.message);
       return Promise.reject(error);
     }
@@ -70,7 +72,6 @@ clienteApi.interceptors.response.use(
 
     // Solo actuar en 401 y solo si no reintentamos esta petición antes
     if (response.status === 401 && !config._reintentado) {
-
       // Si ya hay una renovación en curso, encolar y esperar
       if (estaRenovando) {
         return new Promise((resolve) => {
@@ -96,14 +97,13 @@ clienteApi.interceptors.response.use(
 
         guardarTokens(
           data.accessToken || data.token,
-          data.refreshToken || data.refreshToken || data.refresh_token
+          data.refreshToken || data.refreshToken || data.refresh_token,
         );
         estaRenovando = false;
         procesarCola(data.accessToken || data.token);
 
         config.headers.Authorization = `Bearer ${data.accessToken}`;
         return clienteApi(config);
-
       } catch (err) {
         estaRenovando = false;
         peticionesEnEspera = [];
@@ -116,5 +116,5 @@ clienteApi.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );

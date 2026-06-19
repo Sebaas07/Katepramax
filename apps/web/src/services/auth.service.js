@@ -1,16 +1,22 @@
 import { postLogin, getMe, postLogout } from "../api/authApi";
 import { USUARIOS_MOCK } from "../mocks/datos.mock";
-import { guardarTokens, guardarSesion, cerrarSesion } from "@/utils/sessionHelper";
+import {
+  guardarTokens,
+  guardarSesion,
+  cerrarSesion,
+} from "@/utils/sessionHelper";
 
 const generarTokenMock = (usuario) => {
-  const header    = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const payload   = btoa(JSON.stringify({
-    id: usuario.id,
-    usuario: usuario.usuario,
-    rol: usuario.rol,
-    sedeId: usuario.sedeId,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  }));
+  const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const payload = btoa(
+    JSON.stringify({
+      id: usuario.id,
+      usuario: usuario.usuario,
+      rol: usuario.rol,
+      sedeId: usuario.sedeId,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    }),
+  );
   const signature = btoa("mock-signature");
   return `${header}.${payload}.${signature}`;
 };
@@ -18,29 +24,31 @@ const generarTokenMock = (usuario) => {
 export const iniciarSesion = async (usuario, contrasena) => {
   try {
     const response = await postLogin({ usuario, contrasena });
-    const datos    = response.data;
+    const datos = response.data;
 
     guardarTokens(datos.accessToken, datos.refreshToken);
     guardarSesion(datos.user);
 
     return { exitoso: true, datos: datos.user };
-
   } catch (error) {
-    console.warn("Backend no disponible, intentando login mock:", error.message);
+    console.warn(
+      "Backend no disponible, intentando login mock:",
+      error.message,
+    );
 
     const usuarioMock = USUARIOS_MOCK.find(
-      (u) => u.usuario === usuario && u.contrasena === contrasena
+      (u) => u.usuario === usuario && u.contrasena === contrasena,
     );
 
     if (usuarioMock) {
       const usuarioData = {
-        id:             usuarioMock.id,
+        id: usuarioMock.id,
         nombreCompleto: usuarioMock.nombreCompleto,
-        usuario:        usuarioMock.usuario,
-        rol:            usuarioMock.rol,
-        sedeId:         usuarioMock.sedeId,
-        sede:           usuarioMock.sede,
-        esBogota:       usuarioMock.esBogota,
+        usuario: usuarioMock.usuario,
+        rol: usuarioMock.rol,
+        sedeId: usuarioMock.sedeId,
+        sede: usuarioMock.sede,
+        esBogota: usuarioMock.esBogota,
       };
       const token = generarTokenMock(usuarioMock);
       guardarTokens(token, token.replace(/\./g, ""));
@@ -57,7 +65,8 @@ export const obtenerUsuarioActual = async (options = {}) => {
     const response = await getMe(options);
     return { exitoso: true, datos: response.data };
   } catch (error) {
-    if (error?.name === "AbortError") throw error;
+    if (error?.name === "AbortError" || error?.code === "ERR_CANCELED")
+      throw error;
     console.error("Error al obtener usuario:", error);
     return {
       exitoso: false,
@@ -65,7 +74,6 @@ export const obtenerUsuarioActual = async (options = {}) => {
     };
   }
 };
-
 export const cerrarSesionUsuario = async () => {
   try {
     await postLogout();
