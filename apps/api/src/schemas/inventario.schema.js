@@ -8,11 +8,13 @@ const inventarioBase = {
   properties: {
     id: { type: "integer" },
     fecha: { type: "string", format: "date-time" },
-    semana: { type: "integer", minimum: 1, maximum: 53 },
+    semana: { type: "integer" },
     sedeId: { type: "integer" },
     productoId: { type: "string" },
-    cantidadIngresada: { type: "integer", minimum: 0 },
-    costo: { type: "number", minimum: 0 },
+    cantidadIngresada: { type: "integer" },
+    costoUnitario: { type: "number" },
+    tipo: { type: "string" },
+    nota: { type: ["string", "null"] },
     creadoEn: { type: "string", format: "date-time" },
     sede: {
       type: "object",
@@ -30,7 +32,6 @@ const inventarioBase = {
     },
   },
 };
-
 // POST /api/inventario
 const crearInventario = {
   summary: "Registrar entrada de inventario para un producto en una sede",
@@ -40,12 +41,14 @@ const crearInventario = {
     type: "object",
     required: ["fecha", "semana", "sedeId", "productoId", "cantidadIngresada"],
     properties: {
-      fecha: { type: "string", format: "date", description: "Ej: 2026-04-18" },
+      fecha: { type: "string", format: "date" },
       semana: { type: "integer", minimum: 1, maximum: 53 },
       sedeId: { type: "integer" },
-      productoId: { type: "string", description: "Código del producto" },
+      productoId: { type: "string" },
       cantidadIngresada: { type: "integer", minimum: 0 },
-      costo: { type: "number", minimum: 0 },
+      costoUnitario: { type: "number", minimum: 0 },
+      tipo: { type: "string", enum: ["entrada", "salida", "ajuste"] },
+      nota: { type: "string" },
     },
     additionalProperties: false,
   },

@@ -32,7 +32,9 @@ const toNumber = (value, fallback = 0) => {
 };
 
 const obtenerStock = (producto, sedeId) => {
-  const stockSedes = Array.isArray(producto.stockSedes) ? producto.stockSedes : [];
+  const stockSedes = Array.isArray(producto.stockSedes)
+    ? producto.stockSedes
+    : [];
   const stockPorSede = stockSedes.find(
     (stock) => String(stock.sedeId) === String(sedeId),
   );
@@ -47,7 +49,8 @@ const obtenerStock = (producto, sedeId) => {
 
   if (stockSedes.length && producto.existencia == null) {
     return stockSedes.reduce(
-      (total, stock) => total + toNumber(stock.stockActual ?? stock.existencia, 0),
+      (total, stock) =>
+        total + toNumber(stock.stockActual ?? stock.existencia, 0),
       0,
     );
   }
@@ -56,7 +59,9 @@ const obtenerStock = (producto, sedeId) => {
 };
 
 const normalizarProducto = (producto, sedeId) => {
-  const stockSedes = Array.isArray(producto.stockSedes) ? producto.stockSedes : [];
+  const stockSedes = Array.isArray(producto.stockSedes)
+    ? producto.stockSedes
+    : [];
   const stockSede = stockSedes.find(
     (stock) => String(stock.sedeId) === String(sedeId),
   );
@@ -67,11 +72,19 @@ const normalizarProducto = (producto, sedeId) => {
   );
   const sedeNombre =
     stockSede?.sede?.nombre ||
-    (sedeId ? SEDES.find((s) => String(s.id) === String(sedeId))?.nombre : null) ||
+    (sedeId
+      ? SEDES.find((s) => String(s.id) === String(sedeId))?.nombre
+      : null) ||
     `Sede ${producto.sedeId || sedeId || ""}`.trim();
 
-  const precioCosto = toNumber(producto.precioCosto ?? producto.precio_costo ?? 0, 0);
-  const precioVenta = toNumber(producto.precioVenta ?? producto.precio_venta ?? 0, 0);
+  const precioCosto = toNumber(
+    producto.precioCosto ?? producto.precio_costo ?? 0,
+    0,
+  );
+  const precioVenta = toNumber(
+    producto.precioVenta ?? producto.precio_venta ?? 0,
+    0,
+  );
   const precioMayoreo =
     producto.precioMayoreo !== undefined && producto.precioMayoreo !== null
       ? toNumber(producto.precioMayoreo ?? producto.precio_mayoreo, 0)
@@ -114,27 +127,15 @@ const Spinner = () => (
   </div>
 );
 
-const StockBadge = ({ cantidad, stockMinimo }) => {
-  const esBajo = stockMinimo > 0 && cantidad <= stockMinimo;
-
-  return esBajo ? (
-    <span className="stock-badge stock-badge--bajo">
-      <span className="material-symbols-outlined" aria-hidden="true">
-        warning
-      </span>
-      <strong>{cantidad}</strong>
-      <small>mín. {stockMinimo}</small>
-    </span>
-  ) : (
-    <span className="stock-badge stock-badge--ok">
-      <strong>{cantidad}</strong>
-      {stockMinimo > 0 && <small>mín. {stockMinimo}</small>}
-    </span>
-  );
-};
-
 const ProductosPage = () => {
-  const { esAdmin, esBodega, usuario, isAuthenticated, isSessionChecked, isLoading: authLoading } = useAuth();
+  const {
+    esAdmin,
+    esBodega,
+    usuario,
+    isAuthenticated,
+    isSessionChecked,
+    isLoading: authLoading,
+  } = useAuth();
   const puedeEditar = esAdmin || esBodega;
   const sedeIdUsuario = usuario?.sedeId ?? null;
 
@@ -189,13 +190,15 @@ const ProductosPage = () => {
       const data = await inventarioService.listarMovimientos({});
       setMovimientos(Array.isArray(data) ? data : []);
     } catch (err) {
-      toast.error("Error al cargar movimientos: " + (err?.message || "desconocido"));
+      toast.error(
+        "Error al cargar movimientos: " + (err?.message || "desconocido"),
+      );
     }
   }, []);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    
+
     const id = window.setTimeout(() => {
       void cargarProductos();
     }, 0);
@@ -249,28 +252,38 @@ const ProductosPage = () => {
     setModalNuevo(true);
   }, [resetForm]);
 
-  const abrirModalEditar = useCallback((prod) => {
-    const producto = normalizarProducto(prod, prod.sedeId ?? sedeIdUsuario ?? "");
-    setProductoSel(producto);
-    setForm({
-      codigo: producto.codigo,
-      descripcion: producto.descripcion || producto.nombre,
-      departamento: producto.departamento,
-      precioCosto: producto.precioCosto ? String(producto.precioCosto) : "",
-      precioVenta: producto.precioVenta ? String(producto.precioVenta) : "",
-      precioMayoreo:
-        producto.precioMayoreo !== undefined && producto.precioMayoreo !== null
-          ? String(producto.precioMayoreo)
+  const abrirModalEditar = useCallback(
+    (prod) => {
+      const producto = normalizarProducto(
+        prod,
+        prod.sedeId ?? sedeIdUsuario ?? "",
+      );
+      setProductoSel(producto);
+      setForm({
+        codigo: producto.codigo,
+        descripcion: producto.descripcion || producto.nombre,
+        departamento: producto.departamento,
+        precioCosto: producto.precioCosto ? String(producto.precioCosto) : "",
+        precioVenta: producto.precioVenta ? String(producto.precioVenta) : "",
+        precioMayoreo:
+          producto.precioMayoreo !== undefined &&
+          producto.precioMayoreo !== null
+            ? String(producto.precioMayoreo)
+            : "",
+        porcentajeGanancia: producto.porcentajeGanancia
+          ? String(producto.porcentajeGanancia)
           : "",
-      porcentajeGanancia:
-        producto.porcentajeGanancia ? String(producto.porcentajeGanancia) : "",
-      stockMinimo: String(producto.stockMinimo || 0),
-      proveedorId: producto.proveedorId ? String(producto.proveedorId) : "",
-      activo: producto.activo ?? true,
-      sedeId: producto.sedeId ? String(producto.sedeId) : String(sedeIdUsuario ?? ""),
-    });
-    setModalEditar(true);
-  }, [sedeIdUsuario]);
+        stockMinimo: String(producto.stockMinimo || 0),
+        proveedorId: producto.proveedorId ? String(producto.proveedorId) : "",
+        activo: producto.activo ?? true,
+        sedeId: producto.sedeId
+          ? String(producto.sedeId)
+          : String(sedeIdUsuario ?? ""),
+      });
+      setModalEditar(true);
+    },
+    [sedeIdUsuario],
+  );
 
   const abrirHistorial = useCallback(
     async (prod) => {
@@ -302,7 +315,9 @@ const ProductosPage = () => {
       setForm(resetForm());
       await cargarProductos();
     } catch (err) {
-      toast.error("Error al crear producto: " + (err?.message || "desconocido"));
+      toast.error(
+        "Error al crear producto: " + (err?.message || "desconocido"),
+      );
     } finally {
       setGuardando(false);
     }
@@ -327,7 +342,9 @@ const ProductosPage = () => {
       setForm(resetForm());
       await cargarProductos();
     } catch (err) {
-      toast.error("Error al actualizar producto: " + (err?.message || "desconocido"));
+      toast.error(
+        "Error al actualizar producto: " + (err?.message || "desconocido"),
+      );
     } finally {
       setGuardando(false);
     }
@@ -349,13 +366,19 @@ const ProductosPage = () => {
     [cargarProductos],
   );
 
-  const productosNormalizados = useMemo(
-    () => productos.map((producto) => normalizarProducto(producto, sedeActivaId)),
-    [productos, sedeActivaId],
-  );
+  const productosNormalizados = useMemo(() => {
+    console.log("stockSedes raw:", productos[0]?.stockSedes); // ← agrega esto
+    return productos.map((producto) =>
+      normalizarProducto(producto, sedeActivaId),
+    );
+  }, [productos, sedeActivaId]);
 
   const departamentos = useMemo(() => {
-    const unicos = [...new Set(productosNormalizados.map((p) => p.departamento).filter(Boolean))];
+    const unicos = [
+      ...new Set(
+        productosNormalizados.map((p) => p.departamento).filter(Boolean),
+      ),
+    ];
     return unicos.sort((a, b) => a.localeCompare(b));
   }, [productosNormalizados]);
 
@@ -373,23 +396,40 @@ const ProductosPage = () => {
     () =>
       productosFiltrados.map((producto) => ({
         ...producto,
-        precioDetal: producto.precioDetal,
-        existencia: (
-          <StockBadge
-            cantidad={producto.existencia}
-            stockMinimo={producto.stockMinimo}
-          />
-        ),
-        stockMinimo: producto.stockMinimo || "—",
-        proveedor: producto.proveedor,
-        sede: producto.sede,
-        activo: producto.activo,
+        porcentajeGanancia:
+          producto.porcentajeGanancia != null
+            ? `${producto.porcentajeGanancia}%`
+            : "—",
+        precioMayoreo: producto.precioMayoreo ?? "—",
+        stockMinimo: producto.stockMinimo ?? "—",
+        proveedor:
+          typeof producto.proveedor === "string"
+            ? producto.proveedor
+            : (producto.proveedor?.nombre ?? "—"),
+        stockTotal:
+          Array.isArray(producto.stockSedes) && producto.stockSedes.length
+            ? producto.stockSedes.reduce(
+                (sum, s) => sum + (s.stockActual ?? 0),
+                0,
+              )
+            : 0,
+        sedes:
+          Array.isArray(producto.stockSedes) && producto.stockSedes.length
+            ? producto.stockSedes
+                .map(
+                  (s) =>
+                    `${s.sede?.nombre ?? `Sede ${s.sedeId}`}: ${s.stockActual ?? 0}`,
+                )
+                .join(" | ")
+            : "—",
       })),
     [productosFiltrados],
   );
 
   const totalProductos = productosNormalizados.length;
-  const productosStockBajo = productosNormalizados.filter((p) => p.esStockBajo).length;
+  const productosStockBajo = productosNormalizados.filter(
+    (p) => p.esStockBajo,
+  ).length;
   const valorInventario = productosNormalizados.reduce(
     (suma, producto) => suma + producto.precioDetal * producto.existencia,
     0,
@@ -399,13 +439,18 @@ const ProductosPage = () => {
     () => [
       { campo: "codigo", label: "Código", tipo: "texto" },
       { campo: "nombre", label: "Nombre", tipo: "texto" },
-      { campo: "precioDetal", label: "Precio", tipo: "moneda" },
-      { campo: "existencia", label: "Existencia", tipo: "texto" },
+      { campo: "precioCosto", label: "Precio Costo", tipo: "moneda" },
+      { campo: "precioVenta", label: "Precio Venta", tipo: "moneda" },
+      { campo: "precioMayoreo", label: "Precio Mayoreo", tipo: "moneda" },
+      { campo: "porcentajeGanancia", label: "% Ganancia", tipo: "texto" },
+      { campo: "stockTotal", label: "Stock Total", tipo: "texto" },
       { campo: "stockMinimo", label: "Mínimo", tipo: "texto" },
       { campo: "departamento", label: "Departamento", tipo: "texto" },
       { campo: "proveedor", label: "Proveedor", tipo: "texto" },
-      { campo: "sede", label: "Sede", tipo: "texto" },
+      { campo: "sedes", label: "Sedes", tipo: "texto" },
       { campo: "activo", label: "Estado", tipo: "booleano" },
+      { campo: "creadoEn", label: "Creado", tipo: "fecha" },
+      { campo: "actualizadoEn", label: "Actualizado", tipo: "fecha" },
     ],
     [],
   );
@@ -413,7 +458,11 @@ const ProductosPage = () => {
   const acciones = useCallback(
     (prod) => [
       { label: "Editar", icon: "edit", onClick: () => abrirModalEditar(prod) },
-      { label: "Historial", icon: "history", onClick: () => abrirHistorial(prod) },
+      {
+        label: "Historial",
+        icon: "history",
+        onClick: () => abrirHistorial(prod),
+      },
       ...(puedeEditar
         ? [
             {
@@ -462,7 +511,8 @@ const ProductosPage = () => {
               <span className="material-symbols-outlined">warning</span>
             </span>
             <span className="stock-alerta__text">
-              {productosStockBajo} producto{productosStockBajo > 1 ? "s" : ""} con stock bajo
+              {productosStockBajo} producto{productosStockBajo > 1 ? "s" : ""}{" "}
+              con stock bajo
             </span>
             <button
               className="stock-alerta__btn"
@@ -533,7 +583,11 @@ const ProductosPage = () => {
           </div>
 
           {puedeEditar && (
-            <button className="btn-primary" onClick={abrirModalNuevo} type="button">
+            <button
+              className="btn-primary"
+              onClick={abrirModalNuevo}
+              type="button"
+            >
               <span className="material-symbols-outlined" aria-hidden="true">
                 add
               </span>
@@ -546,7 +600,9 @@ const ProductosPage = () => {
       <div className="prod-stats" aria-label="Resumen del catálogo">
         <div className="prod-stat-card prod-stat-card--total">
           <div className="prod-stat-card__icon-wrap">
-            <span className="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+            <span className="material-symbols-outlined" aria-hidden="true">
+              inventory_2
+            </span>
           </div>
           <div>
             <span className="prod-stat-valor">{totalProductos}</span>
@@ -555,7 +611,9 @@ const ProductosPage = () => {
         </div>
         <div className="prod-stat-card prod-stat-card--danger">
           <div className="prod-stat-card__icon-wrap">
-            <span className="material-symbols-outlined" aria-hidden="true">warning</span>
+            <span className="material-symbols-outlined" aria-hidden="true">
+              warning
+            </span>
           </div>
           <div>
             <span className="prod-stat-valor">{productosStockBajo}</span>
@@ -564,55 +622,70 @@ const ProductosPage = () => {
         </div>
         <div className="prod-stat-card prod-stat-card--gold">
           <div className="prod-stat-card__icon-wrap">
-            <span className="material-symbols-outlined" aria-hidden="true">attach_money</span>
+            <span className="material-symbols-outlined" aria-hidden="true">
+              attach_money
+            </span>
           </div>
           <div>
-            <span className="prod-stat-valor">{formatCOP(valorInventario)}</span>
+            <span className="prod-stat-valor">
+              {formatCOP(valorInventario)}
+            </span>
             <span className="prod-stat-label">Valor Inventario</span>
           </div>
         </div>
       </div>
 
-<div className="tab-content">
-         {!isSessionChecked || authLoading ? (
-           <Spinner />
-         ) : cargando ? (
-           <Spinner />
-         ) : errorProductos ? (
-           errorProductos.includes("401") || errorProductos.includes("autorizado") ? (
-             <EmptyState
-               icono="login"
-               titulo="Sesión requerida"
-               detalle="Necesitas iniciar sesión para ver los productos."
-             >
-               <a href="/login" className="btn-primary">
-                 Ir a Login
-               </a>
-             </EmptyState>
-           ) : (
-             <EmptyState
-               icono="sync_problem"
-               titulo="Error al cargar productos"
-               detalle={errorProductos}
-             >
-               <button className="btn-primary" onClick={cargarProductos} type="button">
-                 Reintentar
-               </button>
-             </EmptyState>
-           )
-         ) : !productosNormalizados.length ? (
-           <EmptyState
-             icono="inventory_2"
-             titulo="No hay productos"
-             detalle="Ajusta los filtros o registra un nuevo producto."
-           />
-         ) : (
-           <TablaGenerica
+      <div className="tab-content">
+        {!isSessionChecked || authLoading ? (
+          <Spinner />
+        ) : cargando ? (
+          <Spinner />
+        ) : errorProductos ? (
+          errorProductos.includes("401") ||
+          errorProductos.includes("autorizado") ? (
+            <EmptyState
+              icono="login"
+              titulo="Sesión requerida"
+              detalle="Necesitas iniciar sesión para ver los productos."
+            >
+              <a href="/login" className="btn-primary">
+                Ir a Login
+              </a>
+            </EmptyState>
+          ) : (
+            <EmptyState
+              icono="sync_problem"
+              titulo="Error al cargar productos"
+              detalle={errorProductos}
+            >
+              <button
+                className="btn-primary"
+                onClick={cargarProductos}
+                type="button"
+              >
+                Reintentar
+              </button>
+            </EmptyState>
+          )
+        ) : !productosNormalizados.length ? (
+          <EmptyState
+            icono="inventory_2"
+            titulo="No hay productos"
+            detalle="Ajusta los filtros o registra un nuevo producto."
+          />
+        ) : (
+          <TablaGenerica
             columnas={columnas}
             datos={datosTabla}
             filasPorPagina={15}
             mostrarBuscador
-            buscarEnCampos={["codigo", "nombre", "departamento", "proveedor", "sede"]}
+            buscarEnCampos={[
+              "codigo",
+              "nombre",
+              "departamento",
+              "proveedor",
+              "sede",
+            ]}
             paginacion
             renderAcciones={acciones}
           />

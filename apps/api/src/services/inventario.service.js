@@ -1,14 +1,6 @@
 const repo = require("../repositories/inventario.repository");
 const AppError = require("../errors/AppError");
 
-/**
- * inventario.service.js
- *
- * CAMBIO CLAVE: usar repo.upsertDiario en lugar de repo.crear.
- * El @@unique([sedeId, productoId, fecha]) causa P2002 si bodega
- * registra el mismo producto dos veces el mismo día. upsert acumula.
- */
-
 async function registrar(app, body) {
   const sede = await app.prisma.sede.findUnique({ where: { id: body.sedeId } });
   if (!sede) throw new AppError(`Sede ${body.sedeId} no encontrada`, 404);
@@ -21,34 +13,42 @@ async function registrar(app, body) {
   if (!producto.activo)
     throw new AppError(`Producto "${body.productoId}" está inactivo`, 422);
 
-  // Normalizar fecha a medianoche UTC
   const fecha = new Date(body.fecha);
   fecha.setUTCHours(0, 0, 0, 0);
 
-  // Si body.costoUnitario no viene, usamos el precioCosto del producto.
+  const tipo = body.tipo ?? "entrada";
+  const cantidad = Number(body.cantidadIngresada);
   const costoUnitarioRegistro =
     body.costoUnitario ?? Number(producto.precioCosto);
 
-  // upsert: si existe (misma sede+producto+fecha) → incrementa; si no → crea
-  const registro = await repo.upsertDiario(app.prisma, {
+  // Delta según tipo — salida resta, ajuste puede ser negativo, entrada suma
+  const delta =
+    tipo === "salida"
+      ? -Math.abs(cantidad)
+      : tipo === "ajuste"
+        ? cantidad
+        : Math.abs(cantidad);
+
+  const registro = await repo.crear(app.prisma, {
     fecha,
     semana: body.semana,
     sedeId: body.sedeId,
     productoId: body.productoId,
-    cantidadIngresada: body.cantidadIngresada,
-    costoUnitario: costoUnitarioRegistro, // Guardado como valor unitario
+    cantidadIngresada: delta,
+    costoUnitario: costoUnitarioRegistro,
+    tipo,
+    nota: body.nota ?? null,
   });
 
-  // Actualizar stock acumulado en StockSede
   await app.prisma.stockSede.upsert({
     where: {
       sedeId_productoId: { sedeId: body.sedeId, productoId: body.productoId },
     },
-    update: { stockActual: { increment: body.cantidadIngresada } },
+    update: { stockActual: { increment: delta } },
     create: {
       sedeId: body.sedeId,
       productoId: body.productoId,
-      stockActual: body.cantidadIngresada,
+      stockActual: Math.max(0, delta),
     },
   });
 
@@ -64,6 +64,7 @@ async function obtenerLista(app, query) {
   if (query.semana) filtros.semana = Number(query.semana);
   if (query.sedeId) filtros.sedeId = Number(query.sedeId);
   if (query.productoId) filtros.productoId = query.productoId;
+  if (query.tipo) filtros.tipo = query.tipo;
   return repo.listar(app.prisma, filtros);
 }
 
@@ -76,10 +77,8 @@ async function obtenerPorId(app, id) {
 
 async function editar(app, id, body) {
   const anterior = await obtenerPorId(app, id);
-
   const actualizado = await repo.actualizar(app.prisma, id, body);
 
-  // Si cambió cantidadIngresada, recalcular el delta en StockSede
   if (body.cantidadIngresada !== undefined) {
     const delta = body.cantidadIngresada - anterior.cantidadIngresada;
     await app.prisma.stockSede.upsert({
@@ -93,7 +92,7 @@ async function editar(app, id, body) {
       create: {
         sedeId: anterior.sedeId,
         productoId: anterior.productoId,
-        stockActual: delta,
+        stockActual: Math.max(0, delta),
       },
     });
   }
@@ -105,7 +104,7 @@ async function borrar(app, id) {
   const registro = await obtenerPorId(app, id);
   await repo.eliminar(app.prisma, id);
 
-  // Revertir el stock
+  // Revertir el stock (delta negativo del registro)
   await app.prisma.stockSede.update({
     where: {
       sedeId_productoId: {
@@ -136,7 +135,7 @@ async function resumenSemanal(app, semana) {
     producto: mapaProducto[f.productoId] ?? f.productoId,
     productoId: f.productoId,
     cantidad: f._sum.cantidadIngresada,
-    costo: f._sum.costo,
+    costo: f._sum.costoUnitario,
     ultimaFecha: f._max.fecha,
   }));
 }

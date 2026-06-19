@@ -1,31 +1,26 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import "./Modal.css";
 
-const Modal = ({ 
-   isOpen, 
-   onClose, 
-   titulo, 
-   children, 
-   textoBotonConfirmar = "Confirmar", 
-   textoBotonCancelar = "Cancelar",
-   onConfirmar,
-   mostrarCancelar = true,
-   disabled = false,
-   className = "",
-   maxWidth
- }) => {
-  const [isConfirmed, setIsConfirmed] = useState(false);
-
+const Modal = ({
+  isOpen,
+  onClose,
+  titulo,
+  children,
+  textoBotonConfirmar = "Confirmar",
+  textoBotonCancelar = "Cancelar",
+  onConfirmar,
+  mostrarCancelar = true,
+  disabled = false,
+  className = "",
+  maxWidth,
+}) => {
   const handleConfirmar = () => {
     if (onConfirmar) {
       onConfirmar();
     }
-    setIsConfirmed(true);
-    onClose();
   };
 
   const handleCancelar = () => {
-    setIsConfirmed(false);
     onClose();
   };
 
@@ -43,14 +38,14 @@ const Modal = ({
   return (
     <>
       <div className="modal-backdrop" onClick={handleCancelar}>
-        <div 
+        <div
           className={`modal-content ${className}`}
           style={maxWidth ? { maxWidth } : undefined}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="modal-header">
             <h5 className="modal-title">{titulo}</h5>
-            <button 
+            <button
               className="modal-close"
               onClick={handleCancelar}
               aria-label="Cerrar"
@@ -58,11 +53,9 @@ const Modal = ({
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
-          
-          <div className="modal-body">
-            {children}
-          </div>
-          
+
+          <div className="modal-body">{children}</div>
+
           <div className="modal-footer">
             {mostrarCancelar && (
               <button
@@ -75,9 +68,9 @@ const Modal = ({
             <button
               className="modal-btn modal-btn--confirmar"
               onClick={handleConfirmar}
-              disabled={disabled || isConfirmed}
+              disabled={disabled}
             >
-              {isConfirmed ? "Procesando..." : textoBotonConfirmar}
+              {textoBotonConfirmar}
             </button>
           </div>
         </div>

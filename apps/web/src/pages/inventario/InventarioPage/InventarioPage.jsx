@@ -24,7 +24,8 @@ const TABS = [
 ];
 
 const InventarioPage = () => {
-  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
+  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } =
+    useAuth();
   const puedeRegistrar = esAdmin || esBodega;
   const sedeIdUsuario = usuario?.sedeId ?? null;
 
@@ -70,7 +71,8 @@ const InventarioPage = () => {
     setCargando(true);
     try {
       const params = {};
-      if (filtrosMov.sedeId && esAdmin) params.sedeId = parseInt(filtrosMov.sedeId);
+      if (filtrosMov.sedeId && esAdmin)
+        params.sedeId = parseInt(filtrosMov.sedeId);
       if (filtrosMov.productoId) params.productoId = filtrosMov.productoId;
       if (filtrosMov.tipo) params.tipo = filtrosMov.tipo;
       const data = await inventarioService.listarMovimientos(params);
@@ -96,13 +98,25 @@ const InventarioPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
+
     const id = window.setTimeout(() => {
       if (activeTab === "productos") void cargarProductos();
-      if (activeTab === "movimientos") void cargarMovimientos();
       if (activeTab === "entradas") void cargarEntradas();
+      if (activeTab === "movimientos") void cargarMovimientos();
     }, 0);
+
     return () => window.clearTimeout(id);
-  }, [activeTab, cargarProductos, cargarMovimientos, cargarEntradas, isSessionChecked, isAuthenticated]);
+  }, [
+    activeTab,
+    cargarProductos,
+    cargarMovimientos,
+    cargarEntradas,
+    isSessionChecked,
+    isAuthenticated,
+    filtrosMov.sedeId,
+    filtrosMov.productoId,
+    filtrosMov.tipo,
+  ]);
 
   // ── Handlers formulario ──────────────────────────────────────
   const handleCambioForm = (e) => {
@@ -128,8 +142,8 @@ const InventarioPage = () => {
         tipo: form.tipo,
         productoId: form.productoId,
         cantidad: parseInt(form.cantidad),
-        nota: form.nota,
-        sedeId: form.sedeId,
+        nota: form.nota || null,
+        sedeId: parseInt(form.sedeId),
         fecha: form.fecha,
       });
       toast.success("Movimiento registrado correctamente.");
@@ -143,6 +157,7 @@ const InventarioPage = () => {
     } finally {
       setGuardandoMov(false);
     }
+    console.log("form al guardar:", form);
   };
 
   // ── Columnas ───────────────────────────────────────────────────
@@ -157,28 +172,33 @@ const InventarioPage = () => {
   ];
 
   const columnasMovimientos = [
+    { campo: "id", label: "ID", tipo: "texto" },
     { campo: "fecha", label: "Fecha", tipo: "fecha" },
+    { campo: "semana", label: "Semana", tipo: "texto" },
     { campo: "producto", label: "Producto", tipo: "texto" },
-    { campo: "tipo", label: "Tipo", tipo: "estado" },
-    { campo: "cantidad", label: "Cantidad", tipo: "texto" },
-    { campo: "nota", label: "Nota", tipo: "texto" },
     { campo: "sede", label: "Sede", tipo: "texto" },
+    { campo: "tipo", label: "Tipo", tipo: "estado" },
+    { campo: "cantidadIngresada", label: "Cantidad", tipo: "texto" },
+    { campo: "costoUnitario", label: "Costo Unit.", tipo: "moneda" },
+    { campo: "nota", label: "Nota", tipo: "texto" },
+    { campo: "creadoEn", label: "Registrado", tipo: "fecha" },
   ];
 
-  // Mapear datos movimientos
   const movimientosMapeados = useMemo(
     () =>
       movimientos.map((m) => ({
         ...m,
-        producto: m.producto?.nombre || m.productoNombre || m.productoId,
-        sede: m.sede?.nombre || `Sede ${m.sedeId}`,
+        producto: m.producto?.descripcion ?? String(m.productoId ?? "—"),
+        sede: m.sede?.nombre ?? `Sede ${m.sedeId}`,
+        costoUnitario: Number(m.costoUnitario ?? 0),
+        nota: m.nota ?? "—",
       })),
-    [movimientos]
+    [movimientos],
   );
 
   // Stats stock bajo
   const stockBajoCount = productos.filter(
-    (p) => p.existencia <= p.stockMinimo
+    (p) => p.existencia <= p.stockMinimo,
   ).length;
 
   // ── Render ───────────────────────────────────────────────────────
@@ -210,7 +230,11 @@ const InventarioPage = () => {
 
           {/* Botón registrar movimiento */}
           {puedeRegistrar && (
-            <button className="btn-primary" onClick={abrirModalMovimiento} type="button">
+            <button
+              className="btn-primary"
+              onClick={abrirModalMovimiento}
+              type="button"
+            >
               <span className="material-symbols-outlined">add</span>
               Nuevo Movimiento
             </button>
@@ -224,7 +248,8 @@ const InventarioPage = () => {
           <div className="inv-alerta-stock">
             <span className="material-symbols-outlined">warning</span>
             <span>
-              <strong>{stockBajoCount} productos</strong> con stock bajo requieren atención
+              <strong>{stockBajoCount} productos</strong> con stock bajo
+              requieren atención
             </span>
           </div>
         </div>
@@ -243,7 +268,9 @@ const InventarioPage = () => {
                     <span className="material-symbols-outlined">category</span>
                     Catálogo de Productos
                   </h2>
-                  <span className="inv-contador">{productos.length} productos</span>
+                  <span className="inv-contador">
+                    {productos.length} productos
+                  </span>
                 </div>
                 <TablaGenerica
                   columnas={columnasProductos}
@@ -271,7 +298,10 @@ const InventarioPage = () => {
                         id="mov-filtro-sede"
                         value={filtrosMov.sedeId}
                         onChange={(e) =>
-                          setFiltrosMov((p) => ({ ...p, sedeId: e.target.value }))
+                          setFiltrosMov((p) => ({
+                            ...p,
+                            sedeId: e.target.value,
+                          }))
                         }
                         className="filter-select"
                       >
@@ -303,10 +333,14 @@ const InventarioPage = () => {
 
                 <div className="page-actions">
                   <h2>
-                    <span className="material-symbols-outlined">swap_horiz</span>
+                    <span className="material-symbols-outlined">
+                      swap_horiz
+                    </span>
                     Movimientos de Inventario
                   </h2>
-                  <span className="inv-contador">{movimientos.length} registros</span>
+                  <span className="inv-contador">
+                    {movimientos.length} registros
+                  </span>
                 </div>
                 <TablaGenerica
                   columnas={columnasMovimientos}
@@ -323,23 +357,40 @@ const InventarioPage = () => {
               <>
                 <div className="page-actions">
                   <h2>
-                    <span className="material-symbols-outlined">move_to_inbox</span>
+                    <span className="material-symbols-outlined">
+                      move_to_inbox
+                    </span>
                     Entradas de Inventario
                   </h2>
                 </div>
                 <TablaGenerica
                   columnas={[
+                    { campo: "id", label: "ID", tipo: "texto" },
                     { campo: "fecha", label: "Fecha", tipo: "fecha" },
+                    { campo: "semana", label: "Semana", tipo: "texto" },
                     { campo: "producto", label: "Producto", tipo: "texto" },
                     { campo: "sede", label: "Sede", tipo: "texto" },
-                    { campo: "cantidad", label: "Cantidad", tipo: "texto" },
-                    { campo: "costo", label: "Costo Unit.", tipo: "moneda" },
-                    { campo: "cantidadIngresada", label: "Cant.", tipo: "texto" },
+                    { campo: "tipo", label: "Tipo", tipo: "estado" },
+                    {
+                      campo: "cantidadIngresada",
+                      label: "Cantidad",
+                      tipo: "texto",
+                    },
+                    {
+                      campo: "costoUnitario",
+                      label: "Costo Unit.",
+                      tipo: "moneda",
+                    },
+                    { campo: "nota", label: "Nota", tipo: "texto" },
+                    { campo: "creadoEn", label: "Registrado", tipo: "fecha" },
                   ]}
                   datos={entradas.map((e) => ({
                     ...e,
-                    producto: e.producto?.descripcion || e.producto?.nombre || String(e.productoId || "—"),
-                    sede: e.sede?.nombre || `Sede ${e.sedeId}`,
+                    producto:
+                      e.producto?.descripcion ?? String(e.productoId ?? "—"),
+                    sede: e.sede?.nombre ?? `Sede ${e.sedeId}`,
+                    costoUnitario: Number(e.costoUnitario ?? 0),
+                    nota: e.nota ?? "—",
                   }))}
                   filasPorPagina={15}
                   mostrarBuscador

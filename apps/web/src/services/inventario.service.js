@@ -66,9 +66,7 @@ const inventarioService = {
         ...(precioMayoreo !== undefined && precioMayoreo !== "" ? { precioMayoreo: toNumber(precioMayoreo, 0) } : {}),
         porcentajeGanancia: ganancia,
         stockMinimo: toNumber(stockMinimo, 0),
-        proveedorId: proveedorId ? Number(proveedorId) : undefined,
-        activo: activo ?? true,
-        ...(sedeId && sedeId !== "" ? { sedeId: Number(sedeId) } : {}),
+        proveedorId: proveedorId ? Number(proveedorId) : null,
       });
     } catch (e) {
       console.error("inventarioService.crearProducto:", e);

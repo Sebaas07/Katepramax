@@ -16,6 +16,11 @@ import { AuthContext } from "@/hooks/useAuth";
 const AUTH_VERIFY_TIMEOUT_MS = 2500;
 
 const verificarUsuarioConBackend = async () => {
+
+   if (import.meta.env.VITE_SKIP_AUTH_VERIFY === "true") {
+    return { exitoso: true };
+  }
+
   const controller = new AbortController();
   const timeout = window.setTimeout(
     () => controller.abort(),
