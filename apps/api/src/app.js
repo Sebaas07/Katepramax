@@ -31,13 +31,26 @@ async function buildApp() {
   // ── Error handler global ──────────────────────────────────────────────────────
   app.setErrorHandler(async (error, request, reply) => {
     const status = error.statusCode || 500;
+    const isDev = process.env.NODE_ENV !== "production";
+
     if (status >= 500) {
-      request.log.error(error);
+      const errorInfo = {
+        message: error.message,
+        stack: isDev ? error.stack : undefined,
+        code: error.code,
+        meta: error.meta,
+      };
+
+      request.log.error(errorInfo);
       await registrarError(app, error, request);
+
+      return reply.code(status).send({
+        error: isDev ? `${error.name}: ${error.message}` : "Error interno del servidor",
+        ...(isDev && { details: errorInfo }),
+      });
     }
-    return reply.code(status).send({
-      error: status === 500 ? "Error interno del servidor" : error.message,
-    });
+
+    return reply.code(status).send({ error: error.message });
   });
 
   // ── Salud ─────────────────────────────────────────────────────────────────────

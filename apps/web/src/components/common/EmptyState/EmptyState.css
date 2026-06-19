@@ -1,3 +1,24 @@
+.rep-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+  text-align: center;
+}
+
+.rep-empty .material-symbols-outlined {
+  font-size: 48px;
+  opacity: 0.25;
+}
+
+.rep-empty .btn-primary {
+  margin-top: 0.5rem;
+}
+
 .rep-empty__titulo {
   font-family: var(--font-headline);
   font-size: 0.9375rem;

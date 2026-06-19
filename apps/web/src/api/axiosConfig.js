@@ -94,9 +94,12 @@ clienteApi.interceptors.response.use(
           refreshToken,
         });
 
-        guardarTokens(data.accessToken, data.refreshToken);
+        guardarTokens(
+          data.accessToken || data.token,
+          data.refreshToken || data.refreshToken || data.refresh_token
+        );
         estaRenovando = false;
-        procesarCola(data.accessToken);
+        procesarCola(data.accessToken || data.token);
 
         config.headers.Authorization = `Bearer ${data.accessToken}`;
         return clienteApi(config);

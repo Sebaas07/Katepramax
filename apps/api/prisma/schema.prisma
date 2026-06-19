@@ -11,6 +11,7 @@ datasource db {
 enum Rol {
   Admin
   Bodega // Gestiona inventario y productos
+  AdminBogota // Administra inventario y productos de Bogotá
   Entregador // Entrega pedidos
 }
 

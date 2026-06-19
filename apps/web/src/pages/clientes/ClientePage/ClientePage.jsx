@@ -25,7 +25,7 @@ const FORM_INICIAL = {
 };
 
 const ClientePage = () => {
-  const { esAdmin, esBodega } = useAuth();
+  const { esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
   const puedeEditar = esAdmin || esBodega;
   const puedeCrear  = esAdmin || esBodega;
   const puedeDesactivar = esAdmin;
@@ -56,8 +56,9 @@ const ClientePage = () => {
   }, [filtros]);
 
   useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
     cargarClientes();
-  }, [cargarClientes]);
+  }, [cargarClientes, isSessionChecked, isAuthenticated]);
 
   // ── Handlers ──────────────────────────────────────────────
   const handleCambioFiltro = (e) => {

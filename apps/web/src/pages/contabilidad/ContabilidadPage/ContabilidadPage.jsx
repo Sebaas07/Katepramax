@@ -64,7 +64,7 @@ const FORM_VACIO = {
 
 // ─────────────────────────────────────────────────────────────
 const ContabilidadPage = () => {
-  const { usuario, esAdmin, esBodega } = useAuth();
+  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
   const sedeIdUsuario  = usuario?.sedeId ?? null;
   const puedeRegistrar = esAdmin || esBodega;
 
@@ -159,9 +159,10 @@ const ContabilidadPage = () => {
   }, [tab, filtroSemana, filtroSedeId, filtroPanelF]);
 
   useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
     const id = window.setTimeout(() => { void cargarDatos(); }, 0);
     return () => window.clearTimeout(id);
-  }, [cargarDatos]);
+  }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
   // ── Datos mapeados (nombre de sede/proveedor inyectado) ───
   const mapSede = useCallback((items) =>

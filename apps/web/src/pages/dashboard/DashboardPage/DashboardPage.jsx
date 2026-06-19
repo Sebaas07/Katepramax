@@ -51,7 +51,7 @@ const obtenerFechaISOHoy = () => {
 
 // ─── Componente ───────────────────────────────────────────────
 const DashboardPage = () => {
-  const { usuario } = useAuth();
+  const { usuario, isAuthenticated, isSessionChecked } = useAuth();
 
   const [kpis, setKpis] = useState(null);
   const [pedidos, setPedidos] = useState([]);
@@ -112,12 +112,13 @@ const DashboardPage = () => {
   }, [sedeId]);
 
   useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
     const id = window.setTimeout(() => {
       cargarKpis();
       cargarPedidos();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [cargarKpis, cargarPedidos]);
+  }, [cargarKpis, cargarPedidos, isSessionChecked, isAuthenticated]);
 
   // ── Render ────────────────────────────────────────────────
   return (

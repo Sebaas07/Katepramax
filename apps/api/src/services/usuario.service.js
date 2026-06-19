@@ -18,9 +18,10 @@ const usuarioService = (app) => {
     create: async (data, creadoPorId) => {
       const { nombreCompleto, usuario, correo, contrasena, rol, telefono, sedeId } = data;
 
+      const correoNormalizado = correo?.trim() || `${usuario}@katepramax.local`;
       const [existeUsuario, existeCorreo] = await Promise.all([
         repo.findByUsuario(usuario),
-        repo.findByCorreo(correo),
+        repo.findByCorreo(correoNormalizado),
       ]);
 
       if (existeUsuario) throw new AppError("El nombre de usuario ya está en uso", 400);
@@ -30,10 +31,10 @@ const usuarioService = (app) => {
       const nuevo = await repo.create({
         nombreCompleto,
         usuario,
-        correo,
+        correo: correoNormalizado,
         clave,
         rol,
-        telefono,
+        telefono: telefono ?? "",
         sedeId: parseInt(sedeId),
       });
 
@@ -57,10 +58,26 @@ const usuarioService = (app) => {
       if (!existe) throw new AppError("Usuario no encontrado", 404);
 
       const campos = {};
-      const permitidos = ["nombreCompleto", "correo", "telefono", "rol"];
+      const permitidos = ["nombreCompleto", "usuario", "correo", "telefono", "rol", "sedeId", "activo"];
       permitidos.forEach((c) => {
         if (data[c] !== undefined) campos[c] = data[c];
       });
+
+      if (campos.usuario && campos.usuario !== existe.usuario) {
+        const usuarioExistente = await repo.findByUsuario(campos.usuario);
+        if (usuarioExistente) throw new AppError("El nombre de usuario ya está en uso", 400);
+      }
+
+      if (campos.correo) {
+        const correoExistente = await repo.findByCorreo(campos.correo);
+        if (correoExistente && correoExistente.id !== id) {
+          throw new AppError("El correo ya está registrado", 400);
+        }
+      }
+
+      if (campos.sedeId !== undefined) campos.sedeId = parseInt(campos.sedeId);
+      if (campos.activo !== undefined) campos.activo = Boolean(campos.activo);
+      if (campos.telefono !== undefined) campos.telefono = campos.telefono ?? "";
 
       if (data.contrasena) {
         campos.clave = await bcrypt.hash(data.contrasena, 10);

@@ -8,7 +8,7 @@ import EmptyState from "@/components/common/EmptyState/EmptyState";
 import "./ProveedoresPage.css";
 
 const ProveedoresPage = () => {
-  const { esAdmin, esBodega } = useAuth();
+  const { esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
   const puedeGestionar = esAdmin || esBodega;
 
   const [proveedores, setProveedores] = useState([]);
@@ -148,9 +148,10 @@ const ProveedoresPage = () => {
   }, [esAdmin, puedeGestionar, abrirEditarProveedor, abrirEliminarProveedor, handleReactivarProveedor]);
 
   useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
     const id = window.setTimeout(() => { void recargarProveedores(); }, 0);
     return () => window.clearTimeout(id);
-  }, [recargarProveedores]);
+  }, [recargarProveedores, isSessionChecked, isAuthenticated]);
 
   // Stats
   const totalActivos   = proveedores.filter((p) => p.activo).length;

@@ -32,7 +32,7 @@ const normalizarEstado = (raw) => {
 };
 
 const PedidosPage = () => {
-  const { esAdmin, esBodega } = useAuth();
+  const { esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
   const puedeCrear    = esAdmin || esBodega;
   const puedeAsignar  = esAdmin || esBodega;
   const puedeCancelar = esAdmin;
@@ -117,7 +117,10 @@ const PedidosPage = () => {
     }
   }, [esAdmin]);
 
-  useEffect(() => { cargarDatos(); }, [cargarDatos]);
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    cargarDatos();
+  }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
   const pedidosNormalizados = useMemo(
     () =>

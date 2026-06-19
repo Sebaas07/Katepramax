@@ -9,12 +9,7 @@ const inventarioApi = {
   // ─── Productos ────────────────────────────────────────────────────────────
   // Backend: GET /productos → Admin, Bodega
   obtenerProductos: async (filtros = {}) => {
-    const params = new URLSearchParams();
-    Object.entries(filtros).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") params.append(k, v);
-    });
-    const qs = params.toString();
-    const response = await clienteApi.get(qs ? `/productos?${qs}` : "/productos");
+    const response = await clienteApi.get("/productos", { params: filtros });
     return response.data;
   },
 
@@ -52,12 +47,7 @@ const inventarioApi = {
 
   // Backend: GET /inventario → Admin, Bodega
   listarInventario: async (filtros = {}) => {
-    const params = new URLSearchParams();
-    Object.entries(filtros).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") params.append(k, v);
-    });
-    const qs = params.toString();
-    const response = await clienteApi.get(qs ? `/inventario?${qs}` : "/inventario");
+    const response = await clienteApi.get("/inventario", { params: filtros });
     return response.data;
   },
 
@@ -82,13 +72,13 @@ const inventarioApi = {
   // ─── Resumen ────────────────────────────────────────────────────────────
   // Backend: GET /inventario/resumen-semanal → Admin, Bodega
   resumenSemanal: async (semana) => {
-    const response = await clienteApi.get(`/inventario/resumen-semanal?semana=${semana}`);
+    const response = await clienteApi.get("/inventario/resumen-semanal", { params: { semana } });
     return response.data;
   },
 
   // Backend: GET /productos?stockBajo=true → Admin, Bodega
   obtenerStockBajo: async () => {
-    const response = await clienteApi.get("/productos?stockBajo=true&activo=true");
+    const response = await clienteApi.get("/productos", { params: { stockBajo: true, activo: true } });
     return response.data;
   },
 };

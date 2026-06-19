@@ -117,8 +117,16 @@ const TablaGenerica = ({
           <EstadoBadge estado="inactivo" />
         );
 
-      default:
+      default: {
+        const esReactElement =
+          typeof valor === "object" &&
+          valor !== null &&
+          typeof valor.$$typeof === "symbol" &&
+          valor.$$typeof === Symbol.for("react.element");
+
+        if (esReactElement) return valor;
         return valor != null ? String(valor) : "—";
+      }
     }
   };
 

@@ -47,7 +47,7 @@ const tokenPair = {
         id: { type: "integer" },
         nombreCompleto: { type: "string", description: "Nombre completo del usuario" },
         usuario: { type: "string", description: "Nombre de usuario" },
-        rol: { type: "string", enum: ["Admin", "Bodega", "Entregador"], description: "Rol del usuario" },
+        rol: { type: "string", enum: ["Admin", "Bodega", "AdminBogota", "Entregador"], description: "Rol del usuario" },
         sedeId: { type: "integer" },
         sede: { type: "string", nullable: false, description: "Nombre de la sede" },
       },

@@ -4,7 +4,7 @@ export const postLogin = (credenciales) =>
   clienteApi.post("/auth/login", credenciales);
 
 export const getMe = (options = {}) =>
-  clienteApi.get("/auth/me", options);
+  clienteApi.get("/auth/me", { signal: options.signal });
 
 export const postRefresh = (refreshToken) =>
   clienteApi.post("/auth/refresh", { refreshToken });

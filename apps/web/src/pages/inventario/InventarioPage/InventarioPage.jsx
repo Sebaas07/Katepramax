@@ -24,7 +24,7 @@ const TABS = [
 ];
 
 const InventarioPage = () => {
-  const { usuario, esAdmin, esBodega } = useAuth();
+  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
   const puedeRegistrar = esAdmin || esBodega;
   const sedeIdUsuario = usuario?.sedeId ?? null;
 
@@ -95,14 +95,14 @@ const InventarioPage = () => {
   }, []);
 
   useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
     const id = window.setTimeout(() => {
       if (activeTab === "productos") void cargarProductos();
       if (activeTab === "movimientos") void cargarMovimientos();
       if (activeTab === "entradas") void cargarEntradas();
     }, 0);
-
     return () => window.clearTimeout(id);
-  }, [activeTab, cargarProductos, cargarMovimientos, cargarEntradas]);
+  }, [activeTab, cargarProductos, cargarMovimientos, cargarEntradas, isSessionChecked, isAuthenticated]);
 
   // ── Handlers formulario ──────────────────────────────────────
   const handleCambioForm = (e) => {

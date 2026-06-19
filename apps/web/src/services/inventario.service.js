@@ -1,5 +1,6 @@
 import inventarioApi from "@/api/inventarioApi";
 import { getSemanaISO } from "@/utils/formatters";
+import { getApiErrorMessage, normalizeArrayResponse } from "@/utils/apiHelpers";
 
 const toNumber = (value, fallback = 0) => {
   const number = Number(value);
@@ -11,9 +12,9 @@ const inventarioService = {
   obtenerProductos: async (filtros = {}) => {
     try {
       return await inventarioApi.obtenerProductos(filtros);
-    } catch (e) {
-      console.error("inventarioService.obtenerProductos:", e);
-      throw e;
+    } catch (error) {
+      console.error("inventarioService.obtenerProductos:", error);
+      throw new Error(getApiErrorMessage(error), { cause: error });
     }
   },
 
@@ -31,29 +32,43 @@ const inventarioService = {
     try {
       const {
         codigo,
-        nombre,
         descripcion,
         departamento,
-        precioDetal,
         precioCosto,
+        precioVenta,
+        precioMayoreo,
+        porcentajeGanancia,
         stockMinimo,
-        sedeId,
         proveedorId,
+        activo,
+        sedeId,
       } = producto;
 
       if (!codigo) throw new Error("El código es obligatorio.");
-      if (!nombre && !descripcion) throw new Error("El nombre es obligatorio.");
+      if (!descripcion) throw new Error("La descripción es obligatoria.");
       if (!departamento) throw new Error("Selecciona un departamento.");
+
+      const costo = toNumber(precioCosto, 0);
+      const venta = toNumber(precioVenta, 0);
+      const ganancia =
+        porcentajeGanancia !== undefined && porcentajeGanancia !== ""
+          ? toNumber(porcentajeGanancia, 0)
+          : costo > 0 && venta > 0
+            ? ((venta - costo) / costo) * 100
+            : 0;
 
       return await inventarioApi.crearProducto({
         codigo,
-        descripcion: nombre || descripcion,
+        descripcion,
         departamento,
-        precioCosto: toNumber(precioCosto ?? precioDetal, 0),
-        precioVenta: toNumber(precioDetal, 0),
+        precioCosto: costo,
+        precioVenta: venta,
+        ...(precioMayoreo !== undefined && precioMayoreo !== "" ? { precioMayoreo: toNumber(precioMayoreo, 0) } : {}),
+        porcentajeGanancia: ganancia,
         stockMinimo: toNumber(stockMinimo, 0),
-        sedeId: sedeId ? Number(sedeId) : undefined,
         proveedorId: proveedorId ? Number(proveedorId) : undefined,
+        activo: activo ?? true,
+        ...(sedeId && sedeId !== "" ? { sedeId: Number(sedeId) } : {}),
       });
     } catch (e) {
       console.error("inventarioService.crearProducto:", e);
@@ -66,19 +81,38 @@ const inventarioService = {
       if (!codigo) throw new Error("Se requiere el código del producto.");
 
       const payload = {
-        descripcion: datos.nombre || datos.descripcion,
+        descripcion: datos.descripcion,
         departamento: datos.departamento,
-        precioVenta: datos.precioDetal ?? datos.precioVenta,
+        precioCosto: datos.precioCosto,
+        precioVenta: datos.precioVenta,
         stockMinimo: datos.stockMinimo,
-        sedeId: datos.sedeId,
         proveedorId: datos.proveedorId ? Number(datos.proveedorId) : null,
       };
 
-      if (payload.descripcion === undefined) delete payload.descripcion;
-      if (payload.departamento === undefined) delete payload.departamento;
-      if (payload.precioVenta === undefined) delete payload.precioVenta;
-      if (payload.stockMinimo === undefined) delete payload.stockMinimo;
-      if (payload.sedeId === undefined || payload.sedeId === "") delete payload.sedeId;
+      if (datos.precioMayoreo !== undefined && datos.precioMayoreo !== "") {
+        payload.precioMayoreo = toNumber(datos.precioMayoreo, 0);
+      }
+      if (datos.porcentajeGanancia !== undefined && datos.porcentajeGanancia !== "") {
+        payload.porcentajeGanancia = toNumber(datos.porcentajeGanancia, 0);
+      }
+      if (datos.activo !== undefined) {
+        payload.activo = datos.activo;
+      }
+
+      const keysToCheck = [
+        "descripcion",
+        "departamento",
+        "precioCosto",
+        "precioVenta",
+        "stockMinimo",
+        "proveedorId",
+        "precioMayoreo",
+        "porcentajeGanancia",
+        "activo",
+      ];
+      for (const key of keysToCheck) {
+        if (payload[key] === undefined || payload[key] === "") delete payload[key];
+      }
 
       return await inventarioApi.actualizarProducto(codigo, payload);
     } catch (e) {
@@ -130,10 +164,11 @@ const inventarioService = {
 
   listarEntradas: async (filtros = {}) => {
     try {
-      return await inventarioApi.listarInventario(filtros);
-    } catch (e) {
-      console.error("inventarioService.listarEntradas:", e);
-      throw e;
+      const data = await inventarioApi.listarInventario(filtros);
+      return normalizeArrayResponse(data);
+    } catch (error) {
+      console.error("inventarioService.listarEntradas:", error);
+      throw error;
     }
   },
 
@@ -173,10 +208,11 @@ const inventarioService = {
   // InventarioPage usa estos nombres; internamente delegan a los métodos reales.
   listarMovimientos: async (filtros = {}) => {
     try {
-      return await inventarioApi.listarInventario(filtros);
-    } catch (e) {
-      console.error("inventarioService.listarMovimientos:", e);
-      throw e;
+      const data = await inventarioApi.listarInventario(filtros);
+      return normalizeArrayResponse(data);
+    } catch (error) {
+      console.error("inventarioService.listarMovimientos:", error);
+      throw error;
     }
   },
 

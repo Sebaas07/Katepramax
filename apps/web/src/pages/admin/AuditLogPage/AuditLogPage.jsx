@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
+import { useAuth } from "@/hooks/useAuth";
 import auditService from "@/services/audit.service";
 import { formatFechaHora, formatRelativo, truncar } from "@/utils/formatters";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
@@ -58,7 +59,8 @@ const AccionBadge = ({ accion }) => {
 };
 
 const AuditLogPage = () => {
-  const [logs, setLogs] = useState([]);
+   const { isAuthenticated, isSessionChecked } = useAuth();
+   const [logs, setLogs] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [modulos, setModulos] = useState([]);
   const [acciones, setAcciones] = useState([]);
@@ -100,9 +102,10 @@ const AuditLogPage = () => {
   }, [filtros]);
 
   useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
     const id = window.setTimeout(() => { void cargarDatos(); }, 0);
     return () => window.clearTimeout(id);
-  }, [cargarDatos]);
+  }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
   const logsMapeados = useMemo(() => {
     return logs.map((log) => ({

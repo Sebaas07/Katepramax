@@ -13,14 +13,14 @@ async function crear(prisma, data) {
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
- * @param {{ descripcion?: string, activo?: boolean, proveedorId?: number, skip?: number, take?: number }} filtros
+ * @param {{ descripcion?: string, activo?: boolean, proveedorId?: number, departamento?: string, skip?: number, take?: number }} filtros
  */
-async function listar(prisma, { descripcion, activo, proveedorId, skip = 0, take = 50 } = {}) {
+async function listar(prisma, { descripcion, activo, proveedorId, departamento, skip = 0, take = 50 } = {}) {
   const where = {};
-  if (activo !== undefined) where.activo = activo;
-  if (proveedorId)          where.proveedorId = proveedorId;
-  if (descripcion)          where.descripcion = { contains: descripcion };
-  if (filtros && filtros.departamento) where.departamento = filtros.departamento;
+  if (activo !== undefined)   where.activo = activo;
+  if (proveedorId)            where.proveedorId = proveedorId;
+  if (descripcion)            where.descripcion = { contains: descripcion, mode: "insensitive" };
+  if (departamento)           where.departamento = departamento;
 
   return prisma.producto.findMany({
     where,
@@ -57,7 +57,10 @@ async function actualizar(prisma, codigo, data) {
   return prisma.producto.update({
     where: { codigo },
     data,
-    include: { proveedor: { select: { id: true, nombre: true } } },
+    include: {
+      proveedor:  { select: { id: true, nombre: true } },
+      stockSedes: { select: { sedeId: true, stockActual: true, sede: { select: { nombre: true } } } },
+    },
   });
 }
 

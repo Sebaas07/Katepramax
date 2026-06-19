@@ -143,7 +143,7 @@ const TarjetaEntrega = ({ asignacion, onSalida, onConfirmar, onFallo }) => {
 };
 
 const EntregasPage = () => {
-  const { usuario } = useAuth();
+  const { usuario, isAuthenticated, isSessionChecked } = useAuth();
 
   const [entregas, setEntregas] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -187,8 +187,9 @@ const EntregasPage = () => {
   }, []);
 
   useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
     cargarEntregas();
-  }, [cargarEntregas]);
+  }, [cargarEntregas, isSessionChecked, isAuthenticated]);
 
   // ── Handlers de acciones ───────────────────────────────────────────
   const handleSalida = async (asignacion) => {

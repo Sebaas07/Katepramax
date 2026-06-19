@@ -3,7 +3,7 @@
  */
 
 // Campos reutilizables
-const rolEnum = { type: "string", enum: ["Admin", "Bodega", "Entregador"] };
+const rolEnum = { type: "string", enum: ["Admin", "Bodega", "AdminBogota", "Entregador"] };
 
 const usuarioResponse = {
   type: "object",
@@ -31,7 +31,6 @@ const createUsuarioBody = {
   required: [
     "nombreCompleto",
     "usuario",
-    "correo",
     "contrasena",
     "rol",
     "sedeId",
@@ -42,7 +41,7 @@ const createUsuarioBody = {
     usuario: {
       type: "string",
       minLength: 5,
-      maxLength: 10,
+      maxLength: 50,
       pattern: "^[a-zA-Z0-9_]+$",
       description: "Solo letras, números y guión bajo",
     },
@@ -51,11 +50,12 @@ const createUsuarioBody = {
     rol: rolEnum,
     telefono: {
       type: "string",
-      minLength: 7,
+      minLength: 0,
       maxLength: 20,
-      pattern: "^[0-9+\\-\\s]+$",
+      pattern: "^[0-9+\\-\\s]*$",
     },
     sedeId: { type: "integer", minimum: 1 },
+    activo: { type: "boolean" },
   },
 };
 
@@ -66,14 +66,23 @@ const updateUsuarioBody = {
   minProperties: 1,
   properties: {
     nombreCompleto: { type: "string", minLength: 3, maxLength: 255 },
+    usuario: {
+      type: "string",
+      minLength: 5,
+      maxLength: 50,
+      pattern: "^[a-zA-Z0-9_]+$",
+      description: "Solo letras, números y guión bajo",
+    },
     correo: { type: "string", format: "email", maxLength: 150 },
     telefono: {
       type: "string",
-      minLength: 7,
+      minLength: 0,
       maxLength: 20,
-      pattern: "^[0-9+\\-\\s]+$",
+      pattern: "^[0-9+\\-\\s]*$",
     },
     rol: rolEnum,
+    sedeId: { type: "integer", minimum: 1 },
+    activo: { type: "boolean" },
     contrasena: { type: "string", minLength: 6, maxLength: 25 },
   },
 };

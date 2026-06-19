@@ -21,12 +21,13 @@ async function crear(app, body) {
 
 async function obtenerLista(app, query) {
   const filtros = {
-    skip: Number(query.skip ?? 0),
-    take: Number(query.take ?? 50),
+    skip: Math.max(0, Number(query.skip) || 0),
+    take: Math.min(200, Math.max(1, Number(query.take) || 50)),
   };
-  if (query.descripcion)  filtros.descripcion  = query.descripcion;
+  if (query.descripcion)  filtros.descripcion  = String(query.descripcion);
   if (query.proveedorId)  filtros.proveedorId  = Number(query.proveedorId);
   if (query.activo !== undefined) filtros.activo = query.activo === "true";
+  if (query.departamento) filtros.departamento = String(query.departamento);
   return repo.listar(app.prisma, filtros);
 }
 
