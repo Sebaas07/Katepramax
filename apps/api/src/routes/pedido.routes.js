@@ -1,9 +1,10 @@
 /**
  *
  * Control de roles por endpoint:
- *  POST   /pedidos              → Admin, Bodega  (crean pedidos)
- *  GET    /pedidos              → Admin, Bodega  (ven todos los pedidos)
- *  GET    /pedidos/:id          → Admin, Bodega  (detalle de un pedido)
+ *  POST   /pedidos              → Admin, Bodega, AdminBogota (crean pedidos)
+ *  GET    /pedidos              → Admin, Bodega, AdminBogota (ven pedidos de su sede)
+ *  GET    /pedidos/:id          → Admin, Bodega, AdminBogota (detalle de un pedido)
+ *  GET    /pedidos/:id/historial → Admin, Bodega, AdminBogota (ver historial)
  *  PATCH  /pedidos/:id/estado   → solo Admin     (única acción manual = Cancelar)
  *
  * La transición Pendiente -> Asignado -> Entregado se gestiona desde /asignaciones.
@@ -35,6 +36,11 @@ async function pedidoRoutes(app) {
     schema:        schemas.obtenerPedido,
     preValidation: adminOBodega.preValidation,
     handler:       ctrl.obtenerPorId,
+  });
+
+  app.get("/pedidos/:id/historial", {
+    preValidation: adminOBodega.preValidation,
+    handler:       ctrl.obtenerHistorial,
   });
 
   // Solo Admin puede cancelar un pedido manualmente

@@ -47,6 +47,7 @@ model Sede {
   egresos     Egreso[]
   abonos      Abono[]
   carteras    Cartera[]
+  pedidos     Pedido[]
 
   @@map("sedes")
 }
@@ -83,6 +84,7 @@ model Usuario {
   pedidosCreados         Pedido[]            @relation("CreadoPor") // Pedidos que este usuario creó
   entregasAsignadas      AsignacionEntrega[] @relation("Entregador") // Entregas asignadas a este usuario
   asignacionesRealizadas AsignacionEntrega[] @relation("AsignadoPor") // Entregas que este usuario asignó
+  historialPedidos       HistorialEstadoPedido[] // Cambios de estado que ejecutó
 
   @@map("usuarios")
 }
@@ -186,9 +188,25 @@ model Proveedor {
   @@map("proveedores")
 }
 
+model HistorialEstadoPedido {
+  id          Int           @id @default(autoincrement())
+  pedidoId    Int           @map("pedido_id")
+  estado      EstadoPedido  @map("estado")
+  cambiadoEn DateTime      @default(now()) @map("cambiado_en")
+  usuarioId   Int?          @map("usuario_id")
+
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id])
+  usuario  Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([pedidoId])
+  @@index([cambiadoEn])
+  @@map("historial_estados_pedido")
+}
+
 model Pedido {
   id            Int          @id @default(autoincrement())
   clienteId     Int          @map("cliente_id")
+  sedeId        Int          @map("sede_id")
   estado        EstadoPedido @default(Pendiente)
   observaciones String?      @db.Text
   totalRecibido Decimal      @default(0.00) @map("total_recibido") @db.Decimal(12, 2)
@@ -197,11 +215,13 @@ model Pedido {
 
   creadoPorId Int @map("creado_por")
 
+  sede    Sede @relation(fields: [sedeId], references: [id])
   creador Usuario @relation("CreadoPor", fields: [creadoPorId], references: [id])
   cliente Cliente @relation(fields: [clienteId], references: [id])
 
   detalles     PedidoDetalle[]
   asignaciones AsignacionEntrega[]
+  historial    HistorialEstadoPedido[]
 
   @@map("pedidos")
 }

@@ -1,37 +1,32 @@
 const svc = require("../services/inventario.service");
 
-/**
- * inventario.controller.js
- * Delega en el servicio; sólo traduce request/reply.
- */
-
 async function crear(request, reply) {
-  const registro = await svc.registrar(request.server, request.body);
+  const registro = await svc.registrar(request.server, request.body, request.user);
   return reply.code(201).send(registro);
 }
 
 async function listar(request, reply) {
-  const lista = await svc.obtenerLista(request.server, request.query);
+  const lista = await svc.obtenerLista(request.server, request.query, request.user);
   return reply.send(lista);
 }
 
 async function obtenerPorId(request, reply) {
-  const registro = await svc.obtenerPorId(request.server, Number(request.params.id));
+  const registro = await svc.obtenerPorId(request.server, Number(request.params.id), request.user);
   return reply.send(registro);
 }
 
 async function editar(request, reply) {
-  const actualizado = await svc.editar(request.server, Number(request.params.id), request.body);
+  const actualizado = await svc.editar(request.server, Number(request.params.id), request.body, request.user);
   return reply.send(actualizado);
 }
 
 async function eliminar(request, reply) {
-  await svc.borrar(request.server, Number(request.params.id));
+  await svc.borrar(request.server, Number(request.params.id), request.user);
   return reply.send({ mensaje: "Registro eliminado correctamente" });
 }
 
 async function resumenSemanal(request, reply) {
-  const resumen = await svc.resumenSemanal(request.server, Number(request.query.semana));
+  const resumen = await svc.resumenSemanal(request.server, Number(request.query.semana), request.user);
   return reply.send(resumen);
 }
 

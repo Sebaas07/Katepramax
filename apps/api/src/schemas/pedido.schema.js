@@ -61,6 +61,7 @@ const crearPedido = {
     required: ["clienteId", "items"],
     properties: {
       clienteId:    { type: "integer" },
+      sedeId:       { type: "integer", description: "Requerido para Admin (sin sede fija). Ignorado para Bodega/AdminBogota." },
       observaciones: { type: "string" },
       items: {
         type: "array",

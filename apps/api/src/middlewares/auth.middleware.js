@@ -62,7 +62,7 @@ module.exports = {
   requireRole,
   soloAdmin: { preValidation: [verifyToken, requireRole(["Admin"])] },
   adminOBodega: {
-    preValidation: [verifyToken, requireRole(["Admin", "Bodega"])],
+    preValidation: [verifyToken, requireRole(["Admin", "Bodega", "AdminBogota"])],
   },
   todos: { preValidation: [verifyToken] },
 };

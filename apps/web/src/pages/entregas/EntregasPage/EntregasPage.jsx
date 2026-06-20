@@ -2,11 +2,15 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import entregaService from "@/services/entrega.service";
+import pedidosService from "@/services/pedidos.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
+import EmptyState from "@/components/common/EmptyState/EmptyState";
 import { formatCOP, formatFecha } from "@/utils/formatters";
 import "./EntregasPage.css";
+
+const POLLING_INTERVAL_MS = 20000;
 
 const Spinner = () => (
   <div className="entr-spinner-wrap">
@@ -15,10 +19,10 @@ const Spinner = () => (
   </div>
 );
 
-const TarjetaEntrega = ({ asignacion, onSalida, onConfirmar, onFallo }) => {
-  const estado = asignacion.estado;
-  const pedido = asignacion.pedido;
-  const estadoNormalizado = estado === "EnRuta" ? "en_ruta" : estado?.toLowerCase();
+const TarjetaEntrega = ({ asignacion, onSalida, onConfirmar, onFallo, totalPedido }) => {
+   const estado = asignacion.estado;
+   const pedido = asignacion.pedido;
+   const estadoNormalizado = estado === "EnRuta" ? "en_ruta" : estado?.toLowerCase();
 
   const totalPedido = useMemo(() => {
     const items = pedido?.detalles ?? pedido?.items ?? [];
@@ -186,10 +190,13 @@ const EntregasPage = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (!isSessionChecked || !isAuthenticated) return;
-    cargarEntregas();
-  }, [cargarEntregas, isSessionChecked, isAuthenticated]);
+useEffect(() => {
+     if (!isSessionChecked || !isAuthenticated) return;
+     cargarEntregas();
+
+     const intervalo = setInterval(cargarEntregas, POLLING_INTERVAL_MS);
+     return () => clearInterval(intervalo);
+   }, [cargarEntregas, isSessionChecked, isAuthenticated]);
 
   // ── Handlers de acciones ───────────────────────────────────────────
   const handleSalida = async (asignacion) => {
@@ -320,39 +327,42 @@ const EntregasPage = () => {
       <div className="tab-content">
         {cargando ? (
           <Spinner />
-        ) : errorDatos ? (
-          <div className="entr-error">
-            <span className="material-symbols-outlined">cloud_off</span>
-            <p>{errorDatos}</p>
-            <button className="btn-outline" onClick={cargarEntregas}>Reintentar</button>
-          </div>
-        ) : entregas.length === 0 ? (
-          <div className="entr-empty">
-            <span className="material-symbols-outlined entr-empty-icon">local_shipping</span>
-            <p>No tienes entregas asignadas.</p>
-            <span className="entr-empty-sub">Cuando se asignen pedidos, aparecerán aquí.</span>
-          </div>
-        ) : usarTarjetas ? (
-          <div className="entr-grid">
-            {entregas.map((asignacion) => (
-              <TarjetaEntrega
-                key={asignacion.id}
-                asignacion={asignacion}
-                onSalida={handleSalida}
-                onConfirmar={abrirConfirmar}
-                onFallo={abrirFallo}
-              />
-            ))}
-          </div>
-        ) : (
-          <TablaGenerica
-            columnas={columnas}
-            datos={entregasMapeadas}
-            filasPorPagina={10}
-            mostrarBuscador={false}
-            paginacion
-          />
-        )}
+) : errorDatos ? (
+           <EmptyState
+             icon="cloud_off"
+             title="Error de conexión"
+             description={errorDatos}
+             actionLabel="Reintentar"
+             onAction={cargarEntregas}
+           />
+         ) : entregas.length === 0 ? (
+           <EmptyState
+             icon="local_shipping"
+             title="Sin entregas"
+             description="No tienes entregas asignadas."
+             subDescription="Cuando se asignen pedidos, aparecerán aquí."
+           />
+         ) : usarTarjetas ? (
+           <div className="entr-grid">
+             {entregas.map((asignacion) => (
+               <TarjetaEntrega
+                 key={asignacion.id}
+                 asignacion={asignacion}
+                 onSalida={handleSalida}
+                 onConfirmar={abrirConfirmar}
+                 onFallo={abrirFallo}
+               />
+             ))}
+           </div>
+         ) : (
+           <TablaGenerica
+             columnas={columnas}
+             datos={entregasMapeadas}
+             filasPorPagina={10}
+             mostrarBuscador={false}
+             paginacion
+           />
+         )}
       </div>
 
       {/* Modal — Confirmar entrega */}
@@ -366,17 +376,26 @@ const EntregasPage = () => {
         disabled={guardando}
       >
         <div className="modal-form">
-          {asignacionActiva && (
-            <div className="form-group">
-              <label>Pedido #{asignacionActiva.pedido?.id ?? asignacionActiva.pedidoId}</label>
-              <p className="entr-pedido-info">
-                {asignacionActiva.pedido?.cliente?.nombre ?? "—"}
-                {asignacionActiva.pedido?.observaciones && (
-                  <span className="entr-pedido-dir"> — {asignacionActiva.pedido.observaciones}</span>
-                )}
-              </p>
-            </div>
-          )}
+{asignacionActiva && (
+             <div className="form-group">
+               <label>Pedido #{asignacionActiva.pedido?.id ?? asignacionActiva.pedidoId}</label>
+               <p className="entr-pedido-info">
+                 {asignacionActiva.pedido?.cliente?.nombre ?? "—"}
+                 {asignacionActiva.pedido?.observaciones && (
+                   <span className="entr-pedido-dir"> — {asignacionActiva.pedido.observaciones}</span>
+                 )}
+               </p>
+               {asignacionActiva.pedido && (
+                 <p className="entr-pedido-total">
+                   Total del pedido: <strong>{formatCOP(
+                     (asignacionActiva.pedido.detalles ?? asignacionActiva.pedido.items ?? []).reduce(
+                       (acc, it) => acc + (parseInt(it.cantidad ?? 0, 10) * parseFloat(it.precioUnitario ?? 0)), 0
+                     )
+                   )}</strong>
+                 </p>
+               )}
+             </div>
+           )}
 
           <div className="form-group">
             <label htmlFor="entr-monto">Monto Cobrado ($) *</label>

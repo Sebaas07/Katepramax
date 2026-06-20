@@ -1,34 +1,37 @@
-.rep-empty {
+.empty-state-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.875rem;
-  padding: 4rem 2rem;
-  color: var(--on-surface-variant);
-  font-family: var(--font-label);
-  font-size: 13px;
+  justify-content: center;
+  padding: 3rem 1rem;
   text-align: center;
+  color: #666;
 }
 
-.rep-empty .material-symbols-outlined {
-  font-size: 48px;
-  opacity: 0.25;
+.empty-state-icon {
+  font-size: 4rem;
+  color: #bbb;
+  margin-bottom: 1rem;
 }
 
-.rep-empty .btn-primary {
-  margin-top: 0.5rem;
-}
-
-.rep-empty__titulo {
-  font-family: var(--font-headline);
-  font-size: 0.9375rem;
+.empty-state-title {
+  font-size: 1.25rem;
   font-weight: 600;
-  color: var(--on-surface);
+  margin: 0 0 0.5rem 0;
+  color: #333;
 }
 
-.rep-empty__detalle {
-  font-family: var(--font-label);
-  font-size: 12px;
-  color: var(--on-surface-variant);
-  max-width: 320px;
+.empty-state-description {
+  font-size: 0.95rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.empty-state-sub {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0 0 1rem 0;
+}
+
+.empty-state-action {
+  margin-top: 0.5rem;
 }

@@ -3,11 +3,11 @@
 const svc = require("../services/reporte.service");
 
 async function arqueoSemanal(req, reply) {
-  return reply.send(await svc.arqueoSemanal(req.server, Number(req.query.semana)));
+  return reply.send(await svc.arqueoSemanal(req.server, Number(req.query.semana), req.user));
 }
 
 async function panelGeneral(req, reply) {
-  return reply.send(await svc.panelGeneral(req.server, req.query.fecha));
+  return reply.send(await svc.panelGeneral(req.server, req.query.fecha, req.user));
 }
 
 async function historialSemanal(req, reply) {
@@ -15,7 +15,7 @@ async function historialSemanal(req, reply) {
     await svc.historialSemanal(req.server, {
       skip: Number(req.query.skip ?? 0),
       take: Number(req.query.take ?? 20),
-    }),
+    }, req.user),
   );
 }
 

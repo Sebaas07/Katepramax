@@ -21,6 +21,9 @@ const asignacionRepository = (prisma) => ({
   findById: (id) =>
     prisma.asignacionEntrega.findUnique({ where: { id }, include: incluirDetalle }),
 
+  obtenerAsignacionPorPedido: (pedidoId) =>
+    prisma.asignacionEntrega.findFirst({ where: { pedidoId }, orderBy: { asignadoEn: "desc" } }),
+
   listar: ({ entregadorId, estado, pedidoId, skip = 0, take = 50 } = {}) => {
     const where = {};
     if (entregadorId) where.entregadorId = entregadorId;

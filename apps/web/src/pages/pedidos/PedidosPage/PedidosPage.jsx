@@ -6,7 +6,12 @@ import inventarioService from "@/services/inventario.service";
 import clientesService from "@/services/clientes.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
+import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
+import EmptyState from "@/components/common/EmptyState/EmptyState";
+import { formatCOP, formatFecha } from "@/utils/formatters";
 import "./PedidosPage.css";
+
+const POLLING_INTERVAL_MS = 15000;
 
 const Spinner = () => (
   <div className="ped-spinner-wrap">
@@ -20,6 +25,7 @@ const ITEM_VACIO = { productoId: "", cantidad: "", precioUnitario: "" };
 const FORM_INICIAL = {
   clienteId:    "",
   observaciones: "",
+  sedeId:       "",
   items:        [{ ...ITEM_VACIO }],
 };
 
@@ -32,10 +38,11 @@ const normalizarEstado = (raw) => {
 };
 
 const PedidosPage = () => {
-  const { esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
+  const { esAdmin, esBodega, usuario, isAuthenticated, isSessionChecked } = useAuth();
   const puedeCrear    = esAdmin || esBodega;
   const puedeAsignar  = esAdmin || esBodega;
   const puedeCancelar = esAdmin;
+  const sedeIdUsuario = usuario?.sedeId ?? null;
 
   const [pedidos,      setPedidos]      = useState([]);
   const [productos,    setProductos]    = useState([]);
@@ -49,10 +56,12 @@ const PedidosPage = () => {
   const [filtroTexto,  setFiltroTexto]  = useState("");
   const [filtroSede,   setFiltroSede]   = useState("");
 
-  const [modalPedidoAbierto,    setModalPedidoAbierto]    = useState(false);
-  const [modalAsignarAbierto,   setModalAsignarAbierto]   = useState(false);
-  const [modalCancelarAbierto,  setModalCancelarAbierto]  = useState(false);
-  const [pedidoSeleccionado,    setPedidoSeleccionado]    = useState(null);
+const [modalPedidoAbierto,    setModalPedidoAbierto]    = useState(false);
+   const [modalAsignarAbierto,   setModalAsignarAbierto]   = useState(false);
+   const [modalCancelarAbierto,  setModalCancelarAbierto]  = useState(false);
+   const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false);
+   const [pedidoSeleccionado,    setPedidoSeleccionado]    = useState(null);
+   const [historialPedido, setHistorialPedido] = useState([]);
 
   const [formPedido,     setFormPedido]     = useState(FORM_INICIAL);
   const [entregadorId,   setEntregadorId]   = useState("");
@@ -117,10 +126,13 @@ const PedidosPage = () => {
     }
   }, [esAdmin]);
 
-  useEffect(() => {
-    if (!isSessionChecked || !isAuthenticated) return;
-    cargarDatos();
-  }, [cargarDatos, isSessionChecked, isAuthenticated]);
+useEffect(() => {
+     if (!isSessionChecked || !isAuthenticated) return;
+     cargarDatos();
+
+     const intervalo = setInterval(cargarDatos, POLLING_INTERVAL_MS);
+     return () => clearInterval(intervalo);
+   }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
   const pedidosNormalizados = useMemo(
     () =>
@@ -248,7 +260,10 @@ const PedidosPage = () => {
   };
 
   const abrirModalNuevo = () => {
-    setFormPedido(FORM_INICIAL);
+    setFormPedido({
+      ...FORM_INICIAL,
+      sedeId: esAdmin ? "" : String(sedeIdUsuario ?? ""),
+    });
     setModalPedidoAbierto(true);
   };
 
@@ -258,6 +273,7 @@ const PedidosPage = () => {
       const itemsValidos = formPedido.items.filter((item) => item.productoId && parseInt(item.cantidad) >= 1);
       await pedidosService.crearPedido({
         clienteId:    formPedido.clienteId,
+        sedeId:       esAdmin ? (formPedido.sedeId ? parseInt(formPedido.sedeId, 10) : undefined) : sedeIdUsuario ?? undefined,
         observaciones: formPedido.observaciones,
         items:        itemsValidos,
       });
@@ -285,7 +301,7 @@ const PedidosPage = () => {
     setGuardando(true);
     try {
       await pedidosService.asignarEntregador(pedidoSeleccionado.id, entregadorId);
-      toast.success("Entregador asignado.");
+      toast.success("Entregador asignado correctamente.");
       setModalAsignarAbierto(false);
       await cargarDatos();
     } catch (err) {
@@ -295,17 +311,35 @@ const PedidosPage = () => {
     }
   };
 
-  const acciones = (pedido) => {
-    if (puedeAsignar && pedido.estado === "Pendiente") {
-      return [
-        {
-          label: "Asignar",
-          icon: "delivery_dining",
-          onClick: () => abrirAsignar(pedido),
-        },
-      ];
+  const abrirHistorial = async (pedido) => {
+    setPedidoSeleccionado(pedido);
+    try {
+      const historial = await pedidosService.obtenerHistorial(pedido.id);
+      setHistorialPedido(historial);
+      setModalHistorialAbierto(true);
+    } catch (err) {
+      toast.error("No se pudo cargar el historial: " + err.message);
     }
-    return [];
+  };
+
+  const acciones = (pedido) => {
+    const accs = [];
+
+    if (puedeAsignar && (pedido.estado === "Pendiente" || pedido.estado === "Asignado")) {
+      accs.push({
+        label: "Asignar",
+        icon: "delivery_dining",
+        onClick: () => abrirAsignar(pedido),
+      });
+    }
+
+    accs.push({
+      label: "Historial",
+      icon: "history",
+      onClick: () => abrirHistorial(pedido),
+    });
+
+    return accs;
   };
 
   return (
@@ -366,13 +400,22 @@ const PedidosPage = () => {
       <div className="tab-content">
         {cargando ? (
           <Spinner />
-        ) : errorDatos ? (
-          <div className="ped-error">
-            <span className="material-symbols-outlined">cloud_off</span>
-            <p>{errorDatos}</p>
-            <button className="btn-outline" onClick={cargarDatos}>Reintentar</button>
-          </div>
-        ) : (
+) : errorDatos ? (
+           <EmptyState
+             icon="cloud_off"
+             title="Error de conexión"
+             description={errorDatos}
+             actionLabel="Reintentar"
+             onAction={cargarDatos}
+           />
+         ) : pedidosFiltrados.length === 0 ? (
+           <EmptyState
+             icon="shopping_bag"
+             title="Sin pedidos"
+             description={tabActiva ? `No hay pedidos ${tabActiva.toLowerCase()}s` : "No hay pedidos registrados"}
+             subDescription="Los pedidos aparecerán aquí cuando se creen."
+           />
+         ) : (
           <div className="ped-tabla-wrap">
             <div className="ped-search">
               <span className="material-symbols-outlined">search</span>
@@ -437,6 +480,25 @@ const PedidosPage = () => {
               placeholder="Calle, número, barrio, referencia..."
             />
           </div>
+
+          {esAdmin && (
+            <div className="form-group">
+              <label htmlFor="ped-sede-modal">Sede *</label>
+              <select
+                id="ped-sede-modal"
+                name="sedeId"
+                value={formPedido.sedeId}
+                onChange={handleCambioFormPedido}
+                className="form-control"
+                required
+              >
+                <option value="">— Selecciona una sede —</option>
+                {sedesDisponibles.map((sid) => (
+                  <option key={sid} value={String(sid)}>{nombreSede(sid)}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="form-group">
             <label>Productos *</label>
@@ -593,12 +655,51 @@ const PedidosPage = () => {
                   {e.nombreCompleto}
                 </option>
               ))}
-            </select>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
-};
+</select>
+           </div>
+         </div>
+       </Modal>
 
-export default PedidosPage;
+       {/* Modal — Historial de estados */}
+       <Modal
+         isOpen={modalHistorialAbierto}
+         onClose={() => setModalHistorialAbierto(false)}
+         titulo="Historial de Estados"
+         mostrarCancelar={false}
+       >
+         <div className="historial-modal">
+           {pedidoSeleccionado && (
+             <div className="historial-pedido-info">
+               <strong>Pedido #{pedidoSeleccionado.id}</strong>
+               <span className="historial-cliente">{pedidoSeleccionado.cliente}</span>
+             </div>
+           )}
+           {historialPedido.length === 0 ? (
+             <p style={{ padding: "1rem", color: "#666" }}>Sin registros de cambios.</p>
+           ) : (
+             <table className="historial-table">
+               <thead>
+                 <tr>
+                   <th>Fecha</th>
+                   <th>Estado</th>
+                   <th>Usuario</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {historialPedido.map((h) => (
+                   <tr key={h.id}>
+                     <td>{formatFecha(h.cambiadoEn)}</td>
+                     <td><EstadoBadge estado={h.estado?.toLowerCase()} /></td>
+                     <td>{h.usuario?.nombreCompleto ?? "Sistema"}</td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           )}
+         </div>
+       </Modal>
+     </div>
+   );
+ };
+
+ export default PedidosPage;

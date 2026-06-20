@@ -45,7 +45,7 @@ const pedidosService = {
       };
     } catch (e) { console.error("pedidosService.obtenerPedidoPorId:", e); throw e; }
   },
-  crearPedido: async ({ clienteId, items, observaciones }) => {
+  crearPedido: async ({ clienteId, items, observaciones, sedeId }) => {
     try {
       if (!clienteId) throw new Error("Selecciona un cliente.");
       if (!items || items.length === 0) throw new Error("El pedido debe tener al menos un producto.");
@@ -55,7 +55,7 @@ const pedidosService = {
       }
       const payload = {
         clienteId: parseInt(clienteId),
-        sedeId:     undefined,
+        ...(sedeId !== undefined && sedeId !== null && sedeId !== "" ? { sedeId: parseInt(sedeId, 10) } : {}),
         observaciones: observaciones?.trim() || undefined,
         items: items.map((item) => ({
           productoId: item.productoId,
@@ -89,6 +89,11 @@ const pedidosService = {
       if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
       return await pedidosApi.actualizarEstadoPedido(pedidoId, estado);
     } catch (e) { console.error("pedidosService.actualizarEstadoPedido:", e); throw e; }
+  },
+
+  obtenerHistorial: async (pedidoId) => {
+    if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
+    return await pedidosApi.obtenerHistorial(pedidoId);
   },
 };
 

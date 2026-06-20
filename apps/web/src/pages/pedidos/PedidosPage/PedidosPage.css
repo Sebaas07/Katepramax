@@ -492,22 +492,64 @@ select.form-control option {
 
 /* ─── Responsive ─────────────────────────────────────────────*/
 @media (max-width: 767.98px) {
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .ped-header-acciones {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .ped-tabs {
-    width: 100%;
-    overflow-x: auto;
-  }
-  .ped-tab,
-  .ped-tab--active {
-    flex: 1;
-    white-space: nowrap;
-    text-align: center;
-  }
-}
+   .page-header {
+     flex-direction: column;
+     align-items: flex-start;
+   }
+   .ped-header-acciones {
+     width: 100%;
+     justify-content: space-between;
+   }
+   .ped-tabs {
+     width: 100%;
+     overflow-x: auto;
+   }
+   .ped-tab,
+   .ped-tab--active {
+     flex: 1;
+     white-space: nowrap;
+     text-align: center;
+   }
+ }
+
+ /* ─── Historial modal ─────────────────────────────────────────*/
+ .historial-modal {
+   padding: 0.5rem;
+ }
+
+ .historial-pedido-info {
+   display: flex;
+   gap: 1rem;
+   margin-bottom: 1rem;
+   padding: 0.75rem 1rem;
+   background: var(--surface-container-high);
+   border-radius: var(--radius-md);
+ }
+
+ .historial-pedido-info strong {
+   color: var(--secondary);
+ }
+
+ .historial-pedido-cliente {
+   color: var(--on-surface);
+ }
+
+ .historial-table {
+   width: 100%;
+   border-collapse: collapse;
+ }
+
+ .historial-table th,
+ .historial-table td {
+   padding: 0.75rem;
+   text-align: left;
+   border-bottom: 1px solid var(--outline-variant);
+ }
+
+ .historial-table th {
+   font-family: var(--font-label);
+   font-size: 11px;
+   font-weight: 600;
+   text-transform: uppercase;
+   color: var(--secondary);
+ }

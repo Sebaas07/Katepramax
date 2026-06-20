@@ -2,41 +2,83 @@ const repo     = require("../repositories/egreso.repository");
 const AppError = require("../errors/AppError");
 const { fechaValida, numeroPositivo, sanitizarTexto, semanaValida } = require("../utils/contabilidad");
 
-async function registrar(app, body) {
+function sedeEsPermitida(usuario) {
+  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";
+}
+
+function sedeWhere(usuario) {
+  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
+    return { sedeId: usuario.sedeId };
+  }
+  return {};
+}
+
+async function registrar(app, body, usuario) {
+  if (!sedeEsPermitida(usuario)) {
+    throw new AppError("No tienes permiso para registrar egresos.", 403);
+  }
+
   const concepto = sanitizarTexto(body.concepto, 200);
   if (!concepto) throw new AppError("El concepto es obligatorio.", 422);
 
-  if (!body.sedeId) throw new AppError("Selecciona la sede.", 422);
-  const sede = await app.prisma.sede.findUnique({ where: { id: body.sedeId } });
-  if (!sede) throw new AppError(`Sede ${body.sedeId} no encontrada`, 404);
+  let sedeId = Number(body.sedeId);
+  if (usuario.rol !== "Admin" && sedeId !== usuario.sedeId) {
+    throw new AppError("No puedes registrar egresos en otra sede.", 403);
+  }
+
+  const sede = await app.prisma.sede.findUnique({ where: { id: sedeId } });
+  if (!sede) throw new AppError(`Sede ${sedeId} no encontrada`, 404);
 
   return repo.crear(app.prisma, {
     fecha: fechaValida(body.fecha),
     semana: semanaValida(body.semana),
-    sedeId: body.sedeId,
+    sedeId,
     concepto,
     total: numeroPositivo(body.total, "total"),
     observacion: sanitizarTexto(body.observacion) || null,
   });
 }
 
-async function obtenerLista(app, query) {
+async function obtenerLista(app, query, usuario) {
+  if (!sedeEsPermitida(usuario)) {
+    throw new AppError("No tienes permiso para listar egresos.", 403);
+  }
+
   const filtros = { skip: Number(query.skip ?? 0), take: Number(query.take ?? 50) };
   if (query.fecha)    filtros.fecha    = new Date(query.fecha);
   if (query.semana)   filtros.semana   = Number(query.semana);
-  if (query.sedeId)   filtros.sedeId   = Number(query.sedeId);
   if (query.concepto) filtros.concepto = query.concepto;
+
+  if (usuario.rol !== "Admin") {
+    filtros.sedeId = usuario.sedeId;
+  } else if (query.sedeId) {
+    filtros.sedeId = Number(query.sedeId);
+  }
+
   return repo.listar(app.prisma, filtros);
 }
 
-async function obtenerPorId(app, id) {
+async function obtenerPorId(app, id, usuario) {
+  if (!sedeEsPermitida(usuario)) {
+    throw new AppError("No tienes permiso para ver egresos.", 403);
+  }
+
   const egreso = await repo.buscarPorId(app.prisma, id);
   if (!egreso) throw new AppError(`Egreso ${id} no encontrado`, 404);
+
+  if (usuario.rol !== "Admin" && egreso.sedeId !== usuario.sedeId) {
+    throw new AppError("No tienes permiso para ver este egreso.", 403);
+  }
+
   return egreso;
 }
 
-async function editar(app, id, body) {
-  await obtenerPorId(app, id);
+async function editar(app, id, body, usuario) {
+  if (!sedeEsPermitida(usuario)) {
+    throw new AppError("No tienes permiso para editar egresos.", 403);
+  }
+
+  await obtenerPorId(app, id, usuario);
   const data = {};
   if (body.concepto !== undefined) {
     const concepto = sanitizarTexto(body.concepto, 200);
@@ -48,14 +90,21 @@ async function editar(app, id, body) {
   return repo.actualizar(app.prisma, id, data);
 }
 
-async function borrar(app, id) {
-  await obtenerPorId(app, id);
+async function borrar(app, id, usuario) {
+  if (!sedeEsPermitida(usuario)) {
+    throw new AppError("No tienes permiso para eliminar egresos.", 403);
+  }
+
+  await obtenerPorId(app, id, usuario);
   return repo.eliminar(app.prisma, id);
 }
 
-async function resumenPorSede(app, semana) {
-  const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana));
-  const sedes = await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
+async function resumenPorSede(app, semana, usuario) {
+  const where = sedeWhere(usuario);
+  const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), where.sedeId);
+  const sedes = usuario.rol !== "Admin" && usuario.sedeId != null
+    ? [{ id: usuario.sedeId, nombre: `Sede ${usuario.sedeId}` }]
+    : await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapa  = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
   const porSede = filas.map((f) => ({
     sede:      mapa[f.sedeId] ?? `Sede ${f.sedeId}`,
@@ -67,13 +116,15 @@ async function resumenPorSede(app, semana) {
   return { porSede, totalGeneral };
 }
 
-async function resumenPorConcepto(app, semana) {
-  const filas = await repo.resumenPorConcepto(app.prisma, semanaValida(semana));
+async function resumenPorConcepto(app, semana, usuario) {
+  const where = sedeWhere(usuario);
+  const filas = await repo.resumenPorConcepto(app.prisma, semanaValida(semana), where.sedeId);
   return filas.map((f) => ({ concepto: f.concepto, registros: f._count.id, total: Number(f._sum.total) }));
 }
 
-async function totalesPorDia(app, semana) {
-  return repo.totalesPorDia(app.prisma, semanaValida(semana));
+async function totalesPorDia(app, semana, usuario) {
+  const where = sedeWhere(usuario);
+  return repo.totalesPorDia(app.prisma, semanaValida(semana), where.sedeId);
 }
 
 module.exports = { registrar, obtenerLista, obtenerPorId, editar, borrar, resumenPorSede, resumenPorConcepto, totalesPorDia };

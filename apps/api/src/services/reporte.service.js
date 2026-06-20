@@ -1,49 +1,32 @@
-
-
-/**
- * reporte.service.js
- *
- * Consolida los datos del "Arqueo Semanal" y "Panel General" del Excel.
- *
- * GET /api/v1/reportes/arqueo-semanal?semana=N
- *   → Ingresos por sede + Egresos por sede + Abonos a proveedores + Saldo neto
- *
- * GET /api/v1/reportes/panel-general?fecha=YYYY-MM-DD
- *   → Snapshot del día: ingresos, egresos, cartera y resumen de stock
- *
- * GET /api/v1/reportes/historial-semanal
- *   → Lista de arqueos consolidados por semana (tabla Historial Semanal del Excel)
- */
-
-// ────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ────────────────────────────────────────────────────────────────────────────
+const AppError = require("../errors/AppError");
 
 function toNum(v) { return Number(v ?? 0); }
 
-async function getSedes(prisma) {
+async function getSedes(prisma, usuario) {
+  if (usuario && usuario.rol !== "Admin") {
+    return [{ id: usuario.sedeId, nombre: `Sede ${usuario.sedeId}` }];
+  }
   const rows = await prisma.sede.findMany({ where: { activo: true }, select: { id: true, nombre: true } });
   return rows;
 }
 
-function mapaId(arr, key = "id") {
-  return Object.fromEntries(arr.map((x) => [x[key], x]));
+function sedeWhere(usuario) {
+  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
+    return { sedeId: usuario.sedeId };
+  }
+  return {};
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// ARQUEO SEMANAL
-// ────────────────────────────────────────────────────────────────────────────
+async function arqueoSemanal(app, semana, usuario) {
+  const prisma   = app.prisma;
+  const sedes    = await getSedes(prisma, usuario);
+  const mapaSede = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
+  const whereSede = sedeWhere(usuario);
 
-async function arqueoSemanal(app, semana) {
-  const prisma = app.prisma;
-  const sedes  = await getSedes(prisma);
-  const mapaSede = mapaId(sedes);
-
-  // ── Ingresos ─────────────────────────────────────────────────────────────
   const ingRows = await prisma.ingreso.groupBy({
-    by:      ["sedeId"],
-    where:   { semana },
-    _sum:    { efectivo: true, cuentas: true, total: true },
+    by:    ["sedeId"],
+    where: { semana, ...whereSede },
+    _sum:  { efectivo: true, cuentas: true, total: true },
     orderBy: { sedeId: "asc" },
   });
 
@@ -64,19 +47,17 @@ async function arqueoSemanal(app, semana) {
     total:    ingresos.reduce((a, s) => a + s.total,     0),
   };
 
-  // ── Egresos operativos ───────────────────────────────────────────────────
   const egrRows = await prisma.egreso.groupBy({
-    by:      ["sedeId"],
-    where:   { semana },
-    _sum:    { total: true },
+    by:    ["sedeId"],
+    where: { semana, ...whereSede },
+    _sum:  { total: true },
     orderBy: { sedeId: "asc" },
   });
 
-  // ── Abonos a proveedores (deuda proveedores) ─────────────────────────────
   const aboRows = await prisma.abono.groupBy({
-    by:      ["sedeId"],
-    where:   { semana },
-    _sum:    { valorPagado: true },
+    by:    ["sedeId"],
+    where: { semana, ...whereSede },
+    _sum:  { valorPagado: true },
     orderBy: { sedeId: "asc" },
   });
 
@@ -100,7 +81,6 @@ async function arqueoSemanal(app, semana) {
     totalEgresos: egresos.reduce((a, s) => a + s.totalEgresos, 0),
   };
 
-  // ── Saldo neto por sede ──────────────────────────────────────────────────
   const saldoNeto = sedes.map((s) => {
     const ing = ingresos.find((x) => x.sedeId === s.id);
     const egr = egresos.find((x)  => x.sedeId === s.id);
@@ -115,12 +95,13 @@ async function arqueoSemanal(app, semana) {
 
   const saldoNetoTotal = saldoNeto.reduce((a, s) => a + s.saldoNeto, 0);
 
-  // ── Cartera total (saldoDeuda de clientes) ───────────────────────────────
-  const cartera = await prisma.cliente.aggregate({ _sum: { saldoDeuda: true } });
+  const carteraWhere = usuario && usuario.rol !== "Admin" && usuario.sedeId != null
+    ? { sedeId: usuario.sedeId }
+    : {};
+  const cartera = await prisma.cliente.aggregate({ where: carteraWhere, _sum: { saldoDeuda: true } });
   const totalCartera = toNum(cartera._sum.saldoDeuda);
 
-  // ── Costo de inventario ingresado en la semana ───────────────────────────
-  const invRows = await prisma.inventario.aggregate({ where: { semana }, _sum: { costo: true } });
+  const invRows = await prisma.inventario.aggregate({ where: { semana, ...whereSede }, _sum: { costo: true } });
   const costoInventario = toNum(invRows._sum.costo);
 
   return {
@@ -133,22 +114,18 @@ async function arqueoSemanal(app, semana) {
   };
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// PANEL GENERAL (snapshot de un día)
-// ────────────────────────────────────────────────────────────────────────────
-
-async function panelGeneral(app, fecha) {
+async function panelGeneral(app, fecha, usuario) {
   const prisma = app.prisma;
   const dia    = new Date(fecha);
   dia.setUTCHours(0, 0, 0, 0);
   const diaFin = new Date(dia); diaFin.setUTCHours(23, 59, 59, 999);
 
-  const sedes = await getSedes(prisma);
+  const sedes = await getSedes(prisma, usuario);
+  const whereSede = sedeWhere(usuario);
 
-  // Ingresos del día
   const ingRows = await prisma.ingreso.groupBy({
     by:    ["sedeId"],
-    where: { fecha: { gte: dia, lte: diaFin } },
+    where: { fecha: { gte: dia, lte: diaFin }, ...whereSede },
     _sum:  { efectivo: true, cuentas: true, total: true },
   });
 
@@ -157,10 +134,9 @@ async function panelGeneral(app, fecha) {
     return { sede: s.nombre, sedeId: s.id, efectivo: toNum(f?._sum.efectivo), cuentas: toNum(f?._sum.cuentas), total: toNum(f?._sum.total) };
   });
 
-  // Egresos del día
   const egrRows = await prisma.egreso.groupBy({
     by:    ["sedeId"],
-    where: { fecha: { gte: dia, lte: diaFin } },
+    where: { fecha: { gte: dia, lte: diaFin }, ...whereSede },
     _sum:  { total: true },
   });
 
@@ -169,11 +145,15 @@ async function panelGeneral(app, fecha) {
     return { sede: s.nombre, sedeId: s.id, total: toNum(f?._sum.total) };
   });
 
-  // Cartera actual
-  const cartera = await prisma.cliente.aggregate({ _sum: { saldoDeuda: true } });
+  const carteraWhere = usuario && usuario.rol !== "Admin" && usuario.sedeId != null
+    ? { sedeId: usuario.sedeId }
+    : {};
+  const cartera = await prisma.cliente.aggregate({ where: carteraWhere, _sum: { saldoDeuda: true } });
 
-  // Stock total de todas las sedes
-  const stock = await prisma.stockSede.aggregate({ _sum: { stockActual: true } });
+  const stockWhere = usuario && usuario.rol !== "Admin" && usuario.sedeId != null
+    ? { sedeId: usuario.sedeId }
+    : {};
+  const stock = await prisma.stockSede.aggregate({ where: stockWhere, _sum: { stockActual: true } });
 
   return {
     fecha,
@@ -192,23 +172,35 @@ async function panelGeneral(app, fecha) {
   };
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// HISTORIAL SEMANAL (tabla resumen de todas las semanas)
-// ────────────────────────────────────────────────────────────────────────────
-
-async function historialSemanal(app, { skip = 0, take = 20 } = {}) {
+async function historialSemanal(app, { skip = 0, take = 20 } = {}, usuario) {
   const prisma = app.prisma;
+  const whereSede = sedeWhere(usuario);
 
-  // Obtener semanas con datos
-  const semanasIng = await prisma.ingreso.groupBy({ by: ["semana"], _sum: { total: true, efectivo: true, cuentas: true } });
-  const semanasEgr = await prisma.egreso.groupBy({  by: ["semana"], _sum: { total: true } });
-  const semanasAbo = await prisma.abono.groupBy({   by: ["semana"], _sum: { valorPagado: true } });
-  const semanasInv = await prisma.inventario.groupBy({ by: ["semana"], _sum: { costo: true } });
+  const semanasIng = await prisma.ingreso.groupBy({
+    by: ["semana", "sedeId"],
+    where: whereSede.sedeId ? { sedeId: whereSede.sedeId } : {},
+    _sum: { total: true, efectivo: true, cuentas: true },
+  });
+  const semanasEgr = await prisma.egreso.groupBy({
+    by: ["semana", "sedeId"],
+    where: whereSede.sedeId ? { sedeId: whereSede.sedeId } : {},
+    _sum: { total: true },
+  });
+  const semanasAbo = await prisma.abono.groupBy({
+    by: ["semana", "sedeId"],
+    where: whereSede.sedeId ? { sedeId: whereSede.sedeId } : {},
+    _sum: { valorPagado: true },
+  });
+  const semanasInv = await prisma.inventario.groupBy({
+    by: ["semana", "sedeId"],
+    where: whereSede.sedeId ? { sedeId: whereSede.sedeId } : {},
+    _sum: { costo: true },
+  });
 
   const todasSemanas = [...new Set([
     ...semanasIng.map((r) => r.semana),
     ...semanasEgr.map((r) => r.semana),
-  ])].sort((a, b) => b - a); // más recientes primero
+  ])].sort((a, b) => b - a);
 
   const paginadas = todasSemanas.slice(skip, skip + take);
 
@@ -236,4 +228,8 @@ async function historialSemanal(app, { skip = 0, take = 20 } = {}) {
   return { total: todasSemanas.length, skip, take, data: historial };
 }
 
-module.exports = { arqueoSemanal, panelGeneral, historialSemanal };
+module.exports = {
+  arqueoSemanal,
+  panelGeneral,
+  historialSemanal,
+};

@@ -34,14 +34,19 @@ const pedidosApi = {
     return response.data;
   },
 
-  // Endpoint existe en backend
-  asignarEntregador: async (pedidoId, entregadorId) => {
-    const response = await clienteApi.post("/asignaciones", {
-      pedidoId:     parseInt(pedidoId),
-      entregadorId: parseInt(entregadorId),
-    });
-    return response.data;
-  },
+// Endpoint existe en backend
+   asignarEntregador: async (pedidoId, entregadorId) => {
+     const response = await clienteApi.post("/asignaciones", {
+       pedidoId:     parseInt(pedidoId),
+       entregadorId: parseInt(entregadorId),
+     });
+     return response.data;
+   },
+
+   obtenerHistorial: async (pedidoId) => {
+     const response = await clienteApi.get(`/pedidos/${pedidoId}/historial`);
+     return response.data;
+   },
 
   // Endpoint existe en backend
   listarAsignaciones: async (filtros = {}) => {
