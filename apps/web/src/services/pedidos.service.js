@@ -1,4 +1,5 @@
 import pedidosApi from "@/api/pedidosApi";
+import { obtenerSedeUsuario, tieneAccesoTotal } from "@/utils/permisos";
 
 /**
  * Mapa códigos reales de estado del API portable hacia etiquetas UI legibles.
@@ -30,8 +31,14 @@ const pedidosService = {
   obtenerPedidos: async (filtros = {}) => {
     try {
       const f = { ...filtros };
+      // Si no es Admin, enviar sedeId automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
       // Si el usuario envía estado en mayúscula, el backend portable acepta ambos formatos
-      // No necesitamos transformar porque el backend portable mapea estados por insensibilidad
       return await pedidosApi.obtenerPedidos(f);
     } catch (e) { console.error("pedidosService.obtenerPedidos:", e); throw e; }
   },
@@ -53,9 +60,13 @@ const pedidosService = {
         if (!item.productoId) throw new Error("Todos los ítems deben tener un producto seleccionado.");
         if (!item.cantidad || parseInt(item.cantidad) < 1) throw new Error("La cantidad de cada ítem debe ser mayor a 0.");
       }
+
+      // Si no es Admin, usar sede del usuario
+      const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
+
       const payload = {
         clienteId: parseInt(clienteId),
-        ...(sedeId !== undefined && sedeId !== null && sedeId !== "" ? { sedeId: parseInt(sedeId, 10) } : {}),
+        ...(sedeFinal ? { sedeId: parseInt(sedeFinal, 10) } : {}),
         observaciones: observaciones?.trim() || undefined,
         items: items.map((item) => ({
           productoId: item.productoId,

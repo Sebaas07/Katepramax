@@ -9,6 +9,7 @@ import {
   iniciarSesion as loginService,
   obtenerUsuarioActual,
   cerrarSesionUsuario,
+  refreshToken as refreshTokenService,
 } from "@/services/auth.service";
 
 import { AuthContext } from "@/hooks/useAuth";
@@ -135,6 +136,18 @@ export const AuthProvider = ({ children }) => {
     [usuario],
   );
 
+  const refreshToken = useCallback(async () => {
+    const result = await refreshTokenService();
+    if (result.exitoso) {
+      setUsuario(result.datos);
+      setIsAuthenticated(true);
+      return true;
+    }
+    setUsuario(null);
+    setIsAuthenticated(false);
+    return false;
+  }, []);
+
   const value = {
     usuario,
     isAuthenticated,
@@ -143,6 +156,7 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     logout,
+    refreshToken,
     verificarRol,
     esAdmin: usuario?.rol === "Admin",
     esBodega: usuario?.rol === "Bodega" || usuario?.rol === "AdminBogota",

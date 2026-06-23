@@ -84,6 +84,7 @@ const DashboardPage = () => {
     setErrorKpis(false);
     try {
       const filtros = { fecha: obtenerFechaISOHoy() };
+      if (sedeId) filtros.sedeId = sedeId;
       const data = await reportesApi.obtenerPanelGeneral(filtros);
       // panel-general devuelve { pedidosPendientes, entregasEnRuta, ventasHoy, alertasInventario, ... }
       setKpis(data);
@@ -93,7 +94,7 @@ const DashboardPage = () => {
     } finally {
       setCargandoKpis(false);
     }
-  }, []);
+  }, [sedeId]);
 
   // ── Carga últimos 5 pedidos ───────────────────────────────
   const cargarPedidos = useCallback(async () => {

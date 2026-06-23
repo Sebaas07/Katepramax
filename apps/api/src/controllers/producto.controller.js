@@ -6,27 +6,27 @@ const svc = require("../services/producto.service");
  */
 
 async function crear(request, reply) {
-  const producto = await svc.crear(request.server, request.body);
+  const producto = await svc.crear(request.server, request.body, request.user);
   return reply.code(201).send(producto);
 }
 
 async function listar(request, reply) {
-  const lista = await svc.obtenerLista(request.server, request.query);
+  const lista = await svc.obtenerLista(request.server, request.query, request.user);
   return reply.send(lista);
 }
 
 async function obtenerPorCodigo(request, reply) {
-  const producto = await svc.obtenerPorCodigo(request.server, request.params.codigo);
+  const producto = await svc.obtenerPorCodigo(request.server, request.params.codigo, request.user);
   return reply.send(producto);
 }
 
 async function editar(request, reply) {
-  const actualizado = await svc.editar(request.server, request.params.codigo, request.body);
+  const actualizado = await svc.editar(request.server, request.params.codigo, request.body, request.user);
   return reply.send(actualizado);
 }
 
 async function desactivar(request, reply) {
-  await svc.desactivar(request.server, request.params.codigo);
+  await svc.desactivar(request.server, request.params.codigo, request.user);
   return reply.send({ mensaje: "Producto desactivado correctamente" });
 }
 

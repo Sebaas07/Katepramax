@@ -86,13 +86,16 @@ export const tieneRol = (...roles) => {
 
 /**
  * Verifica si el usuario es Bodega de la sede Bogotá (Admin Bogotá).
- * Condición: rol === "Admin" Y sede === "Bogotá"
+ * Condición: rol === "AdminBogota" o (rol === "Admin" y sede === "Bogotá")
  */
 export const esBodegaBogota = () => {
   const sesion = obtenerSesion();
   if (!sesion) return false;
 
-  return sesion.rol === "Admin" && sesion.sede === "Bogotá";
+  return (
+    sesion.rol === "AdminBogota" ||
+    (sesion.rol === "Admin" && sesion.sede === "Bogotá")
+  );
 };
 
 /**

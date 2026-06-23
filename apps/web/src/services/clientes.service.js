@@ -1,15 +1,27 @@
 import clientesApi from "@/api/clientesApi";
+import { tieneAccesoTotal, obtenerSedeUsuario } from "@/utils/permisos";
 
 /**
  * clientes.service.js — Katepramax
  * Lógica de negocio del lado cliente para el módulo de clientes.
  * Alineado con el schema Prisma real: nombre, telefono, limiteCredito, saldoDeuda, activo.
  * No incluye "identificacion" ni "email" — esos campos no existen en el modelo.
+ * Reglas de sede:
+ * - Admin: acceso total (no filtra por sede)
+ * - Bodega/AdminBogota: solo su sede
  */
 const clientesService = {
   obtenerClientes: async (filtros = {}) => {
     try {
-      const clientes = await clientesApi.obtenerClientes(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const clientes = await clientesApi.obtenerClientes(f);
       return clientes;
     } catch (error) {
       console.error("Error en clientesService.obtenerClientes:", error);

@@ -71,8 +71,8 @@ const InventarioPage = () => {
     setCargando(true);
     try {
       const params = {};
-      if (filtrosMov.sedeId && esAdmin)
-        params.sedeId = parseInt(filtrosMov.sedeId);
+      if (esAdmin && filtrosMov.sedeId) params.sedeId = parseInt(filtrosMov.sedeId);
+      if (!esAdmin && sedeIdUsuario) params.sedeId = sedeIdUsuario;
       if (filtrosMov.productoId) params.productoId = filtrosMov.productoId;
       if (filtrosMov.tipo) params.tipo = filtrosMov.tipo;
       const data = await inventarioService.listarMovimientos(params);
@@ -82,7 +82,7 @@ const InventarioPage = () => {
     } finally {
       setCargando(false);
     }
-  }, [filtrosMov.sedeId, filtrosMov.productoId, filtrosMov.tipo, esAdmin]);
+  }, [filtrosMov.sedeId, filtrosMov.productoId, filtrosMov.tipo, esAdmin, sedeIdUsuario]);
 
   const cargarEntradas = useCallback(async () => {
     setCargando(true);

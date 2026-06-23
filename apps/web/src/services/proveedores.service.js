@@ -1,16 +1,10 @@
 import proveedoresApi from "@/api/proveedoresApi";
-import { obtenerSesion } from "@/utils/sessionHelper";
 
 const proveedoresService = {
   obtenerProveedores: async (filtros = {}) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
-      const proveedores = await proveedoresApi.obtenerProveedores(filtros);
-      return proveedores;
+      const f = { ...filtros };
+      return await proveedoresApi.obtenerProveedores(f);
     } catch (error) {
       console.error("Error en proveedoresService.obtenerProveedores:", error);
       throw error;
@@ -19,11 +13,6 @@ const proveedoresService = {
 
   obtenerProveedorPorId: async (id) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
       const proveedor = await proveedoresApi.obtenerProveedorPorId(id);
       return proveedor;
     } catch (error) {
@@ -37,11 +26,6 @@ const proveedoresService = {
 
   crearProveedor: async (proveedorData) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
       if (!proveedorData.nombre) {
         throw new Error("Faltan datos requeridos para crear el proveedor");
       }
@@ -55,11 +39,6 @@ const proveedoresService = {
 
   actualizarProveedor: async (id, proveedorData) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
       const proveedorActualizado = await proveedoresApi.actualizarProveedor(
         id,
         proveedorData,
@@ -73,11 +52,6 @@ const proveedoresService = {
 
   eliminarProveedor: async (id) => {
     try {
-      // Verificar si estamos autenticados
-      const sesion = obtenerSesion();
-      if (!sesion) {
-        throw new Error("Usuario no autenticado");
-      }
       await proveedoresApi.eliminarProveedor(id);
       return true;
     } catch (error) {

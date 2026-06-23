@@ -16,12 +16,19 @@ export const normalizarSemana = (valor) => {
 
 export const sanitizarTexto = (valor, max = MAX_OBSERVACION) => {
   if (valor === null || valor === undefined) return "";
-  return String(valor)
-    .replace(/[<>]/g, "")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, max);
+  // Eliminar caracteres de control sin usar regex con escapes
+  let limpio = String(valor).replace(/[<>]/g, "");
+  for (let i = 0; i <= 0x1f; i += 1) {
+    const char = String.fromCharCode(i);
+    if (char !== "\t" && char !== "\n" && char !== "\r") {
+      limpio = limpio.split(char).join("");
+    }
+  }
+  limpio = limpio.replace(/\s+/g, " ").trim().slice(0, max);
+  if (limpio.includes("\x7F")) {
+    return limpio.split("\x7F").join("");
+  }
+  return limpio;
 };
 
 export const parseNumero = (valor) => {
@@ -136,11 +143,9 @@ export const construirPayloadContabilidad = (modalTipo, form) => {
 export const normalizarNumeroInput = (valor) => {
   const raw = String(valor ?? "").replace(/[^\d,.-]/g, "");
   if (raw === "-" || raw === "") return "";
-  const partes = raw.split(/(?=[.,-])/);
   const tieneComa = raw.includes(",");
   const tienePunto = raw.includes(".");
   if (tieneComa && tienePunto) {
-    const ultimoSeparador = Math.max(raw.lastIndexOf(","), raw.lastIndexOf("."));
     const sinSeparadores = raw.replace(/[,.]/g, "");
     const signo = raw.startsWith("-") ? "-" : "";
     const numero = sinSeparadores.slice(1);

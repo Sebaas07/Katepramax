@@ -91,26 +91,6 @@ const asignacionService = (app) => ({
     });
 
     return this.repo.findById(asignacionExistente ? asignacionExistente.id : resultado.id);
-
-    const asignacion = await this.prisma.$transaction(async (tx) => {
-      const nueva = await tx.asignacionEntrega.create({
-        data: {
-          pedidoId,
-          entregadorId,
-          asignadoPorId,
-          observacionesEntrega,
-        },
-      });
-
-      await tx.pedido.update({
-        where: { id: pedidoId },
-        data:  { estado: "Asignado" },
-      });
-
-      return nueva;
-    });
-
-    return this.repo.findById(asignacion.id);
   },
 
   /**
@@ -156,10 +136,10 @@ const asignacionService = (app) => ({
     });
   },
 
-  /**
-   * Vista del entregador: solo sus propias asignaciones.
-   */
-  misEntregas: (entregadorId, { estado, skip, take } = {}) =>
+/**
+    * Vista del entregador: solo sus propias asignaciones.
+    */
+   misEntregas: (entregadorId, { estado, skip, take } = {}) =>
     asignacionRepo(app.prisma).listar({
       entregadorId,
       estado,
@@ -201,16 +181,16 @@ const asignacionService = (app) => ({
     }
 
     const asignacion = await this.repo.findById(id);
-    if (!asignacion) throw new AppError(`Asignaci�n ${id} no encontrada`, 404);
+    if (!asignacion) throw new AppError(`Asignaci\u00F3n ${id} no encontrada`, 404);
 
     if (rolUsuario === "Entregador" && asignacion.entregadorId !== usuarioId) {
-      throw new AppError("No tienes permiso para actualizar esta asignaci�n", 403);
+      throw new AppError("No tienes permiso para actualizar esta asignaci\u00F3n", 403);
     }
 
     if (rolUsuario !== "Admin" && rolUsuario !== "Entregador" && sedeIdUsuario != null) {
       const sedePedido = asignacion.pedido?.sedeId ?? asignacion.pedido?.creador?.sedeId;
       if (sedePedido == null || sedePedido !== sedeIdUsuario) {
-        throw new AppError("No tienes permiso para actualizar esta asignaci�n.", 403);
+        throw new AppError("No tienes permiso para actualizar esta asignaci\u00F3n.", 403);
       }
     }
 

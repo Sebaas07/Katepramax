@@ -2,8 +2,7 @@ const authService = require("../services/auth.service");
 
 const login = async (request, reply) => {
   const svc = authService(request.server);
-  
-  // Obtener la IP del cliente y el User-Agent para mejorar la seguridad y el monitoreo
+
   const ip = request.ip;
   const userAgent = request.headers["user-agent"] ?? null;
 
@@ -14,7 +13,18 @@ const login = async (request, reply) => {
     userAgent,
   );
 
-  return reply.code(200).send(result);
+  // Enviar refresh token como HttpOnly cookie para mayor seguridad
+  reply.setCookie("refreshToken", result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+    maxAge: 7 * 24 * 60 * 60, // 7 días
+    path: "/api/v1/auth/refresh",
+  });
+
+  // No enviar refresh token en el body - solo access token
+  const { refreshToken: _, ...rest } = result;
+  return reply.code(200).send(rest);
 };
 
 const refresh = async (request, reply) => {
@@ -22,8 +32,22 @@ const refresh = async (request, reply) => {
   const ip = request.ip;
   const userAgent = request.headers["user-agent"] ?? null;
 
-  const result = await svc.refresh(request.body.refreshToken, ip, userAgent);
-  return reply.code(200).send(result);
+  // El refresh token puede venir de body (compatibilidad) o cookie
+  const refreshToken = request.body.refreshToken || request.cookies.refreshToken;
+
+  const result = await svc.refresh(refreshToken, ip, userAgent);
+
+  // Actualizar cookie HttpOnly con nuevo refresh token
+  reply.setCookie("refreshToken", result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+    maxAge: 7 * 24 * 60 * 60,
+    path: "/api/v1/auth/refresh",
+  });
+
+  const { refreshToken: _, ...rest } = result;
+  return reply.code(200).send(rest);
 };
 
 const logout = async (request, reply) => {

@@ -1,8 +1,9 @@
 const fp = require("fastify-plugin");
 const fastifyJwt = require("@fastify/jwt");
+const fastifyCookie = require("@fastify/cookie");
 
 /**
- * Plugin JWT. Registra el plugin oficial de Fastify y falla explícitamente
+ * Plugin JWT + Cookie. Registra los plugins necesarios y falla explícitamente
  * si JWT_SECRET no está en el entorno — nunca un fallback hardcodeado.
  */
 async function jwtPlugin(app) {
@@ -13,9 +14,11 @@ async function jwtPlugin(app) {
     throw new Error("FATAL: JWT_SECRET no definido.");
   }
 
+  // Registrar plugin de cookies antes de JWT
+  await app.register(fastifyCookie);
+
   app.register(fastifyJwt, {
     secret: secret,
-    // Configuración recomendada:
     messages: {
       badRequestErrorMessage: "Formato de token incorrecto.",
       noAuthorizationInHeaderMessage:

@@ -13,14 +13,15 @@ async function crear(prisma, data) {
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
- * @param {{ descripcion?: string, activo?: boolean, proveedorId?: number, departamento?: string, skip?: number, take?: number }} filtros
+ * @param {{ descripcion?: string, activo?: boolean, proveedorId?: number, departamento?: string, sedeId?: number, skip?: number, take?: number }} filtros
  */
-async function listar(prisma, { descripcion, activo, proveedorId, departamento, skip = 0, take = 50 } = {}) {
+async function listar(prisma, { descripcion, activo, proveedorId, departamento, sedeId, skip = 0, take = 50 } = {}) {
   const where = {};
   if (activo !== undefined)   where.activo = activo;
   if (proveedorId)            where.proveedorId = proveedorId;
   if (descripcion)            where.descripcion = { contains: descripcion, mode: "insensitive" };
   if (departamento)           where.departamento = departamento;
+  if (sedeId != null)         where.stockSedes = { some: { sedeId: Number(sedeId) } };
 
   return prisma.producto.findMany({
     where,

@@ -1,4 +1,4 @@
-import { postLogin, getMe, postLogout } from "../api/authApi";
+import { postLogin, getMe, postLogout, postRefresh } from "../api/authApi";
 import { USUARIOS_MOCK } from "../mocks/datos.mock";
 import {
   guardarTokens,
@@ -84,4 +84,23 @@ export const cerrarSesionUsuario = async () => {
   }
 
   return { exitoso: true, mensaje: "Sesión cerrada correctamente" };
+};
+
+export const refreshToken = async () => {
+  const { obtenerRefreshToken } = await import("@/utils/sessionHelper");
+  const refreshTokenValor = obtenerRefreshToken();
+  if (!refreshTokenValor) {
+    return { exitoso: false, mensaje: "Sin refresh token" };
+  }
+
+  try {
+    const response = await postRefresh(refreshTokenValor);
+    const datos = response.data;
+    guardarTokens(datos.accessToken, datos.refreshToken);
+    guardarSesion(datos.user);
+    return { exitoso: true, datos: datos.user };
+  } catch {
+    cerrarSesion();
+    return { exitoso: false, mensaje: "Sesión expirada" };
+  }
 };

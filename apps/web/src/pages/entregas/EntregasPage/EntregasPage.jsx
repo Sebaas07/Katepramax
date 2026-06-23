@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import entregaService from "@/services/entrega.service";
-import pedidosService from "@/services/pedidos.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
@@ -19,12 +18,12 @@ const Spinner = () => (
   </div>
 );
 
-const TarjetaEntrega = ({ asignacion, onSalida, onConfirmar, onFallo, totalPedido }) => {
+const TarjetaEntrega = ({ asignacion, onSalida, onConfirmar, onFallo }) => {
    const estado = asignacion.estado;
    const pedido = asignacion.pedido;
    const estadoNormalizado = estado === "EnRuta" ? "en_ruta" : estado?.toLowerCase();
 
-  const totalPedido = useMemo(() => {
+   const totalPedido = useMemo(() => {
     const items = pedido?.detalles ?? pedido?.items ?? [];
     return items.reduce((acc, it) => {
       const cant = parseInt(it.cantidad ?? 0, 10);
@@ -191,12 +190,13 @@ const EntregasPage = () => {
   }, []);
 
 useEffect(() => {
-     if (!isSessionChecked || !isAuthenticated) return;
-     cargarEntregas();
+      if (!isSessionChecked || !isAuthenticated) return;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      cargarEntregas();
 
-     const intervalo = setInterval(cargarEntregas, POLLING_INTERVAL_MS);
-     return () => clearInterval(intervalo);
-   }, [cargarEntregas, isSessionChecked, isAuthenticated]);
+      const intervalo = setInterval(cargarEntregas, POLLING_INTERVAL_MS);
+      return () => clearInterval(intervalo);
+    }, [cargarEntregas, isSessionChecked, isAuthenticated]);
 
   // ── Handlers de acciones ───────────────────────────────────────────
   const handleSalida = async (asignacion) => {

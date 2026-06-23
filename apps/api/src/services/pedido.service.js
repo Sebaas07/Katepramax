@@ -40,9 +40,10 @@ async function crear(app, body, usuarioId) {
 
   if (creador.rol === "Admin") {
     if (sedeIdBody == null || sedeIdBody === "") {
-      throw new AppError("Se requiere sedeId para crear el pedido.", 400);
+      sedePedido = creador.sedeId;
+    } else {
+      sedePedido = Number(sedeIdBody);
     }
-    sedePedido = Number(sedeIdBody);
   }
 
   const detallesPreparados = [];

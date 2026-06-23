@@ -20,6 +20,7 @@ export const clienteApi = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
 // ─── Interceptor de REQUEST ───────────────────────────────────────────────────

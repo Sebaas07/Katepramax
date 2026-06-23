@@ -1,5 +1,6 @@
 import contabilidadApi from "@/api/contabilidadApi";
 import { getSemanaISO } from "@/utils/formatters";
+import { tieneAccesoTotal, obtenerSedeUsuario } from "@/utils/permisos";
 
 const normalizarSemana = (valor) => {
   const numero = Number.parseInt(valor, 10);
@@ -10,7 +11,15 @@ const contabilidadService = {
   // ── INGRESOS ──────────────────────────────────────────────
   obtenerIngresos: async (filtros = {}) => {
     try {
-      return await contabilidadApi.obtenerIngresos(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      return await contabilidadApi.obtenerIngresos(f);
     } catch {
       return [];
     }
@@ -18,7 +27,11 @@ const contabilidadService = {
 
   registrarIngreso: async (datos) => {
     if (!datos.fecha) throw new Error("La fecha es obligatoria.");
-    if (!datos.sedeId) throw new Error("Selecciona la sede.");
+    if (!datos.sedeId) {
+      const sedeIdUsuario = obtenerSedeUsuario();
+      if (sedeIdUsuario) datos.sedeId = sedeIdUsuario;
+      else throw new Error("Selecciona la sede.");
+    }
 
     const ef = Number(datos.efectivo ?? 0);
     const cu = Number(datos.cuentas ?? 0);
@@ -49,7 +62,15 @@ const contabilidadService = {
   // ── EGRESOS ───────────────────────────────────────────────
   obtenerEgresos: async (filtros = {}) => {
     try {
-      return await contabilidadApi.obtenerEgresos(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      return await contabilidadApi.obtenerEgresos(f);
     } catch {
       return [];
     }
@@ -57,7 +78,11 @@ const contabilidadService = {
 
   registrarEgreso: async (datos) => {
     if (!datos.fecha) throw new Error("La fecha es obligatoria.");
-    if (!datos.sedeId) throw new Error("Selecciona la sede.");
+    if (!datos.sedeId) {
+      const sedeIdUsuario = obtenerSedeUsuario();
+      if (sedeIdUsuario) datos.sedeId = sedeIdUsuario;
+      else throw new Error("Selecciona la sede.");
+    }
     if (!String(datos.concepto ?? "").trim()) throw new Error("El concepto es obligatorio.");
 
     const total = Number(datos.total ?? 0);
@@ -87,7 +112,15 @@ const contabilidadService = {
   // ── CARTERA ───────────────────────────────────────────────
   obtenerCartera: async (filtros = {}) => {
     try {
-      return await contabilidadApi.obtenerCartera(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      return await contabilidadApi.obtenerCartera(f);
     } catch {
       return [];
     }
@@ -95,7 +128,11 @@ const contabilidadService = {
 
   registrarCartera: async (datos) => {
     if (!datos.fecha) throw new Error("La fecha es obligatoria.");
-    if (!datos.sedeId) throw new Error("Selecciona la sede.");
+    if (!datos.sedeId) {
+      const sedeIdUsuario = obtenerSedeUsuario();
+      if (sedeIdUsuario) datos.sedeId = sedeIdUsuario;
+      else throw new Error("Selecciona la sede.");
+    }
 
     const saldo = Number(datos.saldoDia ?? 0);
     if (saldo <= 0) throw new Error("Ingresa un saldo mayor a cero.");
@@ -127,7 +164,11 @@ const contabilidadService = {
 
   registrarPagoProveedor: async (datos) => {
     if (!datos.fecha) throw new Error("La fecha es obligatoria.");
-    if (!datos.sedeId) throw new Error("Selecciona la sede.");
+    if (!datos.sedeId) {
+      const sedeIdUsuario = obtenerSedeUsuario();
+      if (sedeIdUsuario) datos.sedeId = sedeIdUsuario;
+      else throw new Error("Selecciona la sede.");
+    }
     if (!datos.proveedorId) throw new Error("Selecciona el proveedor.");
 
     const valor = Number(datos.valorPagado ?? 0);
@@ -169,7 +210,15 @@ const contabilidadService = {
 
   obtenerPanelGeneral: async (fecha) => {
     try {
-      return await contabilidadApi.obtenerPanelGeneral(fecha);
+      const f = {};
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      return await contabilidadApi.obtenerPanelGeneral(fecha ? { ...f, fecha } : f);
     } catch {
       return null;
     }

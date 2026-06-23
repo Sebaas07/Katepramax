@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import TarjetaKpi from "./TarjetaKpi";
-import { formatCOP, formatFecha, getRangoSemana, getSemanaISO } from "@/utils/formatters";
+import { formatCOP, formatFecha, getRangoSemana } from "@/utils/formatters";
 
 const toNumber = (v) => Number(v ?? 0);
 

@@ -367,7 +367,6 @@ const ProductosPage = () => {
   );
 
   const productosNormalizados = useMemo(() => {
-    console.log("stockSedes raw:", productos[0]?.stockSedes); // ← agrega esto
     return productos.map((producto) =>
       normalizarProducto(producto, sedeActivaId),
     );

@@ -8,7 +8,7 @@ import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
-import { formatCOP, formatFecha } from "@/utils/formatters";
+import { formatFecha } from "@/utils/formatters";
 import "./PedidosPage.css";
 
 const POLLING_INTERVAL_MS = 15000;
@@ -38,11 +38,10 @@ const normalizarEstado = (raw) => {
 };
 
 const PedidosPage = () => {
-  const { esAdmin, esBodega, usuario, isAuthenticated, isSessionChecked } = useAuth();
-  const puedeCrear    = esAdmin || esBodega;
-  const puedeAsignar  = esAdmin || esBodega;
-  const puedeCancelar = esAdmin;
-  const sedeIdUsuario = usuario?.sedeId ?? null;
+   const { esAdmin, esBodega, usuario, isAuthenticated, isSessionChecked } = useAuth();
+   const puedeCrear    = esAdmin || esBodega;
+   const puedeAsignar  = esAdmin || esBodega;
+   const sedeIdUsuario = usuario?.sedeId ?? null;
 
   const [pedidos,      setPedidos]      = useState([]);
   const [productos,    setProductos]    = useState([]);
@@ -58,7 +57,6 @@ const PedidosPage = () => {
 
 const [modalPedidoAbierto,    setModalPedidoAbierto]    = useState(false);
    const [modalAsignarAbierto,   setModalAsignarAbierto]   = useState(false);
-   const [modalCancelarAbierto,  setModalCancelarAbierto]  = useState(false);
    const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false);
    const [pedidoSeleccionado,    setPedidoSeleccionado]    = useState(null);
    const [historialPedido, setHistorialPedido] = useState([]);
@@ -88,16 +86,19 @@ const [modalPedidoAbierto,    setModalPedidoAbierto]    = useState(false);
     return Array.from(s).sort();
   }, [productos]);
 
-  const nombreSede = (sedeId) => {
-    const id = typeof sedeId === "string" ? parseInt(sedeId, 10) : sedeId;
-    if (!id) return "—";
-    const nombres = { 1: "Bogotá", 2: "Cartagena", 3: "Villavicencio" };
-    const primero = productos.find((p) => {
-      const sid = p.sedeId ?? p.sede?.id;
-      return sid === id;
-    });
-    return nombres[id] ?? primero?.sede?.nombre ?? `Sede ${id}`;
-  };
+const nombreSede = useCallback(
+    (sedeId) => {
+      const id = typeof sedeId === "string" ? parseInt(sedeId, 10) : sedeId;
+      if (!id) return "—";
+      const nombres = { 1: "Bogotá", 2: "Cartagena", 3: "Villavicencio" };
+      const primero = productos.find((p) => {
+        const sid = p.sedeId ?? p.sede?.id;
+        return sid === id;
+      });
+      return nombres[id] ?? primero?.sede?.nombre ?? `Sede ${id}`;
+    },
+    [productos]
+  );
 
   const cargarDatos = useCallback(async () => {
     setCargando(true);
@@ -127,12 +128,13 @@ const [modalPedidoAbierto,    setModalPedidoAbierto]    = useState(false);
   }, [esAdmin]);
 
 useEffect(() => {
-     if (!isSessionChecked || !isAuthenticated) return;
-     cargarDatos();
+      if (!isSessionChecked || !isAuthenticated) return;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      cargarDatos();
 
-     const intervalo = setInterval(cargarDatos, POLLING_INTERVAL_MS);
-     return () => clearInterval(intervalo);
-   }, [cargarDatos, isSessionChecked, isAuthenticated]);
+      const intervalo = setInterval(cargarDatos, POLLING_INTERVAL_MS);
+      return () => clearInterval(intervalo);
+    }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
   const pedidosNormalizados = useMemo(
     () =>
@@ -177,7 +179,7 @@ useEffect(() => {
           direccion: p.observaciones ?? "",
         };
       }),
-    [pedidos, mapaClientesPorId, mapaEntregadoresPorId, mapaProductosPorCodigo, productos, clientes, entregadores]
+    [pedidos, mapaClientesPorId, mapaEntregadoresPorId, mapaProductosPorCodigo, nombreSede]
   );
 
   const pedidosFiltrados = useMemo(() => {

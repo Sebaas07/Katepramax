@@ -1,13 +1,21 @@
 import reportesApi from "@/api/reportesApi";
 import pedidosApi from "@/api/pedidosApi";
-
+import { tieneAccesoTotal, obtenerSedeUsuario } from "@/utils/permisos";
 
 const reporteService = {
   // ─── Panel general (KPIs del día/semana) ─────────────────────────────
   // Reemplaza: obtenerResumenGeneral, obtenerVentasPorPeriodo, obtenerResumenDia
   obtenerResumenGeneral: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerPanelGeneral(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const datos = await reportesApi.obtenerPanelGeneral(f);
       return {
         kpis: datos?.kpis ?? datos ?? null,
         tendencia: Array.isArray(datos?.tendencia) ? datos.tendencia : [],
@@ -21,7 +29,15 @@ const reporteService = {
 
   obtenerVentasPorPeriodo: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerPanelGeneral(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const datos = await reportesApi.obtenerPanelGeneral(f);
       return {
         resumen: datos?.resumen ?? datos,
         detalle: Array.isArray(datos?.detalle) ? datos.detalle : [],
@@ -37,7 +53,15 @@ const reporteService = {
   // Reemplaza: obtenerCorteCaja
   obtenerCorteCaja: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerArqueo(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const datos = await reportesApi.obtenerArqueo(f);
       return {
         resumen: datos?.resumen ?? datos,
         movimientos: Array.isArray(datos?.movimientos) ? datos.movimientos : [],
@@ -50,7 +74,15 @@ const reporteService = {
 
   obtenerArqueo: async (filtros = {}) => {
     try {
-      return await reportesApi.obtenerArqueo(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      return await reportesApi.obtenerArqueo(f);
     } catch (e) {
       console.error("reporteService.obtenerArqueo:", e);
       throw e;
@@ -71,7 +103,15 @@ const reporteService = {
   // ─── Cobros por entregador → historial semanal (contiene entregas) ───
   obtenerCobrosEntregador: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerPanelGeneral(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const datos = await reportesApi.obtenerPanelGeneral(f);
       return {
         resumen: datos?.resumen ?? datos,
         detalle: Array.isArray(datos?.cobrosEntregador)
@@ -87,7 +127,15 @@ const reporteService = {
   // ─── Stock bajo → panel-general incluye alertasInventario ────────────
   obtenerStockBajo: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerPanelGeneral(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const datos = await reportesApi.obtenerPanelGeneral(f);
       return Array.isArray(datos?.stockBajo) ? datos.stockBajo : [];
     } catch (e) {
       console.error("reporteService.obtenerStockBajo:", e);
@@ -98,7 +146,15 @@ const reporteService = {
   // ─── Deuda clientes → panel-general incluye cartera ──────────────────
   obtenerDeudaClientes: async (filtros = {}) => {
     try {
-      const datos = await reportesApi.obtenerPanelGeneral(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const datos = await reportesApi.obtenerPanelGeneral(f);
       return {
         resumen: datos?.resumen ?? datos,
         detalle: Array.isArray(datos?.deudaClientes) ? datos.deudaClientes : [],
@@ -112,8 +168,17 @@ const reporteService = {
   // ─── KPIs del día (compatibilidad Dashboard) ──────────────────────────
   obtenerResumenDia: async (sedeId) => {
     try {
-      const filtros = sedeId ? { sedeId } : {};
-      return await reportesApi.obtenerPanelGeneral(filtros);
+      const f = {};
+      // Si no es Admin, usar sede del usuario
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      } else if (sedeId) {
+        f.sedeId = sedeId;
+      }
+      return await reportesApi.obtenerPanelGeneral(f);
     } catch (e) {
       console.error("reporteService.obtenerResumenDia:", e);
       throw e;
@@ -123,8 +188,18 @@ const reporteService = {
   // ─── Últimos pedidos (compatibilidad Dashboard) ───────────────────────
   obtenerUltimosPedidos: async (sedeId, limite = 5) => {
     try {
-      const filtros = sedeId ? { sedeId, limit: limite } : { limit: limite };
-      const data = await pedidosApi.obtenerPedidos(filtros);
+      const f = {};
+      // Si no es Admin, usar sede del usuario
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      } else if (sedeId) {
+        f.sedeId = sedeId;
+      }
+      f.limit = limite;
+      const data = await pedidosApi.obtenerPedidos(f);
       const lista = Array.isArray(data) ? data : (data?.data ?? []);
       return lista.slice(0, limite);
     } catch (e) {

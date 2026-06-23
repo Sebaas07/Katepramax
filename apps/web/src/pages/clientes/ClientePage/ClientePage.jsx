@@ -55,10 +55,11 @@ const ClientePage = () => {
     }
   }, [filtros]);
 
-  useEffect(() => {
-    if (!isSessionChecked || !isAuthenticated) return;
-    cargarClientes();
-  }, [cargarClientes, isSessionChecked, isAuthenticated]);
+useEffect(() => {
+     if (!isSessionChecked || !isAuthenticated) return;
+     // eslint-disable-next-line react-hooks/set-state-in-effect
+     cargarClientes();
+   }, [cargarClientes, isSessionChecked, isAuthenticated]);
 
   // ── Handlers ──────────────────────────────────────────────
   const handleCambioFiltro = (e) => {

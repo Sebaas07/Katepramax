@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "react-hot-toast";
-import { useAuth } from "@/hooks/useAuth";
 import pedidosService from "@/services/pedidos.service";
-import inventarioService from "@/services/inventario.service";
-import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
-import { formatCOP, formatFechaHora } from "@/utils/formatters";
 import "./DistribucionPage.css";
 
 // ─── Spinner ──────────────────────────────────────────────────
@@ -36,9 +32,7 @@ const TABS = [
 ];
 
 const DistribucionPage = () => {
-  const { esAdmin, esBodega } = useAuth();
-
-  const [tab,       setTab]       = useState("flujo");
+   const [tab,       setTab]       = useState("flujo");
   const [pedidos,   setPedidos]   = useState([]);
   const [cargando,  setCargando]  = useState(false);
 
@@ -55,7 +49,10 @@ const DistribucionPage = () => {
     }
   }, []);
 
-  useEffect(() => { cargarDatos(); }, [cargarDatos]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarDatos();
+  }, [cargarDatos]);
 
   // ── Contadores ─────────────────────────────────────────────
   const pendientes  = pedidos.filter((p) => p.estado === "Pendiente").length;

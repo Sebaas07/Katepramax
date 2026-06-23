@@ -1,6 +1,7 @@
 import inventarioApi from "@/api/inventarioApi";
 import { getSemanaISO } from "@/utils/formatters";
 import { getApiErrorMessage, normalizeArrayResponse } from "@/utils/apiHelpers";
+import { tieneAccesoTotal, obtenerSedeUsuario } from "@/utils/permisos";
 
 const toNumber = (value, fallback = 0) => {
   const number = Number(value);
@@ -11,7 +12,15 @@ const inventarioService = {
   // ─── Productos ────────────────────────────────────────────────────────────
   obtenerProductos: async (filtros = {}) => {
     try {
-      return await inventarioApi.obtenerProductos(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      return await inventarioApi.obtenerProductos(f);
     } catch (error) {
       console.error("inventarioService.obtenerProductos:", error);
       throw new Error(getApiErrorMessage(error), { cause: error });
@@ -40,7 +49,6 @@ const inventarioService = {
         porcentajeGanancia,
         stockMinimo,
         proveedorId,
-        activo,
         sedeId,
       } = producto;
 
@@ -57,6 +65,9 @@ const inventarioService = {
             ? ((venta - costo) / costo) * 100
             : 0;
 
+      // Si no es Admin, usar sede del usuario
+      const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
+
       return await inventarioApi.crearProducto({
         codigo,
         descripcion,
@@ -67,6 +78,7 @@ const inventarioService = {
         porcentajeGanancia: ganancia,
         stockMinimo: toNumber(stockMinimo, 0),
         proveedorId: proveedorId ? Number(proveedorId) : null,
+        ...(sedeFinal ? { sedeId: sedeFinal } : {}),
       });
     } catch (e) {
       console.error("inventarioService.crearProducto:", e);
@@ -146,8 +158,11 @@ const inventarioService = {
       if (!cantidadIngresada || cantidadIngresada <= 0)
         throw new Error("La cantidad debe ser mayor a 0.");
 
+      // Si no es Admin, usar sede del usuario
+      const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
+
       return await inventarioApi.crearEntradaDiaria({
-        sedeId: parseInt(sedeId),
+        sedeId: parseInt(sedeFinal),
         productoId,
         cantidadIngresada: parseInt(cantidadIngresada),
         fecha,
@@ -162,7 +177,15 @@ const inventarioService = {
 
   listarEntradas: async (filtros = {}) => {
     try {
-      const data = await inventarioApi.listarInventario(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const data = await inventarioApi.listarInventario(f);
       return normalizeArrayResponse(data);
     } catch (error) {
       console.error("inventarioService.listarEntradas:", error);
@@ -195,7 +218,15 @@ const inventarioService = {
   // ─── Stock Bajo ───────────────────────────────────────────────────────────
   obtenerStockBajo: async () => {
     try {
-      return await inventarioApi.obtenerStockBajo();
+      const f = {};
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      return await inventarioApi.obtenerStockBajo(f);
     } catch (e) {
       console.error("inventarioService.obtenerStockBajo:", e);
       throw e;
@@ -206,7 +237,15 @@ const inventarioService = {
   // InventarioPage usa estos nombres; internamente delegan a los métodos reales.
   listarMovimientos: async (filtros = {}) => {
     try {
-      const data = await inventarioApi.listarInventario(filtros);
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const data = await inventarioApi.listarInventario(f);
       return normalizeArrayResponse(data);
     } catch (error) {
       console.error("inventarioService.listarMovimientos:", error);
@@ -226,13 +265,16 @@ const inventarioService = {
       if (!productoId) throw new Error("Selecciona un producto.");
       if (!cantidad || cantidad <= 0)
         throw new Error("La cantidad debe ser mayor a 0.");
-      if (!sedeId) throw new Error("Selecciona la sede.");
+
+      // Si no es Admin, usar sede del usuario
+      const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
+      if (!sedeFinal) throw new Error("Selecciona la sede.");
       if (!fecha) throw new Error("La fecha es obligatoria.");
 
       return await inventarioApi.crearEntradaDiaria({
         productoId,
         cantidadIngresada: parseInt(cantidad),
-        sedeId: parseInt(sedeId),
+        sedeId: parseInt(sedeFinal),
         fecha,
         semana: getSemanaISO(new Date(fecha)),
         ...(nota ? { nota } : {}),
@@ -257,4 +299,3 @@ const inventarioService = {
 };
 
 export default inventarioService;
-
