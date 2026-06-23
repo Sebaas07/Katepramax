@@ -5,12 +5,24 @@ function sedeEsPermitida(usuario) {
   return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";
 }
 
+/**
+ * Calcula el delta de stock según el tipo de movimiento.
+ * - entrada:  suma la cantidad (positivo)
+ * - salida:   resta la cantidad (negativo)
+ * - ajuste:   aplica la cantidad tal cual (puede ser negativo)
+ */
+function calcularDelta(tipo, cantidad) {
+  if (tipo === "salida") return -Math.abs(cantidad);
+  if (tipo === "ajuste") return cantidad;
+  return Math.abs(cantidad); // entrada por defecto
+}
+
 async function registrar(app, body, usuario) {
   if (!sedeEsPermitida(usuario)) {
     throw new AppError("No tienes permiso para registrar inventario.", 403);
   }
 
-  let sedeId = Number(body.sedeId);
+  const sedeId = Number(body.sedeId);
   if (usuario.rol !== "Admin" && sedeId !== usuario.sedeId) {
     throw new AppError("No puedes registrar inventario en otra sede.", 403);
   }
@@ -29,39 +41,41 @@ async function registrar(app, body, usuario) {
   const fecha = new Date(body.fecha);
   fecha.setUTCHours(0, 0, 0, 0);
 
-  const tipo = body.tipo ?? "entrada";
+  const tipo     = body.tipo ?? "entrada";
   const cantidad = Number(body.cantidadIngresada);
-  const costoUnitarioRegistro =
-    body.costoUnitario ?? Number(producto.precioCosto);
+  const costoUnitarioRegistro = body.costoUnitario ?? Number(producto.precioCosto);
 
-  const delta =
-    tipo === "salida"
-      ? -Math.abs(cantidad)
-      : tipo === "ajuste"
-        ? cantidad
-        : Math.abs(cantidad);
+  const delta = calcularDelta(tipo, cantidad);
+
+  // FIX: validar que una salida no deje stock negativo
+  if (tipo === "salida") {
+    const stockActual = await app.prisma.stockSede.findUnique({
+      where: { sedeId_productoId: { sedeId, productoId: body.productoId } },
+    });
+    const disponible = stockActual?.stockActual ?? 0;
+    if (disponible + delta < 0) {
+      throw new AppError(
+        `Stock insuficiente para registrar la salida. Disponible: ${disponible}, solicitado: ${Math.abs(delta)}`,
+        422,
+      );
+    }
+  }
 
   const registro = await repo.crear(app.prisma, {
     fecha,
     semana: body.semana,
     sedeId,
-    productoId: body.productoId,
+    productoId:        body.productoId,
     cantidadIngresada: delta,
-    costoUnitario: costoUnitarioRegistro,
+    costoUnitario:     costoUnitarioRegistro,
     tipo,
     nota: body.nota ?? null,
   });
 
   await app.prisma.stockSede.upsert({
-    where: {
-      sedeId_productoId: { sedeId, productoId: body.productoId },
-    },
+    where:  { sedeId_productoId: { sedeId, productoId: body.productoId } },
     update: { stockActual: { increment: delta } },
-    create: {
-      sedeId,
-      productoId: body.productoId,
-      stockActual: Math.max(0, delta),
-    },
+    create: { sedeId, productoId: body.productoId, stockActual: Math.max(0, delta) },
   });
 
   return registro;
@@ -76,10 +90,10 @@ async function obtenerLista(app, query, usuario) {
     skip: Number(query.skip ?? 0),
     take: Number(query.take ?? 50),
   };
-  if (query.fecha) filtros.fecha = new Date(query.fecha);
-  if (query.semana) filtros.semana = Number(query.semana);
+  if (query.fecha)      filtros.fecha      = new Date(query.fecha);
+  if (query.semana)     filtros.semana     = Number(query.semana);
   if (query.productoId) filtros.productoId = query.productoId;
-  if (query.tipo) filtros.tipo = query.tipo;
+  if (query.tipo)       filtros.tipo       = query.tipo;
 
   if (usuario.rol !== "Admin") {
     filtros.sedeId = usuario.sedeId;
@@ -120,23 +134,35 @@ async function editar(app, id, body, usuario) {
     throw new AppError("No tienes permiso para editar este registro.", 403);
   }
 
+  // FIX: recalcular el delta correctamente considerando el tipo nuevo vs anterior
+  // Si cambia la cantidad O el tipo, hay que revertir el delta anterior y aplicar el nuevo
+  const cambiaAmount = body.cantidadIngresada !== undefined;
+  const cambiaTipo   = body.tipo !== undefined && body.tipo !== anterior.tipo;
+
+  let deltaAjuste = 0;
+
+  if (cambiaAmount || cambiaTipo) {
+    const tipoNuevo    = body.tipo ?? anterior.tipo;
+    const cantidadNueva = body.cantidadIngresada !== undefined
+      ? Number(body.cantidadIngresada)
+      : Math.abs(anterior.cantidadIngresada); // cantidad original sin signo
+
+    const deltaNuevo   = calcularDelta(tipoNuevo, cantidadNueva);
+    const deltaAnterior = anterior.cantidadIngresada; // ya tiene signo guardado
+    deltaAjuste = deltaNuevo - deltaAnterior;
+
+    // Sobreescribir cantidadIngresada en body con el valor ya con signo correcto
+    body = { ...body, cantidadIngresada: deltaNuevo };
+  }
+
   const actualizado = await repo.actualizar(app.prisma, id, body);
 
-  if (body.cantidadIngresada !== undefined) {
-    const delta = body.cantidadIngresada - anterior.cantidadIngresada;
-    const sedeId = anterior.sedeId;
-    const productoId = anterior.productoId;
-
+  if (deltaAjuste !== 0) {
+    const { sedeId, productoId } = anterior;
     await app.prisma.stockSede.upsert({
-      where: {
-        sedeId_productoId: { sedeId, productoId },
-      },
-      update: { stockActual: { increment: delta } },
-      create: {
-        sedeId,
-        productoId,
-        stockActual: Math.max(0, delta),
-      },
+      where:  { sedeId_productoId: { sedeId, productoId } },
+      update: { stockActual: { increment: deltaAjuste } },
+      create: { sedeId, productoId, stockActual: Math.max(0, deltaAjuste) },
     });
   }
 
@@ -157,16 +183,41 @@ async function borrar(app, id, usuario) {
     throw new AppError("No tienes permiso para eliminar este registro.", 403);
   }
 
-  await repo.eliminar(app.prisma, id);
-
-  await app.prisma.stockSede.update({
-    where: {
-      sedeId_productoId: {
-        sedeId: registro.sedeId,
-        productoId: registro.productoId,
+  // FIX: validar que revertir el movimiento no deje stock negativo
+  // Solo aplica si el registro era una entrada (delta positivo)
+  if (registro.cantidadIngresada > 0) {
+    const stockActual = await app.prisma.stockSede.findUnique({
+      where: {
+        sedeId_productoId: {
+          sedeId:     registro.sedeId,
+          productoId: registro.productoId,
+        },
       },
-    },
-    data: { stockActual: { decrement: registro.cantidadIngresada } },
+    });
+    const disponible = stockActual?.stockActual ?? 0;
+    if (disponible - registro.cantidadIngresada < 0) {
+      throw new AppError(
+        `No se puede eliminar este registro: dejaría el stock en negativo. Stock actual: ${disponible}, entrada a revertir: ${registro.cantidadIngresada}`,
+        422,
+      );
+    }
+  }
+
+  // Usar transacción para que el borrado y el ajuste de stock sean atómicos
+  await app.prisma.$transaction(async (tx) => {
+    await tx.inventario.delete({ where: { id } });
+
+    await tx.stockSede.update({
+      where: {
+        sedeId_productoId: {
+          sedeId:     registro.sedeId,
+          productoId: registro.productoId,
+        },
+      },
+      // cantidadIngresada ya tiene signo (positivo = entrada, negativo = salida)
+      // Al borrar, revertimos: restamos lo que se había sumado (o sumamos lo que se restó)
+      data: { stockActual: { decrement: registro.cantidadIngresada } },
+    });
   });
 }
 
@@ -177,14 +228,14 @@ async function resumenSemanal(app, semana, usuario) {
 
   const prisma = app.prisma;
   const sedes  = await prisma.sede.findMany({ where: { activo: true }, select: { id: true, nombre: true } });
-  const mapaSede = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
 
   const where = usuario.rol !== "Admin" ? { sedeId: usuario.sedeId } : {};
 
+  // FIX: campo correcto es "costoUnitario", no "costo"
   const filas = await prisma.inventario.groupBy({
-    by:    ["sedeId", "productoId"],
-    where: { ...where, semana },
-    _sum:  { cantidadIngresada: true, costo: true },
+    by:      ["sedeId", "productoId"],
+    where:   { ...where, semana },
+    _sum:    { cantidadIngresada: true, costoUnitario: true },
     orderBy: { sedeId: "asc" },
   });
 
@@ -195,18 +246,20 @@ async function resumenSemanal(app, semana, usuario) {
     productos.map((p) => [p.codigo, p.descripcion]),
   );
 
-  const sedesFiltradas = usuario.rol === "Admin" ? sedes : sedes.filter((s) => s.id === usuario.sedeId);
+  const sedesFiltradas = usuario.rol === "Admin"
+    ? sedes
+    : sedes.filter((s) => s.id === usuario.sedeId);
 
   return sedesFiltradas.map((s) => ({
-    sede:     s.nombre,
-    sedeId:   s.id,
-    detalle:  filas
+    sede:    s.nombre,
+    sedeId:  s.id,
+    detalle: filas
       .filter((f) => f.sedeId === s.id)
       .map((f) => ({
-        producto:  mapaProducto[f.productoId] ?? f.productoId,
-        productoId: f.productoId,
-        cantidad:  f._sum.cantidadIngresada,
-        costo:     f._sum.costo,
+        producto:    mapaProducto[f.productoId] ?? f.productoId,
+        productoId:  f.productoId,
+        cantidad:    f._sum.cantidadIngresada,
+        costoUnitario: Number(f._sum.costoUnitario ?? 0),
       })),
   }));
 }

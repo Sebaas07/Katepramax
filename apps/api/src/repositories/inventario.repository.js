@@ -59,12 +59,13 @@ async function buscarPorId(prisma, id) {
 async function actualizar(
   prisma,
   id,
-  { cantidadIngresada, costoUnitario, nota },
+  { cantidadIngresada, costoUnitario, tipo, nota },
 ) {
   const data = {};
   if (cantidadIngresada !== undefined)
     data.cantidadIngresada = cantidadIngresada;
   if (costoUnitario !== undefined) data.costoUnitario = costoUnitario;
+  if (tipo !== undefined) data.tipo = tipo;
   if (nota !== undefined) data.nota = nota;
   return prisma.inventario.update({ where: { id }, data, include: INCLUDE });
 }

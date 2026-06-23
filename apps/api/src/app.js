@@ -28,8 +28,10 @@ async function buildApp() {
   app.register(require("./plugins/prisma.plugin"));
   app.register(require("./plugins/jwt.plugin"));
 
-  // Swagger — comentar en producción si no se quiere exponer la documentación
-  app.register(require("./plugins/swagger.plugin"));
+  // Swagger — solo disponible fuera de producción
+  if (process.env.NODE_ENV !== "production") {
+    app.register(require("./plugins/swagger.plugin"));
+  }
   app.register(require("@fastify/rate-limit"), { global: false });
   app.register(require("@fastify/helmet"));
 
