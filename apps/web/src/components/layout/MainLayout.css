@@ -5,7 +5,8 @@
 
 .main-layout {
   min-height: 100vh;
-  background-color: var(--background);
+  /* Fix: --background no está definido → usar --surface */
+  background-color: var(--surface);
   display: flex;
   flex-direction: column;
 }
@@ -16,16 +17,27 @@
   max-width: 1440px;
   width: 100%;
   margin: 0 auto;
+  /* Evita que el contenido se pegue a los bordes en pantallas anchas */
+  box-sizing: border-box;
 }
 
+/* Tablet */
 @media (max-width: 991.98px) {
   .main-layout__contenido {
     padding: 1.5rem 1.25rem;
   }
 }
 
+/* Móvil */
 @media (max-width: 575.98px) {
   .main-layout__contenido {
-    padding: 1.25rem 1rem;
+    padding: 1rem 0.875rem;
+  }
+}
+
+/* Pantallas muy pequeñas */
+@media (max-width: 374px) {
+  .main-layout__contenido {
+    padding: 0.875rem 0.75rem;
   }
 }

@@ -341,3 +341,26 @@
   background: rgba(74,222,128,0.16);
   border-color: #4ade80;
 }
+
+/* ─── Responsive — ocultar columnas no esenciales en móvil ───*/
+@media (max-width: 575.98px) {
+  /* Solo mostrar primeras 3 columnas + acciones en pantallas muy pequeñas */
+  .generica-table th:nth-child(n+4):not(:last-child),
+  .generica-table td:nth-child(n+4):not(:last-child) {
+    display: none;
+  }
+
+  .tabla-accion-btn {
+    padding: 0.3rem 0.5rem;
+    font-size: 11px;
+  }
+
+  .tabla-accion-btn .material-symbols-outlined {
+    font-size: 13px;
+  }
+}
+
+/* ─── Scroll suave en tablas largas ──────────────────────────*/
+.tabla-contenedor {
+  -webkit-overflow-scrolling: touch;
+}
