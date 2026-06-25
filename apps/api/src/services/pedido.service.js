@@ -1,4 +1,4 @@
-const repo     = require("../repositories/pedido.repository");
+const repo = require("../repositories/pedido.repository");
 const AppError = require("../errors/AppError");
 
 /**
@@ -17,20 +17,30 @@ const AppError = require("../errors/AppError");
  */
 
 function sedeEsPermitida(usuario) {
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";
+  return (
+    usuario.rol === "Admin" ||
+    usuario.rol === "Bodega" ||
+    usuario.rol === "AdminBogota"
+  );
 }
 
 async function crear(app, body, usuarioId) {
   const { clienteId, items, observaciones, sedeId: sedeIdBody } = body;
 
   if (!clienteId) throw new AppError("Se requiere clienteId", 400);
-  if (!items || items.length === 0) throw new AppError("El pedido debe tener al menos un producto.", 400);
+  if (!items || items.length === 0)
+    throw new AppError("El pedido debe tener al menos un producto.", 400);
 
-  const cliente = await app.prisma.cliente.findUnique({ where: { id: clienteId } });
+  const cliente = await app.prisma.cliente.findUnique({
+    where: { id: clienteId },
+  });
   if (!cliente) throw new AppError(`Cliente ${clienteId} no encontrado`, 404);
-  if (!cliente.activo) throw new AppError(`El cliente ${cliente.nombre} está inactivo`, 400);
+  if (!cliente.activo)
+    throw new AppError(`El cliente ${cliente.nombre} está inactivo`, 400);
 
-  const creador = await app.prisma.usuario.findUnique({ where: { id: usuarioId } });
+  const creador = await app.prisma.usuario.findUnique({
+    where: { id: usuarioId },
+  });
   if (!creador) throw new AppError("Usuario no encontrado", 404);
   if (!sedeEsPermitida(creador)) {
     throw new AppError("Rol no autorizado para crear pedidos.", 403);
@@ -50,12 +60,21 @@ async function crear(app, body, usuarioId) {
   let totalPedido = 0;
 
   for (const item of items) {
-    const producto = await app.prisma.producto.findUnique({ where: { codigo: item.productoId } });
-    if (!producto) throw new AppError(`Producto ${item.productoId} no encontrado`, 404);
-    if (!producto.activo) throw new AppError(`El producto ${producto.descripcion} está inactivo`, 400);
+    const producto = await app.prisma.producto.findUnique({
+      where: { codigo: item.productoId },
+    });
+    if (!producto)
+      throw new AppError(`Producto ${item.productoId} no encontrado`, 404);
+    if (!producto.activo)
+      throw new AppError(
+        `El producto ${producto.descripcion} está inactivo`,
+        400,
+      );
 
     const stock = await app.prisma.stockSede.findUnique({
-      where: { sedeId_productoId: { sedeId: sedePedido, productoId: item.productoId } },
+      where: {
+        sedeId_productoId: { sedeId: sedePedido, productoId: item.productoId },
+      },
     });
     const stockDisponible = stock?.stockActual ?? 0;
     if (stockDisponible < item.cantidad) {
@@ -70,9 +89,9 @@ async function crear(app, body, usuarioId) {
     totalPedido += subtotal;
 
     detallesPreparados.push({
-      productoId:     item.productoId,
+      productoId: item.productoId,
       productoNombre: producto.descripcion,
-      cantidad:       item.cantidad,
+      cantidad: item.cantidad,
       precioUnitario,
       subtotal,
     });
@@ -91,7 +110,7 @@ async function crear(app, body, usuarioId) {
       data: {
         clienteId,
         creadoPorId: usuarioId,
-        sedeId:     sedePedido,
+        sedeId: sedePedido,
         observaciones,
         detalles: { create: detallesPreparados },
       },
@@ -104,14 +123,19 @@ async function crear(app, body, usuarioId) {
 
     for (const item of items) {
       await tx.stockSede.update({
-        where: { sedeId_productoId: { sedeId: sedePedido, productoId: item.productoId } },
-        data:  { stockActual: { decrement: item.cantidad } },
+        where: {
+          sedeId_productoId: {
+            sedeId: sedePedido,
+            productoId: item.productoId,
+          },
+        },
+        data: { stockActual: { decrement: item.cantidad } },
       });
     }
 
     await tx.cliente.update({
       where: { id: clienteId },
-      data:  { saldoDeuda: { increment: totalPedido } },
+      data: { saldoDeuda: { increment: totalPedido } },
     });
 
     return nuevoPedido;
@@ -129,8 +153,8 @@ async function obtenerLista(app, query, usuario) {
     skip: Number(query.skip ?? 0),
     take: Number(query.take ?? 50),
   };
-  if (query.clienteId)   filtros.clienteId   = Number(query.clienteId);
-  if (query.estado)      filtros.estado      = query.estado;
+  if (query.clienteId) filtros.clienteId = Number(query.clienteId);
+  if (query.estado) filtros.estado = query.estado;
   if (query.creadoPorId) filtros.creadoPorId = Number(query.creadoPorId);
 
   if (usuario.rol !== "Admin") {
@@ -159,95 +183,117 @@ async function obtenerPorId(app, id, usuario) {
 }
 
 async function cambiarEstado(app, id, nuevoEstado, usuario) {
-   if (!sedeEsPermitida(usuario)) {
-     throw new AppError("No tienes permiso para cambiar el estado del pedido.", 403);
-   }
+  if (!sedeEsPermitida(usuario)) {
+    throw new AppError(
+      "No tienes permiso para cambiar el estado del pedido.",
+      403,
+    );
+  }
 
-   const pedido = await repo.buscarPorId(app.prisma, id);
-   if (!pedido) throw new AppError(`Pedido ${id} no encontrado`, 404);
+  const pedido = await repo.buscarPorId(app.prisma, id);
+  if (!pedido) throw new AppError(`Pedido ${id} no encontrado`, 404);
 
-   if (usuario.rol !== "Admin") {
-     const sedePedido = pedido.sedeId ?? pedido.creador?.sedeId;
-     if (sedePedido != null && sedePedido !== usuario.sedeId) {
-       throw new AppError("No tienes permiso para cambiar el estado de este pedido.", 403);
-     }
-   }
+  if (usuario.rol !== "Admin") {
+    const sedePedido = pedido.sedeId ?? pedido.creador?.sedeId;
+    if (sedePedido != null && sedePedido !== usuario.sedeId) {
+      throw new AppError(
+        "No tienes permiso para cambiar el estado de este pedido.",
+        403,
+      );
+    }
+  }
 
-   const transicionesValidas = {
-     Pendiente: ["Asignado", "Cancelado"],
-     Asignado:  ["Cancelado", "Pendiente"],
-     Entregado: [],
-     Cancelado: ["Pendiente"],
-   };
+  const transicionesValidas = {
+    Pendiente: ["Asignado", "Cancelado"],
+    Asignado: ["Cancelado", "Pendiente"],
+    Entregado: [],
+    Cancelado: [],
+  };
 
-   if (!transicionesValidas[pedido.estado]?.includes(nuevoEstado)) {
-     throw new AppError(
-       `No se puede cambiar el estado de ${pedido.estado} a ${nuevoEstado}`,
-       400,
-     );
-   }
+  if (!transicionesValidas[pedido.estado]?.includes(nuevoEstado)) {
+    throw new AppError(
+      `No se puede cambiar el estado de ${pedido.estado} a ${nuevoEstado}`,
+      400,
+    );
+  }
 
-   const estadoAnterior = pedido.estado;
+  const estadoAnterior = pedido.estado;
 
-   if (nuevoEstado === "Cancelado") {
-     const creador = await app.prisma.usuario.findUnique({ where: { id: pedido.creadoPorId } });
-     const totalPedido = pedido.detalles.reduce((sum, d) => sum + Number(d.subtotal), 0);
+  if (nuevoEstado === "Cancelado") {
+    const creador = await app.prisma.usuario.findUnique({
+      where: { id: pedido.creadoPorId },
+    });
+    const totalPedido = pedido.detalles.reduce(
+      (sum, d) => sum + Number(d.subtotal),
+      0,
+    );
 
-     await app.prisma.$transaction(async (tx) => {
-       for (const detalle of pedido.detalles) {
-         await tx.stockSede.update({
-           where: { sedeId_productoId: { sedeId: creador.sedeId, productoId: detalle.productoId } },
-           data:  { stockActual: { increment: detalle.cantidad } },
-         });
-       }
-       await tx.cliente.update({
-         where: { id: pedido.clienteId },
-         data:  { saldoDeuda: { decrement: totalPedido } },
-       });
-       await tx.pedido.update({ where: { id }, data: { estado: nuevoEstado } });
-       await tx.historialEstadoPedido.create({
-         data: {
-           pedidoId: id,
-           estado: nuevoEstado,
-           usuarioId: usuario.id,
-         },
-       });
-     });
-
-     return repo.buscarPorId(app.prisma, id);
-   }
-
-   return app.prisma.$transaction(async (tx) => {
-     await tx.pedido.update({ where: { id }, data: { estado: nuevoEstado } });
-await tx.historialEstadoPedido.create({
+    await app.prisma.$transaction(async (tx) => {
+      for (const detalle of pedido.detalles) {
+        await tx.stockSede.update({
+          where: {
+            sedeId_productoId: {
+              sedeId: creador.sedeId,
+              productoId: detalle.productoId,
+            },
+          },
+          data: { stockActual: { increment: detalle.cantidad } },
+        });
+      }
+      await tx.cliente.update({
+        where: { id: pedido.clienteId },
+        data: { saldoDeuda: { decrement: totalPedido } },
+      });
+      await tx.pedido.update({ where: { id }, data: { estado: nuevoEstado } });
+      await tx.historialEstadoPedido.create({
         data: {
           pedidoId: id,
           estado: nuevoEstado,
           usuarioId: usuario.id,
         },
       });
-      return repo.buscarPorId(app.prisma, id);
     });
+
+    return repo.buscarPorId(app.prisma, id);
   }
 
-  async function obtenerHistorial(app, id, usuario) {
-    const pedido = await repo.buscarPorId(app.prisma, id);
-    if (!pedido) throw new AppError(`Pedido ${id} no encontrado`, 404);
-
-    if (usuario.rol !== "Admin") {
-      const sedePedido = pedido.sedeId ?? pedido.creador?.sedeId;
-      if (sedePedido != null && sedePedido !== usuario.sedeId) {
-        throw new AppError("No tienes permiso para ver este historial.", 403);
-      }
-    }
-
-    return await app.prisma.historialEstadoPedido.findMany({
-      where: { pedidoId: id },
-      orderBy: { cambiadoEn: "desc" },
-      include: {
-        usuario: { select: { id: true, nombreCompleto: true, rol: true } },
+  return app.prisma.$transaction(async (tx) => {
+    await tx.pedido.update({ where: { id }, data: { estado: nuevoEstado } });
+    await tx.historialEstadoPedido.create({
+      data: {
+        pedidoId: id,
+        estado: nuevoEstado,
+        usuarioId: usuario.id,
       },
     });
+    return repo.buscarPorId(app.prisma, id);
+  });
+}
+
+async function obtenerHistorial(app, id, usuario) {
+  const pedido = await repo.buscarPorId(app.prisma, id);
+  if (!pedido) throw new AppError(`Pedido ${id} no encontrado`, 404);
+
+  if (usuario.rol !== "Admin") {
+    const sedePedido = pedido.sedeId ?? pedido.creador?.sedeId;
+    if (sedePedido != null && sedePedido !== usuario.sedeId) {
+      throw new AppError("No tienes permiso para ver este historial.", 403);
+    }
   }
 
-  module.exports = { crear, obtenerLista, obtenerPorId, cambiarEstado, obtenerHistorial };
+  return await app.prisma.historialEstadoPedido.findMany({
+    where: { pedidoId: id },
+    orderBy: { cambiadoEn: "desc" },
+    include: {
+      usuario: { select: { id: true, nombreCompleto: true, rol: true } },
+    },
+  });
+}
+
+module.exports = {
+  crear,
+  obtenerLista,
+  obtenerPorId,
+  cambiarEstado,
+  obtenerHistorial,
+};

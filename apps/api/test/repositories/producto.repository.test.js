@@ -1,12 +1,12 @@
 /**
  * Verificamos que cada método construya la query correcta hacia Prisma.
  */
-const { prisma }          = require("../__mocks__/prisma");
-const productoRepository  = require("../../src/repositories/producto.repository");
+const { prisma } = require("../__mocks__/prisma");
+const productoRepository = require("../../src/repositories/producto.repository");
 
 const productoMock = {
   id: 1,
-  codigo: "PROD-001",
+  codigo: 1,
   descripcion: "Cemento Gris 50kg",
   precioCosto: 18000,
   precioVenta: 25000,
@@ -22,24 +22,24 @@ describe("productoRepository.buscarPorCodigo", () => {
   it("debería buscar por código único e incluir proveedor y stockSedes", async () => {
     prisma.producto.findUnique.mockResolvedValue(productoMock);
 
-    const result = await productoRepository.buscarPorCodigo(prisma, "PROD-001");
+    const result = await productoRepository.buscarPorCodigo(prisma, 1);
 
     expect(prisma.producto.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { codigo: "PROD-001" },
+        where: { codigo: 1 },
         include: expect.objectContaining({
-          proveedor:  expect.anything(),
+          proveedor: expect.anything(),
           stockSedes: expect.anything(),
         }),
-      })
+      }),
     );
-    expect(result.codigo).toBe("PROD-001");
+    expect(result.codigo).toBe(1);
   });
 
   it("debería retornar null si no existe", async () => {
     prisma.producto.findUnique.mockResolvedValue(null);
 
-    const result = await productoRepository.buscarPorCodigo(prisma, "NO-EXISTE");
+    const result = await productoRepository.buscarPorCodigo(prisma, 999);
 
     expect(result).toBeNull();
   });
@@ -54,7 +54,7 @@ describe("productoRepository.listar", () => {
     await productoRepository.listar(prisma);
 
     expect(prisma.producto.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 0, take: 50 })
+      expect.objectContaining({ skip: 0, take: 50 }),
     );
   });
 
@@ -64,7 +64,10 @@ describe("productoRepository.listar", () => {
     await productoRepository.listar(prisma, { descripcion: "Cemento" });
 
     const callWhere = prisma.producto.findMany.mock.calls[0][0].where;
-    expect(callWhere.descripcion).toEqual({ contains: "Cemento" });
+    expect(callWhere.descripcion).toEqual({
+      contains: "Cemento",
+      mode: "insensitive",
+    });
   });
 
   it("debería filtrar por activo si se pasa", async () => {
@@ -100,7 +103,7 @@ describe("productoRepository.listar", () => {
     await productoRepository.listar(prisma);
 
     expect(prisma.producto.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ orderBy: { descripcion: "asc" } })
+      expect.objectContaining({ orderBy: { descripcion: "asc" } }),
     );
   });
 
@@ -112,10 +115,10 @@ describe("productoRepository.listar", () => {
     expect(prisma.producto.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         include: expect.objectContaining({
-          proveedor:  expect.anything(),
+          proveedor: expect.anything(),
           stockSedes: expect.anything(),
         }),
-      })
+      }),
     );
   });
 });
@@ -126,14 +129,19 @@ describe("productoRepository.crear", () => {
   it("debería llamar prisma.producto.create con data e include", async () => {
     prisma.producto.create.mockResolvedValue(productoMock);
 
-    const data = { codigo: "PROD-001", descripcion: "Cemento", precioCosto: 18000, precioVenta: 25000 };
+    const data = {
+      codigo: 1,
+      descripcion: "Cemento",
+      precioCosto: 18000,
+      precioVenta: 25000,
+    };
     await productoRepository.crear(prisma, data);
 
     expect(prisma.producto.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data,
         include: expect.objectContaining({ proveedor: expect.anything() }),
-      })
+      }),
     );
   });
 });
@@ -142,27 +150,30 @@ describe("productoRepository.crear", () => {
 
 describe("productoRepository.actualizar", () => {
   it("debería actualizar por código con los datos dados", async () => {
-    prisma.producto.update.mockResolvedValue({ ...productoMock, precioVenta: 30000 });
+    prisma.producto.update.mockResolvedValue({
+      ...productoMock,
+      precioVenta: 30000,
+    });
 
-    await productoRepository.actualizar(prisma, "PROD-001", { precioVenta: 30000 });
+    await productoRepository.actualizar(prisma, 1, { precioVenta: 30000 });
 
     expect(prisma.producto.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { codigo: "PROD-001" },
+        where: { codigo: 1 },
         data: { precioVenta: 30000 },
-      })
+      }),
     );
   });
 
   it("debería incluir proveedor en el resultado", async () => {
     prisma.producto.update.mockResolvedValue(productoMock);
 
-    await productoRepository.actualizar(prisma, "PROD-001", { activo: false });
+    await productoRepository.actualizar(prisma, 1, { activo: false });
 
     expect(prisma.producto.update).toHaveBeenCalledWith(
       expect.objectContaining({
         include: expect.objectContaining({ proveedor: expect.anything() }),
-      })
+      }),
     );
   });
 });

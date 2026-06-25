@@ -179,7 +179,7 @@ describe("pedidoService.obtenerPorId", () => {
   it("debería retornar el pedido si existe", async () => {
     prisma.pedido.findUnique.mockResolvedValue(pedidoMock);
 
-    const result = await service.obtenerPorId(appMock, 1);
+    const result = await service.obtenerPorId(appMock, 1, creadorMock);
 
     expect(result.id).toBe(1);
   });
@@ -187,7 +187,7 @@ describe("pedidoService.obtenerPorId", () => {
   it("debería lanzar 404 si no existe", async () => {
     prisma.pedido.findUnique.mockResolvedValue(null);
 
-    await expect(service.obtenerPorId(appMock, 999)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.obtenerPorId(appMock, 999, creadorMock)).rejects.toMatchObject({ statusCode: 404 });
   });
 });
 
@@ -197,7 +197,7 @@ describe("pedidoService.cambiarEstado", () => {
   it("debería lanzar 404 si el pedido no existe", async () => {
     prisma.pedido.findUnique.mockResolvedValue(null);
 
-    await expect(service.cambiarEstado(appMock, 999, "Cancelado")).rejects.toMatchObject({
+    await expect(service.cambiarEstado(appMock, 999, "Cancelado", creadorMock)).rejects.toMatchObject({
       statusCode: 404,
     });
   });
@@ -205,7 +205,7 @@ describe("pedidoService.cambiarEstado", () => {
   it("debería lanzar 400 para transición inválida (Entregado→Cancelado)", async () => {
     prisma.pedido.findUnique.mockResolvedValue({ ...pedidoMock, estado: "Entregado" });
 
-    await expect(service.cambiarEstado(appMock, 1, "Cancelado")).rejects.toMatchObject({
+    await expect(service.cambiarEstado(appMock, 1, "Cancelado", creadorMock)).rejects.toMatchObject({
       statusCode: 400,
     });
   });
@@ -213,7 +213,7 @@ describe("pedidoService.cambiarEstado", () => {
   it("debería lanzar 400 para transición inválida (Cancelado→Pendiente)", async () => {
     prisma.pedido.findUnique.mockResolvedValue({ ...pedidoMock, estado: "Cancelado" });
 
-    await expect(service.cambiarEstado(appMock, 1, "Pendiente")).rejects.toMatchObject({
+    await expect(service.cambiarEstado(appMock, 1, "Pendiente", creadorMock)).rejects.toMatchObject({
       statusCode: 400,
     });
   });
@@ -229,10 +229,10 @@ describe("pedidoService.cambiarEstado", () => {
     const txPedido = vi.fn();
 
     prisma.$transaction.mockImplementation(async (fn) => {
-      await fn({ stockSede: { update: txStock }, cliente: { update: txCliente }, pedido: { update: txPedido } });
+      await fn({ stockSede: { update: txStock }, cliente: { update: txCliente }, pedido: { update: txPedido }, historialEstadoPedido: { create: vi.fn() } });
     });
 
-    await service.cambiarEstado(appMock, 1, "Cancelado");
+    await service.cambiarEstado(appMock, 1, "Cancelado", creadorMock);
 
     expect(prisma.$transaction).toHaveBeenCalled();
     // stock se devuelve (increment)
@@ -252,10 +252,10 @@ describe("pedidoService.cambiarEstado", () => {
       .mockResolvedValueOnce(pedidoAsignado);
     prisma.usuario.findUnique.mockResolvedValue(creadorMock);
     prisma.$transaction.mockImplementation(async (fn) => {
-      await fn({ stockSede: { update: vi.fn() }, cliente: { update: vi.fn() }, pedido: { update: vi.fn() } });
+      await fn({ stockSede: { update: vi.fn() }, cliente: { update: vi.fn() }, pedido: { update: vi.fn() }, historialEstadoPedido: { create: vi.fn() } });
     });
 
-    await service.cambiarEstado(appMock, 1, "Cancelado");
+    await service.cambiarEstado(appMock, 1, "Cancelado", creadorMock);
 
     expect(prisma.$transaction).toHaveBeenCalled();
   });

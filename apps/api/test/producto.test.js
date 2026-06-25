@@ -7,6 +7,9 @@
  *  POST   /api/v1/productos          (solo Admin)
  *  PATCH  /api/v1/productos/:codigo  (Admin y Bodega)
  *  DELETE /api/v1/productos/:codigo  (solo Admin)
+ *
+ * Nota: "codigo" es Int autoincrement en Prisma (no lo envía el cliente
+ * en el POST; el schema de la ruta lo rechazaría con additionalProperties:false).
  */
 const { buildApp } = require("../src/app");
 const { prisma } = require("./__mocks__/prisma");
@@ -15,7 +18,7 @@ const { prisma } = require("./__mocks__/prisma");
 
 const productoMock = {
   id: 1,
-  codigo: "PROD-001",
+  codigo: 1,
   descripcion: "Cemento Gris 50kg",
   precioCosto: 18000,
   precioVenta: 25000,
@@ -24,7 +27,7 @@ const productoMock = {
   activo: true,
   proveedorId: 1,
   proveedor: { id: 1, nombre: "Proveedor Test" },
-  stockSedes: [],
+  stockSedes: [{ sedeId: 1, stockActual: 10 }],
 };
 
 const proveedorMock = { id: 1, nombre: "Proveedor Test", activo: true };
@@ -81,7 +84,7 @@ describe("GET /api/v1/productos", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json()).toHaveLength(1);
-    expect(res.json()[0].codigo).toBe("PROD-001");
+    expect(res.json()[0].codigo).toBe(1);
   });
 
   it("debería retornar 200 con lista de productos (Bodega)", async () => {
@@ -108,7 +111,7 @@ describe("GET /api/v1/productos", () => {
     });
 
     const callWhere = prisma.producto.findMany.mock.calls[0][0].where;
-    expect(callWhere.descripcion).toEqual({ contains: "Cemento" });
+    expect(callWhere.descripcion).toEqual({ contains: "Cemento", mode: "insensitive" });
   });
 
   it("debería filtrar por activo=true", async () => {
@@ -135,12 +138,12 @@ describe("GET /api/v1/productos/:codigo", () => {
 
     const res = await app.inject({
       method: "GET",
-      url: "/api/v1/productos/PROD-001",
+      url: "/api/v1/productos/1",
       headers: { authorization: `Bearer ${tokenAdmin}` },
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json().codigo).toBe("PROD-001");
+    expect(res.json().codigo).toBe(1);
   });
 
   it("debería retornar 404 si el producto no existe", async () => {
@@ -149,7 +152,7 @@ describe("GET /api/v1/productos/:codigo", () => {
 
     const res = await app.inject({
       method: "GET",
-      url: "/api/v1/productos/NO-EXISTE",
+      url: "/api/v1/productos/999",
       headers: { authorization: `Bearer ${tokenAdmin}` },
     });
 
@@ -159,6 +162,8 @@ describe("GET /api/v1/productos/:codigo", () => {
 });
 
 // ── POST /api/v1/productos ────────────────────────────────────────────────────
+// "codigo" NO se envía: es Int autoincrement generado por Prisma, y el schema
+// de la ruta (additionalProperties:false) lo rechazaría si viniera en el body.
 
 describe("POST /api/v1/productos", () => {
   it("debería retornar 401 sin token", async () => {
@@ -166,7 +171,6 @@ describe("POST /api/v1/productos", () => {
       method: "POST",
       url: "/api/v1/productos",
       payload: {
-        codigo: "PROD-002",
         descripcion: "Nuevo",
         precioCosto: 1000,
         precioVenta: 1500,
@@ -183,7 +187,6 @@ describe("POST /api/v1/productos", () => {
       url: "/api/v1/productos",
       headers: { authorization: `Bearer ${tokenBodega}` },
       payload: {
-        codigo: "PROD-002",
         descripcion: "Nuevo",
         precioCosto: 1000,
         precioVenta: 1500,
@@ -193,29 +196,8 @@ describe("POST /api/v1/productos", () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it("debería retornar 409 si el código ya existe", async () => {
-    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
-    prisma.producto.findUnique.mockResolvedValue(productoMock); // ya existe
-
-    const res = await app.inject({
-      method: "POST",
-      url: "/api/v1/productos",
-      headers: { authorization: `Bearer ${tokenAdmin}` },
-      payload: {
-        codigo: "PROD-001",
-        descripcion: "Duplicado",
-        precioCosto: 1000,
-        precioVenta: 1500,
-      },
-    });
-
-    expect(res.statusCode).toBe(409);
-    expect(res.json().error).toMatch(/ya existe/i);
-  });
-
   it("debería retornar 404 si el proveedorId no existe", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
-    prisma.producto.findUnique.mockResolvedValue(null); // código no existe
     prisma.proveedor.findUnique.mockResolvedValue(null); // proveedor no existe
 
     const res = await app.inject({
@@ -223,7 +205,6 @@ describe("POST /api/v1/productos", () => {
       url: "/api/v1/productos",
       headers: { authorization: `Bearer ${tokenAdmin}` },
       payload: {
-        codigo: "PROD-002",
         descripcion: "Nuevo",
         precioCosto: 1000,
         precioVenta: 1500,
@@ -237,11 +218,14 @@ describe("POST /api/v1/productos", () => {
 
   it("debería retornar 201 al crear un producto correctamente", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
-    prisma.producto.findUnique.mockResolvedValue(null); // código libre
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
     prisma.producto.create.mockResolvedValue({
       ...productoMock,
-      codigo: "PROD-002",
+      codigo: 2,
+    });
+    prisma.producto.findUnique.mockResolvedValue({
+      ...productoMock,
+      codigo: 2,
     });
 
     const res = await app.inject({
@@ -249,7 +233,6 @@ describe("POST /api/v1/productos", () => {
       url: "/api/v1/productos",
       headers: { authorization: `Bearer ${tokenAdmin}` },
       payload: {
-        codigo: "PROD-002",
         descripcion: "Nuevo",
         precioCosto: 1000,
         precioVenta: 1500,
@@ -258,7 +241,7 @@ describe("POST /api/v1/productos", () => {
     });
 
     expect(res.statusCode).toBe(201);
-    expect(res.json().codigo).toBe("PROD-002");
+    expect(res.json().codigo).toBe(2);
   });
 });
 
@@ -275,7 +258,7 @@ describe("PATCH /api/v1/productos/:codigo", () => {
 
     const res = await app.inject({
       method: "PATCH",
-      url: "/api/v1/productos/PROD-001",
+      url: "/api/v1/productos/1",
       headers: { authorization: `Bearer ${tokenAdmin}` },
       payload: { precioVenta: 30000 },
     });
@@ -294,7 +277,7 @@ describe("PATCH /api/v1/productos/:codigo", () => {
 
     const res = await app.inject({
       method: "PATCH",
-      url: "/api/v1/productos/PROD-001",
+      url: "/api/v1/productos/1",
       headers: { authorization: `Bearer ${tokenBodega}` },
       payload: { precioVenta: 28000 },
     });
@@ -308,7 +291,7 @@ describe("PATCH /api/v1/productos/:codigo", () => {
 
     const res = await app.inject({
       method: "PATCH",
-      url: "/api/v1/productos/NO-EXISTE",
+      url: "/api/v1/productos/999",
       headers: { authorization: `Bearer ${tokenAdmin}` },
       payload: { precioVenta: 30000 },
     });
@@ -325,7 +308,7 @@ describe("DELETE /api/v1/productos/:codigo", () => {
 
     const res = await app.inject({
       method: "DELETE",
-      url: "/api/v1/productos/PROD-001",
+      url: "/api/v1/productos/1",
       headers: { authorization: `Bearer ${tokenBodega}` },
     });
 
@@ -342,7 +325,7 @@ describe("DELETE /api/v1/productos/:codigo", () => {
 
     const res = await app.inject({
       method: "DELETE",
-      url: "/api/v1/productos/PROD-001",
+      url: "/api/v1/productos/1",
       headers: { authorization: `Bearer ${tokenAdmin}` },
     });
 
@@ -356,7 +339,7 @@ describe("DELETE /api/v1/productos/:codigo", () => {
 
     const res = await app.inject({
       method: "DELETE",
-      url: "/api/v1/productos/NO-EXISTE",
+      url: "/api/v1/productos/999",
       headers: { authorization: `Bearer ${tokenAdmin}` },
     });
 

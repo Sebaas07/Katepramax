@@ -1,21 +1,25 @@
 /**
  * Tests unitarios — proveedor.service.js
- * El service usa factory: proveedorService(app) => { listar, obtenerPorId, ... }
  */
-const { prisma }         = require("./__mocks__/prisma");
-const proveedorService   = require("../src/services/proveedor.service");
+const { prisma } = require("./__mocks__/prisma");
+const proveedorService = require("../src/services/proveedor.service");
+const AppError = require("../src/errors/AppError");
 
 const appMock = { prisma };
-const svc     = proveedorService(appMock);
 
 // ── Datos de prueba ───────────────────────────────────────────────────────────
 
 const proveedorMock = {
   id: 1,
-  nombre: "Cemex Colombia",
+  nombre: "Proveedor ABC",
   activo: true,
-  creadoEn: new Date(),
+  creadoEn: new Date("2026-06-02"),
 };
+
+const usuarioAdmin = { id: 1, rol: "Admin", sedeId: 1 };
+const usuarioBodega = { id: 2, rol: "Bodega", sedeId: 1 };
+const usuarioAdminBogota = { id: 3, rol: "AdminBogota", sedeId: 2 };
+const usuarioEntregador = { id: 4, rol: "Entregador", sedeId: 1 };
 
 // ── listar ────────────────────────────────────────────────────────────────────
 
@@ -23,17 +27,17 @@ describe("proveedorService.listar", () => {
   it("debería usar skip=0 y take=50 por defecto", async () => {
     prisma.proveedor.findMany.mockResolvedValue([]);
 
-    await svc.listar({});
+    await proveedorService(appMock).listar({}, usuarioAdmin);
 
     expect(prisma.proveedor.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 0, take: 50 })
+      expect.objectContaining({ skip: 0, take: 50 }),
     );
   });
 
   it("debería convertir activo='true' a booleano true", async () => {
     prisma.proveedor.findMany.mockResolvedValue([]);
 
-    await svc.listar({ activo: "true" });
+    await proveedorService(appMock).listar({ activo: "true" }, usuarioAdmin);
 
     const callWhere = prisma.proveedor.findMany.mock.calls[0][0].where;
     expect(callWhere.activo).toBe(true);
@@ -42,7 +46,7 @@ describe("proveedorService.listar", () => {
   it("debería convertir activo='false' a booleano false", async () => {
     prisma.proveedor.findMany.mockResolvedValue([]);
 
-    await svc.listar({ activo: "false" });
+    await proveedorService(appMock).listar({ activo: "false" }, usuarioAdmin);
 
     const callWhere = prisma.proveedor.findMany.mock.calls[0][0].where;
     expect(callWhere.activo).toBe(false);
@@ -51,19 +55,49 @@ describe("proveedorService.listar", () => {
   it("no debería incluir activo en where si no se pasa", async () => {
     prisma.proveedor.findMany.mockResolvedValue([]);
 
-    await svc.listar({});
+    await proveedorService(appMock).listar({}, usuarioAdmin);
 
     const callWhere = prisma.proveedor.findMany.mock.calls[0][0].where;
     expect(callWhere.activo).toBeUndefined();
   });
 
   it("debería filtrar por nombre si se pasa", async () => {
-    prisma.proveedor.findMany.mockResolvedValue([proveedorMock]);
+    prisma.proveedor.findMany.mockResolvedValue([]);
 
-    await svc.listar({ nombre: "Cemex" });
+    await proveedorService(appMock).listar(
+      { nombre: "Proveedor ABC" },
+      usuarioAdmin,
+    );
 
     const callWhere = prisma.proveedor.findMany.mock.calls[0][0].where;
-    expect(callWhere.nombre).toEqual({ contains: "Cemex" });
+    expect(callWhere.nombre).toEqual({ contains: "Proveedor ABC" });
+  });
+
+  it("debería permitir acceso a Admin, Bodega y AdminBogota", async () => {
+    prisma.proveedor.findMany.mockResolvedValue([]);
+
+    await proveedorService(appMock).listar({}, usuarioAdmin);
+    await proveedorService(appMock).listar({}, usuarioBodega);
+    await proveedorService(appMock).listar({}, usuarioAdminBogota);
+
+    expect(prisma.proveedor.findMany).toHaveBeenCalledTimes(3);
+  });
+
+  // ── TEST CORREGIDO ──
+  it("debería lanzar AppError 403 si usuario sin permiso intenta listar", async () => {
+    const usuarioSinPermiso = { id: 4, rol: "Ventas", sedeId: 1 };
+
+    // Usamos try/catch para tener más control
+    try {
+      await proveedorService(appMock).listar({}, usuarioSinPermiso);
+      // Si llegamos aquí, el test falla porque no lanzó error
+      expect(true).toBe(false);
+    } catch (error) {
+      // Verificamos que sea un AppError
+      expect(error).toBeInstanceOf(AppError);
+      expect(error.statusCode).toBe(403);
+      expect(error.message).toBe("No tienes permiso para listar proveedores.");
+    }
   });
 });
 
@@ -73,38 +107,90 @@ describe("proveedorService.obtenerPorId", () => {
   it("debería retornar el proveedor si existe", async () => {
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
 
-    const result = await svc.obtenerPorId(1);
+    const result = await proveedorService(appMock).obtenerPorId(
+      1,
+      usuarioAdmin,
+    );
 
-    expect(result.id).toBe(1);
-    expect(result.nombre).toBe("Cemex Colombia");
+    expect(result).toEqual(proveedorMock);
+    expect(prisma.proveedor.findUnique).toHaveBeenCalledWith({
+      where: { id: 1 },
+    });
   });
 
   it("debería lanzar AppError 404 si no existe", async () => {
     prisma.proveedor.findUnique.mockResolvedValue(null);
 
-    await expect(svc.obtenerPorId(999))
-      .rejects.toMatchObject({ statusCode: 404, message: expect.stringMatching(/no encontrado/i) });
+    await expect(
+      proveedorService(appMock).obtenerPorId(999, usuarioAdmin),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      message: expect.stringMatching(/no encontrado/i),
+    });
+  });
+
+  it("debería lanzar AppError 403 si usuario sin permiso intenta obtener", async () => {
+    const usuarioSinPermiso = { id: 4, rol: "Ventas", sedeId: 1 };
+
+    try {
+      await proveedorService(appMock).obtenerPorId(1, usuarioSinPermiso);
+      expect(true).toBe(false);
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect(error.statusCode).toBe(403);
+      expect(error.message).toBe("No tienes permiso para ver proveedores.");
+    }
   });
 });
 
-// ── crear ─────────────────────────────────────────────────────────────────────
+// ── crear ────────────────────────────────────────────────────────────────────
 
 describe("proveedorService.crear", () => {
   it("debería lanzar AppError 409 si el nombre ya existe", async () => {
     prisma.proveedor.findFirst.mockResolvedValue(proveedorMock);
 
-    await expect(svc.crear({ nombre: "Cemex Colombia" }))
-      .rejects.toMatchObject({ statusCode: 409, message: expect.stringMatching(/ya existe/i) });
+    await expect(
+      proveedorService(appMock).crear(
+        { nombre: "Proveedor ABC" },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      message: expect.stringMatching(/Ya existe un proveedor/i),
+    });
   });
 
   it("debería crear el proveedor si el nombre es único", async () => {
+    const nuevoProveedor = { id: 3, nombre: "Nuevo Proveedor", activo: true };
+
     prisma.proveedor.findFirst.mockResolvedValue(null);
-    prisma.proveedor.create.mockResolvedValue({ ...proveedorMock, id: 2, nombre: "Nuevo" });
+    prisma.proveedor.create.mockResolvedValue(nuevoProveedor);
 
-    const result = await svc.crear({ nombre: "Nuevo" });
+    const result = await proveedorService(appMock).crear(
+      { nombre: "Nuevo Proveedor" },
+      usuarioAdmin,
+    );
 
-    expect(result.nombre).toBe("Nuevo");
-    expect(prisma.proveedor.create).toHaveBeenCalledWith({ data: { nombre: "Nuevo" } });
+    expect(result).toEqual(nuevoProveedor);
+    expect(prisma.proveedor.create).toHaveBeenCalledWith({
+      data: { nombre: "Nuevo Proveedor" },
+    });
+  });
+
+  it("debería lanzar AppError 403 si usuario sin permiso intenta crear", async () => {
+    const usuarioSinPermiso = { id: 4, rol: "Ventas", sedeId: 1 };
+
+    try {
+      await proveedorService(appMock).crear(
+        { nombre: "Test" },
+        usuarioSinPermiso,
+      );
+      expect(true).toBe(false);
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect(error.statusCode).toBe(403);
+      expect(error.message).toBe("No tienes permiso para crear proveedores.");
+    }
   });
 });
 
@@ -114,60 +200,141 @@ describe("proveedorService.actualizar", () => {
   it("debería lanzar AppError 404 si el proveedor no existe", async () => {
     prisma.proveedor.findUnique.mockResolvedValue(null);
 
-    await expect(svc.actualizar(999, { nombre: "Editado" }))
-      .rejects.toMatchObject({ statusCode: 404 });
+    await expect(
+      proveedorService(appMock).actualizar(
+        999,
+        { nombre: "Nuevo nombre" },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      message: expect.stringMatching(/no encontrado/i),
+    });
   });
 
   it("debería lanzar AppError 409 si el nuevo nombre colisiona con otro proveedor", async () => {
-    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
-    prisma.proveedor.findFirst.mockResolvedValue({ id: 2, nombre: "Nombre Colision" });
+    const otroProveedor = { id: 2, nombre: "Nombre Colision" };
 
-    await expect(svc.actualizar(1, { nombre: "Nombre Colision" }))
-      .rejects.toMatchObject({ statusCode: 409 });
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.proveedor.findFirst.mockResolvedValue(otroProveedor);
+
+    await expect(
+      proveedorService(appMock).actualizar(
+        1,
+        { nombre: "Nombre Colision" },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      message: expect.stringMatching(/Ya existe un proveedor/i),
+    });
   });
 
   it("no debería verificar colisión si el nombre no cambia", async () => {
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
-    prisma.proveedor.update.mockResolvedValue(proveedorMock);
+    prisma.proveedor.update.mockResolvedValue({
+      ...proveedorMock,
+      activo: false,
+    });
 
-    await svc.actualizar(1, { nombre: "Cemex Colombia" }); // mismo nombre
+    await proveedorService(appMock).actualizar(
+      1,
+      { activo: false },
+      usuarioAdmin,
+    );
 
     expect(prisma.proveedor.findFirst).not.toHaveBeenCalled();
+    expect(prisma.proveedor.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { activo: false },
+    });
   });
 
   it("debería actualizar solo campos permitidos (nombre y activo)", async () => {
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
-    prisma.proveedor.findFirst.mockResolvedValue(null);
-    prisma.proveedor.update.mockResolvedValue({ ...proveedorMock, nombre: "Cemex Editado" });
+    prisma.proveedor.findFirst.mockResolvedValue(null); // No hay colisión
+    prisma.proveedor.update.mockResolvedValue({
+      ...proveedorMock,
+      nombre: "Nuevo Nombre",
+      activo: false,
+    });
 
-    await svc.actualizar(1, { nombre: "Cemex Editado", campoExtra: "ignorar" });
+    await proveedorService(appMock).actualizar(
+      1,
+      {
+        nombre: "Nuevo Nombre",
+        activo: false,
+        campoNoPermitido: "ignorado",
+      },
+      usuarioAdmin,
+    );
 
-    const callData = prisma.proveedor.update.mock.calls[0][0].data;
-    expect(callData).toHaveProperty("nombre", "Cemex Editado");
-    expect(callData).not.toHaveProperty("campoExtra");
+    expect(prisma.proveedor.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { nombre: "Nuevo Nombre", activo: false },
+    });
+  });
+
+  it("debería lanzar AppError 403 si usuario sin permiso intenta actualizar", async () => {
+    const usuarioSinPermiso = { id: 4, rol: "Ventas", sedeId: 1 };
+
+    try {
+      await proveedorService(appMock).actualizar(
+        1,
+        { nombre: "Test" },
+        usuarioSinPermiso,
+      );
+      expect(true).toBe(false);
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect(error.statusCode).toBe(403);
+      expect(error.message).toBe("No tienes permiso para editar proveedores.");
+    }
   });
 });
 
-// ── desactivar ────────────────────────────────────────────────────────────────
+// ── desactivar ──────────────────────────────────────────────────────────────
 
 describe("proveedorService.desactivar", () => {
   it("debería lanzar AppError 404 si el proveedor no existe", async () => {
     prisma.proveedor.findUnique.mockResolvedValue(null);
 
-    await expect(svc.desactivar(999))
-      .rejects.toMatchObject({ statusCode: 404 });
+    await expect(
+      proveedorService(appMock).desactivar(999, usuarioAdmin),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      message: expect.stringMatching(/no encontrado/i),
+    });
   });
 
   it("debería actualizar activo a false y retornar mensaje", async () => {
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
-    prisma.proveedor.update.mockResolvedValue({ ...proveedorMock, activo: false });
+    prisma.proveedor.update.mockResolvedValue({
+      ...proveedorMock,
+      activo: false,
+    });
 
-    const result = await svc.desactivar(1);
+    const result = await proveedorService(appMock).desactivar(1, usuarioAdmin);
 
+    expect(result).toEqual({ mensaje: "Proveedor desactivado correctamente" });
     expect(prisma.proveedor.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: { activo: false },
     });
-    expect(result.mensaje).toMatch(/desactivado/i);
+  });
+
+  it("debería lanzar AppError 403 si usuario sin permiso intenta desactivar", async () => {
+    const usuarioSinPermiso = { id: 4, rol: "Ventas", sedeId: 1 };
+
+    try {
+      await proveedorService(appMock).desactivar(1, usuarioSinPermiso);
+      expect(true).toBe(false);
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect(error.statusCode).toBe(403);
+      expect(error.message).toBe(
+        "No tienes permiso para desactivar proveedores.",
+      );
+    }
   });
 });

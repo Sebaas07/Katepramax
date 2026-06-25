@@ -398,6 +398,7 @@ describe("PATCH /api/v1/pedidos/:id/estado", () => {
         stockSede: { update: vi.fn() },
         cliente: { update: vi.fn() },
         pedido: { update: vi.fn() },
+        historialEstadoPedido: { create: vi.fn() },
       });
     });
 

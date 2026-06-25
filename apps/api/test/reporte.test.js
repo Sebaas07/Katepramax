@@ -64,14 +64,12 @@ function mockSesion(mock) {
 function mockArqueo() {
   prisma.sede.findMany.mockResolvedValue(sedes);
   prisma.ingreso = {
-    groupBy: vi
-      .fn()
-      .mockResolvedValue([
-        {
-          sedeId: 1,
-          _sum: { efectivo: 300000, cuentas: 100000, total: 400000 },
-        },
-      ]),
+    groupBy: vi.fn().mockResolvedValue([
+      {
+        sedeId: 1,
+        _sum: { efectivo: 300000, cuentas: 100000, total: 400000 },
+      },
+    ]),
   };
   prisma.egreso = {
     groupBy: vi.fn().mockResolvedValue([{ sedeId: 1, _sum: { total: 50000 } }]),
@@ -84,8 +82,8 @@ function mockArqueo() {
   prisma.inventario = {
     groupBy: vi
       .fn()
-      .mockResolvedValue([{ semana: 18, _sum: { costo: 150000 } }]),
-    aggregate: vi.fn().mockResolvedValue({ _sum: { costo: 150000 } }),
+      .mockResolvedValue([{ semana: 18, _sum: { costoUnitario: 150000 } }]),
+    aggregate: vi.fn().mockResolvedValue({ _sum: { costoUnitario: 150000 } }),
   };
   prisma.cliente = {
     ...prisma.cliente,
@@ -205,14 +203,12 @@ describe("GET /api/v1/reportes/panel-general", () => {
     mockSesion(sesionAdminMock);
     prisma.sede.findMany.mockResolvedValue(sedes);
     prisma.ingreso = {
-      groupBy: vi
-        .fn()
-        .mockResolvedValue([
-          {
-            sedeId: 1,
-            _sum: { efectivo: 200000, cuentas: 50000, total: 250000 },
-          },
-        ]),
+      groupBy: vi.fn().mockResolvedValue([
+        {
+          sedeId: 1,
+          _sum: { efectivo: 200000, cuentas: 50000, total: 250000 },
+        },
+      ]),
     };
     prisma.egreso = {
       groupBy: vi

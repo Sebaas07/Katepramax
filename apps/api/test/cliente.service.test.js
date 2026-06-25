@@ -4,10 +4,10 @@
 const { prisma } = require("./__mocks__/prisma");
 const clienteService = require("../src/services/cliente.service");
 
-const appMock = { prisma };
-const svc = clienteService(appMock);
+const adminMock = { rol: "Admin", sedeId: null };
+const svc = clienteService(prisma);
 
-// ── Datos de prueba ───────────────────────────────────────────────────────────
+// ── Datar de prueba ───────────────────────────────────────────────────────────
 
 const clienteMock = {
   id: 1,
@@ -24,7 +24,7 @@ describe("clienteService.listar", () => {
   it("debería llamar findAll con los parámetros por defecto", async () => {
     prisma.cliente.findMany.mockResolvedValue([clienteMock]);
 
-    await svc.listar({});
+    await svc.listar({}, adminMock);
 
     expect(prisma.cliente.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 0, take: 50 }),
@@ -34,7 +34,7 @@ describe("clienteService.listar", () => {
   it("debería convertir activo='true' a booleano true", async () => {
     prisma.cliente.findMany.mockResolvedValue([]);
 
-    await svc.listar({ activo: "true" });
+    await svc.listar({ activo: "true" }, adminMock);
 
     const callWhere = prisma.cliente.findMany.mock.calls[0][0].where;
     expect(callWhere.activo).toBe(true);
@@ -43,7 +43,7 @@ describe("clienteService.listar", () => {
   it("debería convertir activo='false' a booleano false", async () => {
     prisma.cliente.findMany.mockResolvedValue([]);
 
-    await svc.listar({ activo: "false" });
+    await svc.listar({ activo: "false" }, adminMock);
 
     const callWhere = prisma.cliente.findMany.mock.calls[0][0].where;
     expect(callWhere.activo).toBe(false);
@@ -52,7 +52,7 @@ describe("clienteService.listar", () => {
   it("no debería incluir activo en el where si no se pasa", async () => {
     prisma.cliente.findMany.mockResolvedValue([]);
 
-    await svc.listar({});
+    await svc.listar({}, adminMock);
 
     const callWhere = prisma.cliente.findMany.mock.calls[0][0].where;
     expect(callWhere.activo).toBeUndefined();
@@ -61,7 +61,7 @@ describe("clienteService.listar", () => {
   it("debería respetar skip y take personalizados", async () => {
     prisma.cliente.findMany.mockResolvedValue([]);
 
-    await svc.listar({ skip: "10", take: "5" });
+    await svc.listar({ skip: "10", take: "5" }, adminMock);
 
     expect(prisma.cliente.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 10, take: 5 }),
@@ -75,7 +75,7 @@ describe("clienteService.obtenerPorId", () => {
   it("debería retornar el cliente si existe", async () => {
     prisma.cliente.findUnique.mockResolvedValue(clienteMock);
 
-    const result = await svc.obtenerPorId(1);
+    const result = await svc.obtenerPorId(1, adminMock);
 
     expect(result.id).toBe(1);
     expect(result.nombre).toBe("Juan Pérez");
@@ -84,7 +84,7 @@ describe("clienteService.obtenerPorId", () => {
   it("debería lanzar AppError 404 si no existe", async () => {
     prisma.cliente.findUnique.mockResolvedValue(null);
 
-    await expect(svc.obtenerPorId(999)).rejects.toMatchObject({
+    await expect(svc.obtenerPorId(999, adminMock)).rejects.toMatchObject({
       statusCode: 404,
       message: expect.stringMatching(/no encontrado/i),
     });
@@ -101,7 +101,7 @@ describe("clienteService.crear", () => {
       nombre: "Juan Pérez",
       telefono: "3001234567",
       campoExtra: "ignorado",
-    });
+    }, adminMock);
 
     expect(prisma.cliente.create).toHaveBeenCalledWith({
       data: { nombre: "Juan Pérez", telefono: "3001234567" },
@@ -116,7 +116,7 @@ describe("clienteService.actualizar", () => {
     prisma.cliente.findUnique.mockResolvedValue(null);
 
     await expect(
-      svc.actualizar(999, { nombre: "Nuevo" }),
+      svc.actualizar(999, { nombre: "Nuevo" }, adminMock),
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
@@ -130,7 +130,7 @@ describe("clienteService.actualizar", () => {
     await svc.actualizar(1, {
       nombre: "Editado",
       campoNoPermitido: "ignorar",
-    });
+    }, adminMock);
 
     const callData = prisma.cliente.update.mock.calls[0][0].data;
     expect(callData).toHaveProperty("nombre", "Editado");
@@ -144,7 +144,7 @@ describe("clienteService.actualizar", () => {
       limiteCredito: 500000,
     });
 
-    await svc.actualizar(1, { limiteCredito: 500000 });
+    await svc.actualizar(1, { limiteCredito: 500000 }, adminMock);
 
     const callData = prisma.cliente.update.mock.calls[0][0].data;
     expect(callData.limiteCredito).toBe(500000);
@@ -157,7 +157,7 @@ describe("clienteService.desactivar", () => {
   it("debería lanzar AppError 404 si el cliente no existe", async () => {
     prisma.cliente.findUnique.mockResolvedValue(null);
 
-    await expect(svc.desactivar(999)).rejects.toMatchObject({
+    await expect(svc.desactivar(999, adminMock)).rejects.toMatchObject({
       statusCode: 404,
     });
   });
@@ -166,7 +166,7 @@ describe("clienteService.desactivar", () => {
     prisma.cliente.findUnique.mockResolvedValue(clienteMock);
     prisma.cliente.update.mockResolvedValue({ ...clienteMock, activo: false });
 
-    const result = await svc.desactivar(1);
+    const result = await svc.desactivar(1, adminMock);
 
     expect(prisma.cliente.update).toHaveBeenCalledWith({
       where: { id: 1 },

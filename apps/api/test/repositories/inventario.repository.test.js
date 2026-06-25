@@ -9,99 +9,78 @@ const inventarioMock = {
   fecha: new Date("2026-06-02"),
   semana: 23,
   sedeId: 1,
-  productoId: "PROD-001",
+  productoId: 1,
   cantidadIngresada: 10,
-  costo: 180000,
+  costoUnitario: 180000,
   sede: { id: 1, nombre: "Sede Principal" },
   producto: {
-    codigo: "PROD-001",
+    codigo: 1,
     descripcion: "Cemento Gris 50kg",
     precioCosto: 18000,
   },
 };
 
-// ── upsertDiario ──────────────────────────────────────────────────────────────
+// ── crear ─────────────────────────────────────────────────────────────────────
 
-describe("inventarioRepository.upsertDiario", () => {
-  it("debería hacer upsert por la clave compuesta sedeId_productoId_fecha", async () => {
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
-
-    const fecha = new Date("2026-06-02");
-    await inventarioRepository.upsertDiario(prisma, {
-      fecha,
-      semana: 23,
-      sedeId: 1,
-      productoId: "PROD-001",
-      cantidadIngresada: 10,
-      costo: 180000,
-    });
-
-    const callArg = prisma.inventario.upsert.mock.calls[0][0];
-    expect(callArg.where).toEqual({
-      sedeId_productoId_fecha: { sedeId: 1, productoId: "PROD-001", fecha },
-    });
-  });
-
-  it("en create debería guardar todos los campos", async () => {
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
+describe("inventarioRepository.crear", () => {
+  it("debería crear el registro con todos los campos", async () => {
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
 
     const fecha = new Date("2026-06-02");
-    await inventarioRepository.upsertDiario(prisma, {
+    await inventarioRepository.crear(prisma, {
       fecha,
       semana: 23,
       sedeId: 1,
-      productoId: "PROD-001",
+      productoId: 1,
       cantidadIngresada: 10,
-      costo: 180000,
+      costoUnitario: 180000,
     });
 
-    const create = prisma.inventario.upsert.mock.calls[0][0].create;
-    expect(create).toMatchObject({
+    const data = prisma.inventario.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
       fecha,
       semana: 23,
       sedeId: 1,
-      productoId: "PROD-001",
+      productoId: 1,
       cantidadIngresada: 10,
-      costo: 180000,
-    });
-  });
-
-  it("en update debería incrementar cantidadIngresada y costo", async () => {
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
-
-    await inventarioRepository.upsertDiario(prisma, {
-      fecha: new Date("2026-06-02"),
-      semana: 23,
-      sedeId: 1,
-      productoId: "PROD-001",
-      cantidadIngresada: 5,
-      costo: 90000,
-    });
-
-    const update = prisma.inventario.upsert.mock.calls[0][0].update;
-    expect(update).toMatchObject({
-      cantidadIngresada: { increment: 5 },
-      costo: { increment: 90000 },
+      costoUnitario: 180000,
+      tipo: "entrada",
     });
   });
 
   it("debería incluir sede y producto en el resultado", async () => {
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
 
-    await inventarioRepository.upsertDiario(prisma, {
+    await inventarioRepository.crear(prisma, {
       fecha: new Date(),
       semana: 23,
       sedeId: 1,
-      productoId: "PROD-001",
+      productoId: 1,
       cantidadIngresada: 1,
-      costo: 18000,
+      costoUnitario: 18000,
     });
 
-    const callArg = prisma.inventario.upsert.mock.calls[0][0];
+    const callArg = prisma.inventario.create.mock.calls[0][0];
     expect(callArg.include).toMatchObject({
       sede: expect.anything(),
       producto: expect.anything(),
     });
+  });
+
+  it("debería usar 'entrada' como tipo por defecto si no se pasa", async () => {
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
+
+    await inventarioRepository.crear(prisma, {
+      fecha: new Date(),
+      semana: 23,
+      sedeId: 1,
+      productoId: 1,
+      cantidadIngresada: 1,
+      costoUnitario: 18000,
+    });
+
+    const data = prisma.inventario.create.mock.calls[0][0].data;
+    expect(data.tipo).toBe("entrada");
   });
 });
 
@@ -149,10 +128,10 @@ describe("inventarioRepository.listar", () => {
   it("debería filtrar por productoId si se pasa", async () => {
     prisma.inventario.findMany.mockResolvedValue([]);
 
-    await inventarioRepository.listar(prisma, { productoId: "PROD-001" });
+    await inventarioRepository.listar(prisma, { productoId: 1 });
 
     const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
-    expect(callWhere.productoId).toBe("PROD-001");
+    expect(callWhere.productoId).toBe(1);
   });
 
   it("no debería incluir filtros undefined en where", async () => {
@@ -221,16 +200,16 @@ describe("inventarioRepository.actualizar", () => {
     expect(callData.cantidadIngresada).toBe(15);
   });
 
-  it("debería actualizar costo si se pasa", async () => {
+  it("debería actualizar costoUnitario si se pasa", async () => {
     prisma.inventario.update.mockResolvedValue({
       ...inventarioMock,
-      costo: 200000,
+      costoUnitario: 200000,
     });
 
-    await inventarioRepository.actualizar(prisma, 1, { costo: 200000 });
+    await inventarioRepository.actualizar(prisma, 1, { costoUnitario: 200000 });
 
     const callData = prisma.inventario.update.mock.calls[0][0].data;
-    expect(callData.costo).toBe(200000);
+    expect(callData.costoUnitario).toBe(200000);
   });
 
   it("no debería incluir campos undefined en data", async () => {
@@ -239,7 +218,7 @@ describe("inventarioRepository.actualizar", () => {
     await inventarioRepository.actualizar(prisma, 1, { cantidadIngresada: 12 });
 
     const callData = prisma.inventario.update.mock.calls[0][0].data;
-    expect(Object.keys(callData)).not.toContain("costo");
+    expect(Object.keys(callData)).not.toContain("costoUnitario");
   });
 });
 
@@ -267,7 +246,10 @@ describe("inventarioRepository.resumenSemanal", () => {
       expect.objectContaining({
         by: ["sedeId", "productoId"],
         where: { semana: 23 },
-        _sum: expect.objectContaining({ cantidadIngresada: true, costo: true }),
+        _sum: expect.objectContaining({
+          cantidadIngresada: true,
+          costoUnitario: true,
+        }),
         _max: expect.objectContaining({ fecha: true }),
       }),
     );

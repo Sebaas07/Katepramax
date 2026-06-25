@@ -2,7 +2,11 @@ const repo = require("../repositories/inventario.repository");
 const AppError = require("../errors/AppError");
 
 function sedeEsPermitida(usuario) {
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";
+  return (
+    usuario.rol === "Admin" ||
+    usuario.rol === "Bodega" ||
+    usuario.rol === "AdminBogota"
+  );
 }
 
 /**
@@ -41,9 +45,10 @@ async function registrar(app, body, usuario) {
   const fecha = new Date(body.fecha);
   fecha.setUTCHours(0, 0, 0, 0);
 
-  const tipo     = body.tipo ?? "entrada";
+  const tipo = body.tipo ?? "entrada";
   const cantidad = Number(body.cantidadIngresada);
-  const costoUnitarioRegistro = body.costoUnitario ?? Number(producto.precioCosto);
+  const costoUnitarioRegistro =
+    body.costoUnitario ?? Number(producto.precioCosto);
 
   const delta = calcularDelta(tipo, cantidad);
 
@@ -65,17 +70,21 @@ async function registrar(app, body, usuario) {
     fecha,
     semana: body.semana,
     sedeId,
-    productoId:        body.productoId,
+    productoId: body.productoId,
     cantidadIngresada: delta,
-    costoUnitario:     costoUnitarioRegistro,
+    costoUnitario: costoUnitarioRegistro,
     tipo,
     nota: body.nota ?? null,
   });
 
   await app.prisma.stockSede.upsert({
-    where:  { sedeId_productoId: { sedeId, productoId: body.productoId } },
+    where: { sedeId_productoId: { sedeId, productoId: body.productoId } },
     update: { stockActual: { increment: delta } },
-    create: { sedeId, productoId: body.productoId, stockActual: Math.max(0, delta) },
+    create: {
+      sedeId,
+      productoId: body.productoId,
+      stockActual: Math.max(0, delta),
+    },
   });
 
   return registro;
@@ -90,10 +99,10 @@ async function obtenerLista(app, query, usuario) {
     skip: Number(query.skip ?? 0),
     take: Number(query.take ?? 50),
   };
-  if (query.fecha)      filtros.fecha      = new Date(query.fecha);
-  if (query.semana)     filtros.semana     = Number(query.semana);
+  if (query.fecha) filtros.fecha = new Date(query.fecha);
+  if (query.semana) filtros.semana = Number(query.semana);
   if (query.productoId) filtros.productoId = query.productoId;
-  if (query.tipo)       filtros.tipo       = query.tipo;
+  if (query.tipo) filtros.tipo = query.tipo;
 
   if (usuario.rol !== "Admin") {
     filtros.sedeId = usuario.sedeId;
@@ -137,17 +146,18 @@ async function editar(app, id, body, usuario) {
   // FIX: recalcular el delta correctamente considerando el tipo nuevo vs anterior
   // Si cambia la cantidad O el tipo, hay que revertir el delta anterior y aplicar el nuevo
   const cambiaAmount = body.cantidadIngresada !== undefined;
-  const cambiaTipo   = body.tipo !== undefined && body.tipo !== anterior.tipo;
+  const cambiaTipo = body.tipo !== undefined && body.tipo !== anterior.tipo;
 
   let deltaAjuste = 0;
 
   if (cambiaAmount || cambiaTipo) {
-    const tipoNuevo    = body.tipo ?? anterior.tipo;
-    const cantidadNueva = body.cantidadIngresada !== undefined
-      ? Number(body.cantidadIngresada)
-      : Math.abs(anterior.cantidadIngresada); // cantidad original sin signo
+    const tipoNuevo = body.tipo ?? anterior.tipo;
+    const cantidadNueva =
+      body.cantidadIngresada !== undefined
+        ? Number(body.cantidadIngresada)
+        : Math.abs(anterior.cantidadIngresada); // cantidad original sin signo
 
-    const deltaNuevo   = calcularDelta(tipoNuevo, cantidadNueva);
+    const deltaNuevo = calcularDelta(tipoNuevo, cantidadNueva);
     const deltaAnterior = anterior.cantidadIngresada; // ya tiene signo guardado
     deltaAjuste = deltaNuevo - deltaAnterior;
 
@@ -160,7 +170,7 @@ async function editar(app, id, body, usuario) {
   if (deltaAjuste !== 0) {
     const { sedeId, productoId } = anterior;
     await app.prisma.stockSede.upsert({
-      where:  { sedeId_productoId: { sedeId, productoId } },
+      where: { sedeId_productoId: { sedeId, productoId } },
       update: { stockActual: { increment: deltaAjuste } },
       create: { sedeId, productoId, stockActual: Math.max(0, deltaAjuste) },
     });
@@ -189,7 +199,7 @@ async function borrar(app, id, usuario) {
     const stockActual = await app.prisma.stockSede.findUnique({
       where: {
         sedeId_productoId: {
-          sedeId:     registro.sedeId,
+          sedeId: registro.sedeId,
           productoId: registro.productoId,
         },
       },
@@ -210,7 +220,7 @@ async function borrar(app, id, usuario) {
     await tx.stockSede.update({
       where: {
         sedeId_productoId: {
-          sedeId:     registro.sedeId,
+          sedeId: registro.sedeId,
           productoId: registro.productoId,
         },
       },
@@ -220,22 +230,23 @@ async function borrar(app, id, usuario) {
     });
   });
 }
-
 async function resumenSemanal(app, semana, usuario) {
   if (!sedeEsPermitida(usuario)) {
     throw new AppError("No tienes permiso para ver el resumen semanal.", 403);
   }
 
   const prisma = app.prisma;
-  const sedes  = await prisma.sede.findMany({ where: { activo: true }, select: { id: true, nombre: true } });
+  const sedes = await prisma.sede.findMany({
+    where: { activo: true },
+    select: { id: true, nombre: true },
+  });
 
   const where = usuario.rol !== "Admin" ? { sedeId: usuario.sedeId } : {};
 
-  // FIX: campo correcto es "costoUnitario", no "costo"
   const filas = await prisma.inventario.groupBy({
-    by:      ["sedeId", "productoId"],
-    where:   { ...where, semana },
-    _sum:    { cantidadIngresada: true, costoUnitario: true },
+    by: ["sedeId", "productoId"],
+    where: { ...where, semana },
+    _sum: { cantidadIngresada: true, costoUnitario: true },
     orderBy: { sedeId: "asc" },
   });
 
@@ -246,22 +257,27 @@ async function resumenSemanal(app, semana, usuario) {
     productos.map((p) => [p.codigo, p.descripcion]),
   );
 
-  const sedesFiltradas = usuario.rol === "Admin"
-    ? sedes
-    : sedes.filter((s) => s.id === usuario.sedeId);
+  const sedesFiltradas =
+    usuario.rol === "Admin"
+      ? sedes
+      : sedes.filter((s) => s.id === usuario.sedeId);
 
-  return sedesFiltradas.map((s) => ({
-    sede:    s.nombre,
-    sedeId:  s.id,
-    detalle: filas
-      .filter((f) => f.sedeId === s.id)
-      .map((f) => ({
-        producto:    mapaProducto[f.productoId] ?? f.productoId,
-        productoId:  f.productoId,
-        cantidad:    f._sum.cantidadIngresada,
-        costoUnitario: Number(f._sum.costoUnitario ?? 0),
-      })),
-  }));
+  const resultado = [];
+  for (const sede of sedesFiltradas) {
+    const filasSede = filas.filter((f) => f.sedeId === sede.id);
+    for (const fila of filasSede) {
+      resultado.push({
+        sede: sede.nombre,
+        sedeId: sede.id,
+        producto: mapaProducto[fila.productoId] ?? String(fila.productoId),
+        productoId: fila.productoId,
+        cantidad: fila._sum.cantidadIngresada ?? 0,
+        costoUnitario: Number(fila._sum.costoUnitario ?? 0),
+      });
+    }
+  }
+
+  return resultado;
 }
 
 module.exports = {

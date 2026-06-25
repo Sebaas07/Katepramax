@@ -16,7 +16,7 @@ const { prisma } = require("./__mocks__/prisma");
 
 const sedeMock = { id: 1, nombre: "Sede Principal" };
 const productoMock = {
-  codigo: "PROD-001",
+  codigo: 1,
   descripcion: "Cemento Gris 50kg",
   precioCosto: 18000,
   activo: true,
@@ -27,12 +27,12 @@ const inventarioMock = {
   fecha: new Date("2026-06-02"),
   semana: 23,
   sedeId: 1,
-  productoId: "PROD-001",
+  productoId: 1,
   cantidadIngresada: 10,
-  costo: 180000,
+  costoUnitario: 180000,
   sede: { id: 1, nombre: "Sede Principal" },
   producto: {
-    codigo: "PROD-001",
+    codigo: 1,
     descripcion: "Cemento Gris 50kg",
     precioCosto: 18000,
   },
@@ -92,7 +92,7 @@ describe("POST /api/v1/inventario", () => {
       headers: { authorization: `Bearer ${tokenAdmin}` },
       payload: {
         sedeId: 999,
-        productoId: "PROD-001",
+        productoId: 1,
         cantidadIngresada: 10,
         fecha: "2026-06-02",
         semana: 23,
@@ -114,7 +114,7 @@ describe("POST /api/v1/inventario", () => {
       headers: { authorization: `Bearer ${tokenAdmin}` },
       payload: {
         sedeId: 1,
-        productoId: "NO-EXISTE",
+        productoId: 999,
         cantidadIngresada: 10,
         fecha: "2026-06-02",
         semana: 23,
@@ -139,7 +139,7 @@ describe("POST /api/v1/inventario", () => {
       headers: { authorization: `Bearer ${tokenAdmin}` },
       payload: {
         sedeId: 1,
-        productoId: "PROD-001",
+        productoId: 1,
         cantidadIngresada: 10,
         fecha: "2026-06-02",
         semana: 23,
@@ -154,7 +154,7 @@ describe("POST /api/v1/inventario", () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
     prisma.producto.findUnique.mockResolvedValue(productoMock);
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
     prisma.stockSede.upsert.mockResolvedValue({});
 
     const res = await app.inject({
@@ -163,7 +163,7 @@ describe("POST /api/v1/inventario", () => {
       headers: { authorization: `Bearer ${tokenAdmin}` },
       payload: {
         sedeId: 1,
-        productoId: "PROD-001",
+        productoId: 1,
         cantidadIngresada: 10,
         fecha: "2026-06-02",
         semana: 23,
@@ -171,7 +171,7 @@ describe("POST /api/v1/inventario", () => {
     });
 
     expect(res.statusCode).toBe(201);
-    expect(res.json().productoId).toBe("PROD-001");
+    expect(res.json().productoId).toBe(1);
     expect(res.json().cantidadIngresada).toBe(10);
   });
 
@@ -179,7 +179,7 @@ describe("POST /api/v1/inventario", () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionBodegaMock);
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
     prisma.producto.findUnique.mockResolvedValue(productoMock);
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
     prisma.stockSede.upsert.mockResolvedValue({});
 
     const res = await app.inject({
@@ -188,7 +188,7 @@ describe("POST /api/v1/inventario", () => {
       headers: { authorization: `Bearer ${tokenBodega}` },
       payload: {
         sedeId: 1,
-        productoId: "PROD-001",
+        productoId: 1,
         cantidadIngresada: 5,
         fecha: "2026-06-02",
         semana: 23,
@@ -258,14 +258,14 @@ describe("GET /api/v1/inventario/resumen-semanal", () => {
     prisma.inventario.groupBy.mockResolvedValue([
       {
         sedeId: 1,
-        productoId: "PROD-001",
-        _sum: { cantidadIngresada: 15, costo: 270000 },
+        productoId: 1,
+        _sum: { cantidadIngresada: 15, costoUnitario: 270000 },
         _max: { fecha: new Date("2026-06-06") },
       },
     ]);
     prisma.sede.findMany.mockResolvedValue([sedeMock]);
     prisma.producto.findMany.mockResolvedValue([
-      { codigo: "PROD-001", descripcion: "Cemento Gris 50kg" },
+      { codigo: 1, descripcion: "Cemento Gris 50kg" },
     ]);
 
     const res = await app.inject({
@@ -388,6 +388,11 @@ describe("DELETE /api/v1/inventario/:id", () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.inventario.findUnique.mockResolvedValue(inventarioMock); // cantidadIngresada: 10
     prisma.inventario.delete.mockResolvedValue(inventarioMock);
+    prisma.stockSede.findUnique.mockResolvedValue({
+      sedeId: 1,
+      productoId: 1,
+      stockActual: 100,
+    });
     prisma.stockSede.update.mockResolvedValue({});
 
     const res = await app.inject({
