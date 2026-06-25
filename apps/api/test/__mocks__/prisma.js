@@ -101,6 +101,7 @@ const prisma = {
     findMany: vi.fn(),
   },
   asignacionEntrega: {
+    findFirst:   vi.fn(),
     findUnique:  vi.fn(),
     findMany:    vi.fn(),
     create:      vi.fn(),

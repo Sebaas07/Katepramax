@@ -8,7 +8,10 @@ const fp = require("fastify-plugin");
  */
 async function envPlugin(app) {
   await app.register(require("@fastify/env"), {
-    dotenv: true, // Carga el .env automáticamente (reemplaza el require("dotenv").config() en app.js)
+    // En tests Vitest ya cargó .env.test — dejar dotenv: true haría que
+    // @fastify/env cargue el .env del proyecto encima, pisando las variables
+    // de prueba y causando un Hook timeout en beforeAll.
+    dotenv: process.env.NODE_ENV !== "test",
     schema: {
       type: "object",
       required: ["DATABASE_URL", "JWT_SECRET", "PORT"],

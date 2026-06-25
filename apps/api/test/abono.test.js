@@ -49,17 +49,13 @@ const sesionBodegaMock = {
 let app, tokenAdmin, tokenBodega;
 
 beforeAll(async () => {
-  process.env.NODE_ENV   = "test";
-  process.env.JWT_SECRET = "test-secret-clave-super-segura-32chars";
-  process.env.DATABASE_URL = "mysql://mock:mock@localhost/mock";
-
   app = await buildApp();
   app.prisma = prisma;
   await app.ready();
 
   tokenAdmin  = app.jwt.sign({ sesionId: 10 });
   tokenBodega = app.jwt.sign({ sesionId: 11 });
-});
+}, 15000);
 
 afterAll(async () => { await app.close(); });
 
@@ -126,9 +122,8 @@ describe("POST /api/v1/abonos", () => {
     mockSesion(sesionAdminMock);
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
-    prisma.abono = {
-      create: vi.fn().mockResolvedValue(abonoMock),
-    };
+    // FIX: mockear método individual, no reemplazar el objeto del mock centralizado
+    prisma.abono.create.mockResolvedValue(abonoMock);
 
     const res = await app.inject({
       method: "POST", url: "/api/v1/abonos",
@@ -143,9 +138,8 @@ describe("POST /api/v1/abonos", () => {
     mockSesion(sesionBodegaMock);
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
-    prisma.abono = {
-      create: vi.fn().mockResolvedValue(abonoMock),
-    };
+    // FIX: mockear método individual, no reemplazar el objeto del mock centralizado
+    prisma.abono.create.mockResolvedValue(abonoMock);
 
     const res = await app.inject({
       method: "POST", url: "/api/v1/abonos",
@@ -165,7 +159,8 @@ describe("GET /api/v1/abonos", () => {
 
   it("debería retornar 200 con la lista de abonos", async () => {
     mockSesion(sesionAdminMock);
-    prisma.abono = { findMany: vi.fn().mockResolvedValue([abonoMock]) };
+    // FIX: mockear método individual
+    prisma.abono.findMany.mockResolvedValue([abonoMock]);
 
     const res = await app.inject({
       method: "GET", url: "/api/v1/abonos",
@@ -179,7 +174,8 @@ describe("GET /api/v1/abonos", () => {
 
   it("debería filtrar por semana", async () => {
     mockSesion(sesionAdminMock);
-    prisma.abono = { findMany: vi.fn().mockResolvedValue([abonoMock]) };
+    // FIX: mockear método individual
+    prisma.abono.findMany.mockResolvedValue([abonoMock]);
 
     const res = await app.inject({
       method: "GET", url: "/api/v1/abonos?semana=18",
@@ -199,7 +195,8 @@ describe("GET /api/v1/abonos/:id", () => {
 
   it("debería retornar 404 si el abono no existe", async () => {
     mockSesion(sesionAdminMock);
-    prisma.abono = { findUnique: vi.fn().mockResolvedValue(null) };
+    // FIX: mockear método individual
+    prisma.abono.findUnique.mockResolvedValue(null);
 
     const res = await app.inject({
       method: "GET", url: "/api/v1/abonos/999",
@@ -210,7 +207,8 @@ describe("GET /api/v1/abonos/:id", () => {
 
   it("debería retornar 200 con el abono", async () => {
     mockSesion(sesionAdminMock);
-    prisma.abono = { findUnique: vi.fn().mockResolvedValue(abonoMock) };
+    // FIX: mockear método individual
+    prisma.abono.findUnique.mockResolvedValue(abonoMock);
 
     const res = await app.inject({
       method: "GET", url: "/api/v1/abonos/1",
@@ -234,7 +232,8 @@ describe("PATCH /api/v1/abonos/:id", () => {
 
   it("debería retornar 404 si el abono no existe", async () => {
     mockSesion(sesionAdminMock);
-    prisma.abono = { findUnique: vi.fn().mockResolvedValue(null) };
+    // FIX: mockear método individual
+    prisma.abono.findUnique.mockResolvedValue(null);
 
     const res = await app.inject({
       method: "PATCH", url: "/api/v1/abonos/999",
@@ -246,10 +245,9 @@ describe("PATCH /api/v1/abonos/:id", () => {
   it("debería retornar 200 al editar correctamente", async () => {
     const actualizado = { ...abonoMock, valorPagado: 600000 };
     mockSesion(sesionAdminMock);
-    prisma.abono = {
-      findUnique: vi.fn().mockResolvedValue(abonoMock),
-      update:     vi.fn().mockResolvedValue(actualizado),
-    };
+    // FIX: mockear métodos individuales
+    prisma.abono.findUnique.mockResolvedValue(abonoMock);
+    prisma.abono.update.mockResolvedValue(actualizado);
 
     const res = await app.inject({
       method: "PATCH", url: "/api/v1/abonos/1",
@@ -280,7 +278,8 @@ describe("DELETE /api/v1/abonos/:id", () => {
 
   it("debería retornar 404 si el abono no existe", async () => {
     mockSesion(sesionAdminMock);
-    prisma.abono = { findUnique: vi.fn().mockResolvedValue(null) };
+    // FIX: mockear método individual
+    prisma.abono.findUnique.mockResolvedValue(null);
 
     const res = await app.inject({
       method: "DELETE", url: "/api/v1/abonos/999",
@@ -291,10 +290,9 @@ describe("DELETE /api/v1/abonos/:id", () => {
 
   it("debería retornar 200 al eliminar correctamente", async () => {
     mockSesion(sesionAdminMock);
-    prisma.abono = {
-      findUnique: vi.fn().mockResolvedValue(abonoMock),
-      delete:     vi.fn().mockResolvedValue(abonoMock),
-    };
+    // FIX: mockear métodos individuales
+    prisma.abono.findUnique.mockResolvedValue(abonoMock);
+    prisma.abono.delete.mockResolvedValue(abonoMock);
 
     const res = await app.inject({
       method: "DELETE", url: "/api/v1/abonos/1",
@@ -316,11 +314,10 @@ describe("GET /api/v1/abonos/resumen-proveedor", () => {
 
   it("debería retornar 200 con el resumen por proveedor", async () => {
     mockSesion(sesionAdminMock);
-    prisma.abono = {
-      groupBy: vi.fn().mockResolvedValue([
-        { proveedorId: 1, _sum: { valorPagado: 500000 }, _count: { id: 2 } },
-      ]),
-    };
+    // FIX: mockear métodos individuales
+    prisma.abono.groupBy.mockResolvedValue([
+      { proveedorId: 1, _sum: { valorPagado: 500000 }, _count: { id: 2 } },
+    ]);
     prisma.proveedor.findMany.mockResolvedValue([{ id: 1, nombre: "Cemex S.A." }]);
 
     const res = await app.inject({
@@ -346,11 +343,10 @@ describe("GET /api/v1/abonos/resumen-sede", () => {
 
   it("debería retornar 200 con el resumen por sede", async () => {
     mockSesion(sesionAdminMock);
-    prisma.abono = {
-      groupBy: vi.fn().mockResolvedValue([
-        { sedeId: 1, _sum: { valorPagado: 500000 } },
-      ]),
-    };
+    // FIX: mockear métodos individuales
+    prisma.abono.groupBy.mockResolvedValue([
+      { sedeId: 1, _sum: { valorPagado: 500000 } },
+    ]);
     prisma.sede.findMany.mockResolvedValue([{ id: 1, nombre: "Bogotá" }]);
 
     const res = await app.inject({

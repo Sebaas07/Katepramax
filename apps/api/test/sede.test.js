@@ -23,6 +23,7 @@ let app, tokenAdmin, tokenBodega;
 
 beforeAll(async () => {
   app = await buildApp();
+  app.prisma = prisma;
   await app.ready();
   tokenAdmin  = app.jwt.sign({ sesionId: 10 });
   tokenBodega = app.jwt.sign({ sesionId: 11 });

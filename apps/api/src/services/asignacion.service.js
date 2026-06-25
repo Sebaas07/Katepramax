@@ -18,6 +18,7 @@ const repoPedido      = require("../repositories/pedido.repository");
 const AppError        = require("../errors/AppError");
 
 function sedeEsPermitida(usuario) {
+  if (!usuario) return false;
   return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";
 }
 
@@ -36,6 +37,10 @@ const asignacionService = (app) => ({
 
     const pedido = await repoPedido.buscarPorId(this.prisma, pedidoId);
     if (!pedido) throw new AppError(`Pedido ${pedidoId} no encontrado`, 404);
+
+    if (pedido.estado !== "Pendiente") {
+      throw new AppError(`Pedido ${pedidoId} no está Pendiente`, 400);
+    }
 
     if (usuario.rol !== "Admin") {
       const sedePedido = pedido.sedeId ?? pedido.creador?.sedeId;
@@ -151,7 +156,7 @@ const asignacionService = (app) => ({
    * Obtener una asignación por ID con control de acceso.
    */
   async obtenerPorId(id, usuario) {
-    if (!sedeEsPermitida(usuario) && usuario.rol !== "Entregador") {
+    if (!sedeEsPermitida(usuario) && usuario?.rol !== "Entregador") {
       throw new AppError("No tienes permiso para ver esta asignación.", 403);
     }
 

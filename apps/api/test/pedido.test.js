@@ -2,40 +2,66 @@
  * Tests de integración — rutas HTTP de Pedido
  */
 const { buildApp } = require("../src/app");
-const { prisma }   = require("./__mocks__/prisma");
+const { prisma } = require("./__mocks__/prisma");
 
 // ── Datos de prueba ───────────────────────────────────────────────────────────
 
 const clienteMock = {
-  id: 1, nombre: "Juan Pérez", activo: true,
-  saldoDeuda: 0, limiteCredito: 2000000,
+  id: 1,
+  nombre: "Juan Pérez",
+  activo: true,
+  saldoDeuda: 0,
+  limiteCredito: 2000000,
 };
 const productaMock = {
-  codigo: "CEM-001", descripcion: "Cemento Gris 50kg",
-  activo: true, precioVenta: 25000,
+  codigo: "CEM-001",
+  descripcion: "Cemento Gris 50kg",
+  activo: true,
+  precioVenta: 25000,
 };
-const stockMock    = { sedeId: 1, productoId: "CEM-001", stockActual: 100 };
-const creadorMock  = { id: 1, usuario: "admin", rol: "Admin", sedeId: 1, activo: true };
+const stockMock = { sedeId: 1, productoId: "CEM-001", stockActual: 100 };
+const creadorMock = {
+  id: 1,
+  usuario: "admin",
+  rol: "Admin",
+  sedeId: 1,
+  activo: true,
+};
 
 const pedidoMock = {
-  id: 1, estado: "Pendiente", observaciones: null, totalRecibido: null,
-  creadoEn: new Date(), actualizadoEn: new Date(), creadoPorId: 1, clienteId: 1,
-  cliente:  { id: 1, nombre: "Juan Pérez", telefono: null },
-  creador:  { id: 1, nombreCompleto: "Administrador" },
+  id: 1,
+  estado: "Pendiente",
+  observaciones: null,
+  totalRecibido: null,
+  creadoEn: new Date(),
+  actualizadoEn: new Date(),
+  creadoPorId: 1,
+  clienteId: 1,
+  cliente: { id: 1, nombre: "Juan Pérez", telefono: null },
+  creador: { id: 1, nombreCompleto: "Administrador" },
   detalles: [
-    { id: 1, productoId: "CEM-001", productoNombre: "Cemento Gris 50kg",
-      cantidad: 2, precioUnitario: 25000, subtotal: 50000,
-      producto: { codigo: "CEM-001", descripcion: "Cemento Gris 50kg" } },
+    {
+      id: 1,
+      productoId: "CEM-001",
+      productoNombre: "Cemento Gris 50kg",
+      cantidad: 2,
+      precioUnitario: 25000,
+      subtotal: 50000,
+      producto: { codigo: "CEM-001", descripcion: "Cemento Gris 50kg" },
+    },
   ],
   asignaciones: [],
 };
 
 const sesionAdminMock = {
-  id: 10, activa: true, expiraEn: new Date(Date.now() + 86400000),
+  id: 10,
+  activa: true,
+  expiraEn: new Date(Date.now() + 86400000),
   usuario: { id: 1, usuario: "admin", rol: "Admin", sedeId: 1, activo: true },
 };
 const sesionBodegaMock = {
-  ...sesionAdminMock, id: 11,
+  ...sesionAdminMock,
+  id: 11,
   usuario: { ...sesionAdminMock.usuario, id: 2, rol: "Bodega" },
 };
 
@@ -44,40 +70,54 @@ const sesionBodegaMock = {
 let app, tokenAdmin, tokenBodega;
 
 beforeAll(async () => {
-  process.env.NODE_ENV     = "test";
-  process.env.JWT_SECRET   = "test-secret-clave-super-segura-32chars";
-  process.env.DATABASE_URL = "mysql://mock:mock@localhost/mock";
-
   app = await buildApp();
   app.prisma = prisma;
   await app.ready();
 
-  tokenAdmin  = app.jwt.sign({ sesionId: 10 });
+  tokenAdmin = app.jwt.sign({ sesionId: 10 });
   tokenBodega = app.jwt.sign({ sesionId: 11 });
 });
 
-afterAll(async () => { await app.close(); });
+afterAll(async () => {
+  await app.close();
+});
 
-function authAdmin()  { return { Authorization: `Bearer ${tokenAdmin}` }; }
-function authBodega() { return { Authorization: `Bearer ${tokenBodega}` }; }
-function mockSesion(mock) { prisma.sesion.findFirst.mockResolvedValue(mock); }
+function authAdmin() {
+  return { Authorization: `Bearer ${tokenAdmin}` };
+}
+function authBodega() {
+  return { Authorization: `Bearer ${tokenBodega}` };
+}
+function mockSesion(mock) {
+  prisma.sesion.findFirst.mockResolvedValue(mock);
+}
 
 // Helpers: mockear métodos específicos SIN reemplazar el objeto completo
-function mockPedidoFindUnique(value)  { prisma.pedido.findUnique.mockResolvedValue(value); }
-function mockPedidoFindMany(value)    { prisma.pedido.findMany.mockResolvedValue(value); }
-function mockPedidoUpdate(value)      { prisma.pedido.update.mockResolvedValue(value); }
+function mockPedidoFindUnique(value) {
+  prisma.pedido.findUnique.mockResolvedValue(value);
+}
+function mockPedidoFindMany(value) {
+  prisma.pedido.findMany.mockResolvedValue(value);
+}
+function mockPedidoUpdate(value) {
+  prisma.pedido.update.mockResolvedValue(value);
+}
 
 // ── POST /api/v1/pedidos ──────────────────────────────────────────────────────
 
 describe("POST /api/v1/pedidos", () => {
-  const payload = { clienteId: 1, items: [{ productoId: "CEM-001", cantidad: 2 }] };
+  const payload = {
+    clienteId: 1,
+    items: [{ productoId: "CEM-001", cantidad: 2 }],
+  };
 
   // El body tiene required: [clienteId, items] → enviar payload válido para que
   // preValidation (auth) corra antes de que el schema rechace con 400
   it("debería retornar 401 sin token", async () => {
     const res = await app.inject({
-      method: "POST", url: "/api/v1/pedidos",
-      payload,  // body válido; solo falta el token
+      method: "POST",
+      url: "/api/v1/pedidos",
+      payload, // body válido; solo falta el token
     });
     expect(res.statusCode).toBe(401);
   });
@@ -87,19 +127,26 @@ describe("POST /api/v1/pedidos", () => {
     prisma.cliente.findUnique.mockResolvedValue(null);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/pedidos",
-      headers: authAdmin(), payload,
+      method: "POST",
+      url: "/api/v1/pedidos",
+      headers: authAdmin(),
+      payload,
     });
     expect(res.statusCode).toBe(404);
   });
 
   it("debería retornar 400 si el cliente está inactivo", async () => {
     mockSesion(sesionAdminMock);
-    prisma.cliente.findUnique.mockResolvedValue({ ...clienteMock, activo: false });
+    prisma.cliente.findUnique.mockResolvedValue({
+      ...clienteMock,
+      activo: false,
+    });
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/pedidos",
-      headers: authAdmin(), payload,
+      method: "POST",
+      url: "/api/v1/pedidos",
+      headers: authAdmin(),
+      payload,
     });
     expect(res.statusCode).toBe(400);
   });
@@ -111,8 +158,10 @@ describe("POST /api/v1/pedidos", () => {
     prisma.producto.findUnique.mockResolvedValue(null);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/pedidos",
-      headers: authAdmin(), payload,
+      method: "POST",
+      url: "/api/v1/pedidos",
+      headers: authAdmin(),
+      payload,
     });
     expect(res.statusCode).toBe(404);
   });
@@ -121,11 +170,16 @@ describe("POST /api/v1/pedidos", () => {
     mockSesion(sesionAdminMock);
     prisma.cliente.findUnique.mockResolvedValue(clienteMock);
     prisma.usuario.findUnique.mockResolvedValue(creadorMock);
-    prisma.producto.findUnique.mockResolvedValue({ ...productaMock, activo: false });
+    prisma.producto.findUnique.mockResolvedValue({
+      ...productaMock,
+      activo: false,
+    });
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/pedidos",
-      headers: authAdmin(), payload,
+      method: "POST",
+      url: "/api/v1/pedidos",
+      headers: authAdmin(),
+      payload,
     });
     expect(res.statusCode).toBe(400);
   });
@@ -135,12 +189,19 @@ describe("POST /api/v1/pedidos", () => {
     prisma.cliente.findUnique.mockResolvedValue(clienteMock);
     prisma.usuario.findUnique.mockResolvedValue(creadorMock);
     prisma.producto.findUnique.mockResolvedValue(productaMock);
-    prisma.stockSede.findUnique.mockResolvedValue({ ...stockMock, stockActual: 1 });
+    prisma.stockSede.findUnique.mockResolvedValue({
+      ...stockMock,
+      stockActual: 1,
+    });
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/pedidos",
+      method: "POST",
+      url: "/api/v1/pedidos",
       headers: authAdmin(),
-      payload: { clienteId: 1, items: [{ productoId: "CEM-001", cantidad: 50 }] },
+      payload: {
+        clienteId: 1,
+        items: [{ productoId: "CEM-001", cantidad: 50 }],
+      },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/stock/i);
@@ -148,14 +209,19 @@ describe("POST /api/v1/pedidos", () => {
 
   it("debería retornar 400 si supera el límite de crédito", async () => {
     mockSesion(sesionAdminMock);
-    prisma.cliente.findUnique.mockResolvedValue({ ...clienteMock, limiteCredito: 10 });
+    prisma.cliente.findUnique.mockResolvedValue({
+      ...clienteMock,
+      limiteCredito: 10,
+    });
     prisma.usuario.findUnique.mockResolvedValue(creadorMock);
     prisma.producto.findUnique.mockResolvedValue(productaMock);
     prisma.stockSede.findUnique.mockResolvedValue(stockMock);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/pedidos",
-      headers: authAdmin(), payload,
+      method: "POST",
+      url: "/api/v1/pedidos",
+      headers: authAdmin(),
+      payload,
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/crédito/i);
@@ -170,8 +236,10 @@ describe("POST /api/v1/pedidos", () => {
     prisma.$transaction.mockResolvedValue(pedidoMock);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/pedidos",
-      headers: authAdmin(), payload,
+      method: "POST",
+      url: "/api/v1/pedidos",
+      headers: authAdmin(),
+      payload,
     });
     expect(res.statusCode).toBe(201);
     expect(res.json().estado).toBe("Pendiente");
@@ -180,14 +248,20 @@ describe("POST /api/v1/pedidos", () => {
   it("debería retornar 201 al crear correctamente (Bodega)", async () => {
     mockSesion(sesionBodegaMock);
     prisma.cliente.findUnique.mockResolvedValue(clienteMock);
-    prisma.usuario.findUnique.mockResolvedValue({ ...creadorMock, id: 2, rol: "Bodega" });
+    prisma.usuario.findUnique.mockResolvedValue({
+      ...creadorMock,
+      id: 2,
+      rol: "Bodega",
+    });
     prisma.producto.findUnique.mockResolvedValue(productaMock);
     prisma.stockSede.findUnique.mockResolvedValue(stockMock);
     prisma.$transaction.mockResolvedValue(pedidoMock);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/pedidos",
-      headers: authBodega(), payload,
+      method: "POST",
+      url: "/api/v1/pedidos",
+      headers: authBodega(),
+      payload,
     });
     expect(res.statusCode).toBe(201);
   });
@@ -206,7 +280,8 @@ describe("GET /api/v1/pedidos", () => {
     mockPedidoFindMany([pedidoMock]);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/pedidos",
+      method: "GET",
+      url: "/api/v1/pedidos",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(200);
@@ -218,7 +293,8 @@ describe("GET /api/v1/pedidos", () => {
     mockPedidoFindMany([pedidoMock]);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/pedidos",
+      method: "GET",
+      url: "/api/v1/pedidos",
       headers: authBodega(),
     });
     expect(res.statusCode).toBe(200);
@@ -238,7 +314,8 @@ describe("GET /api/v1/pedidos/:id", () => {
     mockPedidoFindUnique(null);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/pedidos/999",
+      method: "GET",
+      url: "/api/v1/pedidos/999",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(404);
@@ -249,7 +326,8 @@ describe("GET /api/v1/pedidos/:id", () => {
     mockPedidoFindUnique(pedidoMock);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/pedidos/1",
+      method: "GET",
+      url: "/api/v1/pedidos/1",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(200);
@@ -262,7 +340,8 @@ describe("GET /api/v1/pedidos/:id", () => {
 describe("PATCH /api/v1/pedidos/:id/estado", () => {
   it("debería retornar 401 sin token", async () => {
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/pedidos/1/estado",
+      method: "PATCH",
+      url: "/api/v1/pedidos/1/estado",
       payload: { estado: "Cancelado" },
     });
     expect(res.statusCode).toBe(401);
@@ -272,8 +351,10 @@ describe("PATCH /api/v1/pedidos/:id/estado", () => {
     mockSesion(sesionBodegaMock);
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/pedidos/1/estado",
-      headers: authBodega(), payload: { estado: "Cancelado" },
+      method: "PATCH",
+      url: "/api/v1/pedidos/1/estado",
+      headers: authBodega(),
+      payload: { estado: "Cancelado" },
     });
     expect(res.statusCode).toBe(403);
   });
@@ -283,8 +364,10 @@ describe("PATCH /api/v1/pedidos/:id/estado", () => {
     mockPedidoFindUnique(null);
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/pedidos/999/estado",
-      headers: authAdmin(), payload: { estado: "Cancelado" },
+      method: "PATCH",
+      url: "/api/v1/pedidos/999/estado",
+      headers: authAdmin(),
+      payload: { estado: "Cancelado" },
     });
     expect(res.statusCode).toBe(404);
   });
@@ -294,8 +377,10 @@ describe("PATCH /api/v1/pedidos/:id/estado", () => {
     mockPedidoFindUnique({ ...pedidoMock, estado: "Entregado" });
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/pedidos/1/estado",
-      headers: authAdmin(), payload: { estado: "Cancelado" },
+      method: "PATCH",
+      url: "/api/v1/pedidos/1/estado",
+      headers: authAdmin(),
+      payload: { estado: "Cancelado" },
     });
     expect(res.statusCode).toBe(400);
   });
@@ -311,14 +396,16 @@ describe("PATCH /api/v1/pedidos/:id/estado", () => {
     prisma.$transaction.mockImplementation(async (fn) => {
       await fn({
         stockSede: { update: vi.fn() },
-        cliente:   { update: vi.fn() },
-        pedido:    { update: vi.fn() },
+        cliente: { update: vi.fn() },
+        pedido: { update: vi.fn() },
       });
     });
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/pedidos/1/estado",
-      headers: authAdmin(), payload: { estado: "Cancelado" },
+      method: "PATCH",
+      url: "/api/v1/pedidos/1/estado",
+      headers: authAdmin(),
+      payload: { estado: "Cancelado" },
     });
     expect(res.statusCode).toBe(200);
   });

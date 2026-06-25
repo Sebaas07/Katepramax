@@ -50,10 +50,6 @@ let tokenAdmin;
 let tokenBodega;
 
 beforeAll(async () => {
-  process.env.NODE_ENV = "test";
-  process.env.JWT_SECRET = "test-secret-clave-super-segura-32chars";
-  process.env.DATABASE_URL = "mysql://mock:mock@localhost/mock";
-
   app = await buildApp();
   app.prisma = prisma;
   await app.ready();

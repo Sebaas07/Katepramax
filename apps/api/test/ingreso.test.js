@@ -11,29 +11,29 @@
  *  GET    /api/v1/ingresos/totales-dia
  */
 const { buildApp } = require("../src/app");
-const { prisma }   = require("./__mocks__/prisma");
+const { prisma } = require("./__mocks__/prisma");
 
 // ── Datos de prueba ───────────────────────────────────────────────────────────
 
-const sedeMock    = { id: 1, nombre: "Bogotá" };
+const sedeMock = { id: 1, nombre: "Bogotá" };
 const ingresoMock = {
   id: 1,
-  fecha:       new Date("2026-05-05T00:00:00.000Z"),
-  semana:      18,
-  sedeId:      1,
-  efectivo:    300000,
-  cuentas:     150000,
-  total:       450000,
+  fecha: new Date("2026-05-05T00:00:00.000Z"),
+  semana: 18,
+  sedeId: 1,
+  efectivo: 300000,
+  cuentas: 150000,
+  total: 450000,
   observacion: null,
-  creadoEn:    new Date(),
-  sede:        { id: 1, nombre: "Bogotá" },
+  creadoEn: new Date(),
+  sede: { id: 1, nombre: "Bogotá" },
 };
 
 const sesionAdminMock = {
   id: 10,
-  activa:   true,
+  activa: true,
   expiraEn: new Date(Date.now() + 86400000),
-  usuario:  { id: 1, usuario: "admin", rol: "Admin", sedeId: 1, activo: true },
+  usuario: { id: 1, usuario: "admin", rol: "Admin", sedeId: 1, activo: true },
 };
 const sesionBodegaMock = {
   ...sesionAdminMock,
@@ -46,37 +46,45 @@ const sesionBodegaMock = {
 let app, tokenAdmin, tokenBodega;
 
 beforeAll(async () => {
-  process.env.NODE_ENV     = "test";
-  process.env.JWT_SECRET   = "test-secret-clave-super-segura-32chars";
-  process.env.DATABASE_URL = "mysql://mock:mock@localhost/mock";
-
   app = await buildApp();
   app.prisma = prisma;
   await app.ready();
 
-  tokenAdmin  = app.jwt.sign({ sesionId: 10 });
+  tokenAdmin = app.jwt.sign({ sesionId: 10 });
   tokenBodega = app.jwt.sign({ sesionId: 11 });
 });
 
-afterAll(async () => { await app.close(); });
+afterAll(async () => {
+  await app.close();
+});
 
-function authAdmin()  { return { Authorization: `Bearer ${tokenAdmin}` }; }
-function authBodega() { return { Authorization: `Bearer ${tokenBodega}` }; }
-function mockSesion(mock) { prisma.sesion.findFirst.mockResolvedValue(mock); }
+function authAdmin() {
+  return { Authorization: `Bearer ${tokenAdmin}` };
+}
+function authBodega() {
+  return { Authorization: `Bearer ${tokenBodega}` };
+}
+function mockSesion(mock) {
+  prisma.sesion.findFirst.mockResolvedValue(mock);
+}
 
 // ── POST /api/v1/ingresos ─────────────────────────────────────────────────────
 
 describe("POST /api/v1/ingresos", () => {
   const payload = {
-    fecha:    "2026-05-05",
-    semana:   18,
-    sedeId:   1,
+    fecha: "2026-05-05",
+    semana: 18,
+    sedeId: 1,
     efectivo: 300000,
-    cuentas:  150000,
+    cuentas: 150000,
   };
 
   it("debería retornar 401 sin token", async () => {
-    const res = await app.inject({ method: "POST", url: "/api/v1/ingresos", payload: {} });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/ingresos",
+      payload: {},
+    });
     expect(res.statusCode).toBe(401);
   });
 
@@ -85,8 +93,10 @@ describe("POST /api/v1/ingresos", () => {
     prisma.sede.findUnique.mockResolvedValue(null);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/ingresos",
-      headers: authAdmin(), payload,
+      method: "POST",
+      url: "/api/v1/ingresos",
+      headers: authAdmin(),
+      payload,
     });
     expect(res.statusCode).toBe(404);
   });
@@ -97,8 +107,10 @@ describe("POST /api/v1/ingresos", () => {
     prisma.ingreso = { create: vi.fn().mockResolvedValue(ingresoMock) };
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/ingresos",
-      headers: authAdmin(), payload,
+      method: "POST",
+      url: "/api/v1/ingresos",
+      headers: authAdmin(),
+      payload,
     });
     expect(res.statusCode).toBe(201);
     expect(res.json().total).toBe(450000);
@@ -110,8 +122,10 @@ describe("POST /api/v1/ingresos", () => {
     prisma.ingreso = { create: vi.fn().mockResolvedValue(ingresoMock) };
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/ingresos",
-      headers: authBodega(), payload,
+      method: "POST",
+      url: "/api/v1/ingresos",
+      headers: authBodega(),
+      payload,
     });
     expect(res.statusCode).toBe(201);
   });
@@ -123,8 +137,10 @@ describe("POST /api/v1/ingresos", () => {
     prisma.ingreso = { create: vi.fn().mockResolvedValue(soloEfectivo) };
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/ingresos",
-      headers: authAdmin(), payload: { fecha: "2026-05-05", semana: 18, sedeId: 1, efectivo: 300000 },
+      method: "POST",
+      url: "/api/v1/ingresos",
+      headers: authAdmin(),
+      payload: { fecha: "2026-05-05", semana: 18, sedeId: 1, efectivo: 300000 },
     });
     expect(res.statusCode).toBe(201);
   });
@@ -143,7 +159,8 @@ describe("GET /api/v1/ingresos", () => {
     prisma.ingreso = { findMany: vi.fn().mockResolvedValue([ingresoMock]) };
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/ingresos",
+      method: "GET",
+      url: "/api/v1/ingresos",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(200);
@@ -155,7 +172,8 @@ describe("GET /api/v1/ingresos", () => {
     prisma.ingreso = { findMany: vi.fn().mockResolvedValue([ingresoMock]) };
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/ingresos?semana=18&sedeId=1",
+      method: "GET",
+      url: "/api/v1/ingresos?semana=18&sedeId=1",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(200);
@@ -175,7 +193,8 @@ describe("GET /api/v1/ingresos/:id", () => {
     prisma.ingreso = { findUnique: vi.fn().mockResolvedValue(null) };
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/ingresos/999",
+      method: "GET",
+      url: "/api/v1/ingresos/999",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(404);
@@ -186,7 +205,8 @@ describe("GET /api/v1/ingresos/:id", () => {
     prisma.ingreso = { findUnique: vi.fn().mockResolvedValue(ingresoMock) };
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/ingresos/1",
+      method: "GET",
+      url: "/api/v1/ingresos/1",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(200);
@@ -199,7 +219,8 @@ describe("GET /api/v1/ingresos/:id", () => {
 describe("PATCH /api/v1/ingresos/:id", () => {
   it("debería retornar 401 sin token", async () => {
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/ingresos/1",
+      method: "PATCH",
+      url: "/api/v1/ingresos/1",
       payload: { efectivo: 400000 },
     });
     expect(res.statusCode).toBe(401);
@@ -210,8 +231,10 @@ describe("PATCH /api/v1/ingresos/:id", () => {
     prisma.ingreso = { findUnique: vi.fn().mockResolvedValue(null) };
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/ingresos/999",
-      headers: authAdmin(), payload: { efectivo: 400000 },
+      method: "PATCH",
+      url: "/api/v1/ingresos/999",
+      headers: authAdmin(),
+      payload: { efectivo: 400000 },
     });
     expect(res.statusCode).toBe(404);
   });
@@ -222,12 +245,14 @@ describe("PATCH /api/v1/ingresos/:id", () => {
     mockSesion(sesionAdminMock);
     prisma.ingreso = {
       findUnique: vi.fn().mockResolvedValue(ingresoMock),
-      update:     vi.fn().mockResolvedValue(actualizado),
+      update: vi.fn().mockResolvedValue(actualizado),
     };
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/ingresos/1",
-      headers: authAdmin(), payload: { efectivo: 400000 },
+      method: "PATCH",
+      url: "/api/v1/ingresos/1",
+      headers: authAdmin(),
+      payload: { efectivo: 400000 },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().total).toBe(550000);
@@ -238,7 +263,10 @@ describe("PATCH /api/v1/ingresos/:id", () => {
 
 describe("DELETE /api/v1/ingresos/:id", () => {
   it("debería retornar 401 sin token", async () => {
-    const res = await app.inject({ method: "DELETE", url: "/api/v1/ingresos/1" });
+    const res = await app.inject({
+      method: "DELETE",
+      url: "/api/v1/ingresos/1",
+    });
     expect(res.statusCode).toBe(401);
   });
 
@@ -246,7 +274,8 @@ describe("DELETE /api/v1/ingresos/:id", () => {
     mockSesion(sesionBodegaMock);
 
     const res = await app.inject({
-      method: "DELETE", url: "/api/v1/ingresos/1",
+      method: "DELETE",
+      url: "/api/v1/ingresos/1",
       headers: authBodega(),
     });
     expect(res.statusCode).toBe(403);
@@ -257,7 +286,8 @@ describe("DELETE /api/v1/ingresos/:id", () => {
     prisma.ingreso = { findUnique: vi.fn().mockResolvedValue(null) };
 
     const res = await app.inject({
-      method: "DELETE", url: "/api/v1/ingresos/999",
+      method: "DELETE",
+      url: "/api/v1/ingresos/999",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(404);
@@ -267,11 +297,12 @@ describe("DELETE /api/v1/ingresos/:id", () => {
     mockSesion(sesionAdminMock);
     prisma.ingreso = {
       findUnique: vi.fn().mockResolvedValue(ingresoMock),
-      delete:     vi.fn().mockResolvedValue(ingresoMock),
+      delete: vi.fn().mockResolvedValue(ingresoMock),
     };
 
     const res = await app.inject({
-      method: "DELETE", url: "/api/v1/ingresos/1",
+      method: "DELETE",
+      url: "/api/v1/ingresos/1",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(200);
@@ -283,7 +314,8 @@ describe("DELETE /api/v1/ingresos/:id", () => {
 describe("GET /api/v1/ingresos/resumen-semanal", () => {
   it("debería retornar 401 sin token", async () => {
     const res = await app.inject({
-      method: "GET", url: "/api/v1/ingresos/resumen-semanal?semana=18",
+      method: "GET",
+      url: "/api/v1/ingresos/resumen-semanal?semana=18",
     });
     expect(res.statusCode).toBe(401);
   });
@@ -291,14 +323,21 @@ describe("GET /api/v1/ingresos/resumen-semanal", () => {
   it("debería retornar 200 con resumen por sede incluyendo totales", async () => {
     mockSesion(sesionAdminMock);
     prisma.ingreso = {
-      groupBy: vi.fn().mockResolvedValue([
-        { sedeId: 1, _sum: { efectivo: 300000, cuentas: 150000, total: 450000 }, _count: { id: 2 } },
-      ]),
+      groupBy: vi
+        .fn()
+        .mockResolvedValue([
+          {
+            sedeId: 1,
+            _sum: { efectivo: 300000, cuentas: 150000, total: 450000 },
+            _count: { id: 2 },
+          },
+        ]),
     };
     prisma.sede.findMany.mockResolvedValue([{ id: 1, nombre: "Bogotá" }]);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/ingresos/resumen-semanal?semana=18",
+      method: "GET",
+      url: "/api/v1/ingresos/resumen-semanal?semana=18",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(200);
@@ -313,7 +352,8 @@ describe("GET /api/v1/ingresos/resumen-semanal", () => {
 describe("GET /api/v1/ingresos/totales-dia", () => {
   it("debería retornar 401 sin token", async () => {
     const res = await app.inject({
-      method: "GET", url: "/api/v1/ingresos/totales-dia?semana=18",
+      method: "GET",
+      url: "/api/v1/ingresos/totales-dia?semana=18",
     });
     expect(res.statusCode).toBe(401);
   });
@@ -321,13 +361,19 @@ describe("GET /api/v1/ingresos/totales-dia", () => {
   it("debería retornar 200 con los totales por día", async () => {
     mockSesion(sesionAdminMock);
     prisma.ingreso = {
-      groupBy: vi.fn().mockResolvedValue([
-        { fecha: new Date("2026-05-05"), _sum: { efectivo: 300000, cuentas: 150000, total: 450000 } },
-      ]),
+      groupBy: vi
+        .fn()
+        .mockResolvedValue([
+          {
+            fecha: new Date("2026-05-05"),
+            _sum: { efectivo: 300000, cuentas: 150000, total: 450000 },
+          },
+        ]),
     };
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/ingresos/totales-dia?semana=18",
+      method: "GET",
+      url: "/api/v1/ingresos/totales-dia?semana=18",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(200);

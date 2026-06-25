@@ -22,9 +22,7 @@ const login = async (request, reply) => {
     path: "/api/v1/auth/refresh",
   });
 
-  // No enviar refresh token en el body - solo access token
-  const { refreshToken: _, ...rest } = result;
-  return reply.code(200).send(rest);
+  return reply.code(200).send(result);
 };
 
 const refresh = async (request, reply) => {
@@ -46,8 +44,7 @@ const refresh = async (request, reply) => {
     path: "/api/v1/auth/refresh",
   });
 
-  const { refreshToken: _, ...rest } = result;
-  return reply.code(200).send(rest);
+  return reply.code(200).send(result);
 };
 
 const logout = async (request, reply) => {

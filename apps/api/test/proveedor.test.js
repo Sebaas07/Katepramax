@@ -9,7 +9,7 @@
  *  DELETE /api/v1/proveedores/:id      (solo Admin)
  */
 const { buildApp } = require("../src/app");
-const { prisma }   = require("./__mocks__/prisma");
+const { prisma } = require("./__mocks__/prisma");
 
 // ── Datos de prueba ───────────────────────────────────────────────────────────
 
@@ -40,15 +40,11 @@ let tokenAdmin;
 let tokenBodega;
 
 beforeAll(async () => {
-  process.env.NODE_ENV     = "test";
-  process.env.JWT_SECRET   = "test-secret-clave-super-segura-32chars";
-  process.env.DATABASE_URL = "mysql://mock:mock@localhost/mock";
-
   app = await buildApp();
   app.prisma = prisma;
   await app.ready();
 
-  tokenAdmin  = app.jwt.sign({ sesionId: 10 }, { expiresIn: "15m" });
+  tokenAdmin = app.jwt.sign({ sesionId: 10 }, { expiresIn: "15m" });
   tokenBodega = app.jwt.sign({ sesionId: 11 }, { expiresIn: "15m" });
 });
 
@@ -210,7 +206,11 @@ describe("POST /api/v1/proveedores", () => {
   it("debería retornar 201 al crear correctamente", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.proveedor.findFirst.mockResolvedValue(null); // nombre libre
-    prisma.proveedor.create.mockResolvedValue({ ...proveedorMock, id: 2, nombre: "Nuevo Proveedor" });
+    prisma.proveedor.create.mockResolvedValue({
+      ...proveedorMock,
+      id: 2,
+      nombre: "Nuevo Proveedor",
+    });
 
     const res = await app.inject({
       method: "POST",
@@ -257,7 +257,10 @@ describe("PATCH /api/v1/proveedores/:id", () => {
   it("debería retornar 409 si el nuevo nombre ya pertenece a otro proveedor", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
-    prisma.proveedor.findFirst.mockResolvedValue({ id: 2, nombre: "Nombre Colision" }); // colisión
+    prisma.proveedor.findFirst.mockResolvedValue({
+      id: 2,
+      nombre: "Nombre Colision",
+    }); // colisión
 
     const res = await app.inject({
       method: "PATCH",
@@ -273,7 +276,10 @@ describe("PATCH /api/v1/proveedores/:id", () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
     prisma.proveedor.findFirst.mockResolvedValue(null); // sin colisión
-    prisma.proveedor.update.mockResolvedValue({ ...proveedorMock, nombre: "Cemex Editado" });
+    prisma.proveedor.update.mockResolvedValue({
+      ...proveedorMock,
+      nombre: "Cemex Editado",
+    });
 
     const res = await app.inject({
       method: "PATCH",
@@ -318,7 +324,10 @@ describe("DELETE /api/v1/proveedores/:id", () => {
   it("debería retornar 200 al desactivar correctamente (Admin)", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
-    prisma.proveedor.update.mockResolvedValue({ ...proveedorMock, activo: false });
+    prisma.proveedor.update.mockResolvedValue({
+      ...proveedorMock,
+      activo: false,
+    });
 
     const res = await app.inject({
       method: "DELETE",

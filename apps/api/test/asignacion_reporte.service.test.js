@@ -6,6 +6,7 @@ const asignacionSvc = require("../src/services/asignacion.service");
 const reporteSvc    = require("../src/services/reporte.service");
 
 const appMock = { prisma };
+const usuarioBodega = { id: 2, rol: "Bodega", sedeId: 1 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ASIGNACION SERVICE
@@ -13,13 +14,13 @@ const appMock = { prisma };
 
 const svc = asignacionSvc(appMock);
 
-const pedidoPendiente  = { id: 1, estado: "Pendiente", clienteId: 1 };
+const pedidoPendiente  = { id: 1, estado: "Pendiente", clienteId: 1, sedeId: 1 };
 const entregadorActivo = { id: 3, nombreCompleto: "Carlos", rol: "Entregador", activo: true };
 const asignacionMock = {
   id: 1, pedidoId: 1, entregadorId: 3, asignadoPorId: 2, estado: "Pendiente",
   montoCobrado: null, metodoPago: null, fechaConfirmada: null,
   observacionesEntrega: null, asignadoEn: new Date(),
-  pedido: { id: 1, estado: "Asignado", observaciones: null,
+  pedido: { id: 1, estado: "Asignado", sedeId: 1, observaciones: null,
             cliente: { id: 1, nombre: "Juan", telefono: null } },
   entregador: { id: 3, nombreCompleto: "Carlos", telefono: null },
   asignador:  { id: 2, nombreCompleto: "Bodega" },
@@ -29,7 +30,7 @@ describe("asignacionService.crear", () => {
   it("debería lanzar 404 si el pedido no existe", async () => {
     prisma.pedido = { findUnique: vi.fn().mockResolvedValue(null) };
 
-    await expect(svc.crear({ pedidoId: 1, entregadorId: 3 }, 2)).rejects.toMatchObject({
+    await expect(svc.crear({ pedidoId: 1, entregadorId: 3 }, 2, usuarioBodega)).rejects.toMatchObject({
       statusCode: 404, message: expect.stringMatching(/pedido/i),
     });
   });
@@ -37,7 +38,7 @@ describe("asignacionService.crear", () => {
   it("debería lanzar 400 si el pedido no está Pendiente", async () => {
     prisma.pedido = { findUnique: vi.fn().mockResolvedValue({ ...pedidoPendiente, estado: "Asignado" }) };
 
-    await expect(svc.crear({ pedidoId: 1, entregadorId: 3 }, 2)).rejects.toMatchObject({
+    await expect(svc.crear({ pedidoId: 1, entregadorId: 3 }, 2, usuarioBodega)).rejects.toMatchObject({
       statusCode: 400, message: expect.stringMatching(/pendiente/i),
     });
   });
@@ -46,7 +47,7 @@ describe("asignacionService.crear", () => {
     prisma.pedido = { findUnique: vi.fn().mockResolvedValue(pedidoPendiente) };
     prisma.usuario.findUnique.mockResolvedValue(null);
 
-    await expect(svc.crear({ pedidoId: 1, entregadorId: 99 }, 2)).rejects.toMatchObject({
+    await expect(svc.crear({ pedidoId: 1, entregadorId: 99 }, 2, usuarioBodega)).rejects.toMatchObject({
       statusCode: 404, message: expect.stringMatching(/entregador/i),
     });
   });
@@ -55,7 +56,7 @@ describe("asignacionService.crear", () => {
     prisma.pedido = { findUnique: vi.fn().mockResolvedValue(pedidoPendiente) };
     prisma.usuario.findUnique.mockResolvedValue({ ...entregadorActivo, rol: "Bodega" });
 
-    await expect(svc.crear({ pedidoId: 1, entregadorId: 3 }, 2)).rejects.toMatchObject({
+    await expect(svc.crear({ pedidoId: 1, entregadorId: 3 }, 2, usuarioBodega)).rejects.toMatchObject({
       statusCode: 400,
     });
   });
@@ -64,7 +65,7 @@ describe("asignacionService.crear", () => {
     prisma.pedido = { findUnique: vi.fn().mockResolvedValue(pedidoPendiente) };
     prisma.usuario.findUnique.mockResolvedValue({ ...entregadorActivo, activo: false });
 
-    await expect(svc.crear({ pedidoId: 1, entregadorId: 3 }, 2)).rejects.toMatchObject({
+    await expect(svc.crear({ pedidoId: 1, entregadorId: 3 }, 2, usuarioBodega)).rejects.toMatchObject({
       statusCode: 400, message: expect.stringMatching(/inactivo/i),
     });
   });
@@ -83,7 +84,7 @@ describe("asignacionService.crear", () => {
     });
     prisma.asignacionEntrega.findUnique.mockResolvedValue(asignacionMock);
 
-    const result = await svc.crear({ pedidoId: 1, entregadorId: 3 }, 2);
+    const result = await svc.crear({ pedidoId: 1, entregadorId: 3 }, 2, usuarioBodega);
 
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(result.id).toBe(1);
@@ -94,7 +95,7 @@ describe("asignacionService.obtenerPorId", () => {
   it("debería retornar la asignación si existe", async () => {
     prisma.asignacionEntrega.findUnique.mockResolvedValue(asignacionMock);
 
-    const result = await svc.obtenerPorId(1);
+    const result = await svc.obtenerPorId(1, usuarioBodega);
 
     expect(result.id).toBe(1);
   });
@@ -102,7 +103,7 @@ describe("asignacionService.obtenerPorId", () => {
   it("debería lanzar 404 si no existe", async () => {
     prisma.asignacionEntrega.findUnique.mockResolvedValue(null);
 
-    await expect(svc.obtenerPorId(999)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(svc.obtenerPorId(999, usuarioBodega)).rejects.toMatchObject({ statusCode: 404 });
   });
 });
 
@@ -236,7 +237,7 @@ function mockArqueoBase() {
   };
   prisma.inventario = {
     groupBy:   vi.fn().mockResolvedValue([]),
-    aggregate: vi.fn().mockResolvedValue({ _sum: { costo: 150000 } }),
+    aggregate: vi.fn().mockResolvedValue({ _sum: { costoUnitario: 150000 } }),
   };
 }
 
@@ -336,7 +337,7 @@ describe("reporteService.historialSemanal", () => {
       { semana: 18, _sum: { valorPagado: 20000 } },
     ]) };
     prisma.inventario = { groupBy: vi.fn().mockResolvedValue([
-      { semana: 18, _sum: { costo: 150000 } },
+      { semana: 18, _sum: { costoUnitario: 150000 } },
     ]) };
 
     const result = await reporteSvc.historialSemanal(appMock);

@@ -36,7 +36,7 @@ async function registrar(app, body, usuario) {
     proveedorId: body.proveedorId,
     sedeId,
     valorPagado: numeroPositivo(body.valorPagado, "valor de abono"),
-    observacion: sanitizarTexto(body.observacion) || null,
+    observacion: body.observacion === undefined ? null : sanitizarTexto(body.observacion),
   });
 }
 
@@ -82,7 +82,7 @@ async function editar(app, id, body, usuario) {
   await obtenerPorId(app, id, usuario);
   const data = {};
   if (body.valorPagado !== undefined) data.valorPagado = numeroPositivo(body.valorPagado, "valor de abono");
-  if (body.observacion !== undefined) data.observacion = sanitizarTexto(body.observacion) || null;
+  if (body.observacion !== undefined) data.observacion = sanitizarTexto(body.observacion);
   return repo.actualizar(app.prisma, id, data);
 }
 

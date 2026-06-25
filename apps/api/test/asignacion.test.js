@@ -2,38 +2,58 @@
  * Tests de integración — rutas HTTP de AsignacionEntrega
  */
 const { buildApp } = require("../src/app");
-const { prisma }   = require("./__mocks__/prisma");
+const { prisma } = require("./__mocks__/prisma");
 
 // ── Datos de prueba ───────────────────────────────────────────────────────────
 
-const pedidoPendienteMock = { id: 1, estado: "Pendiente", clienteId: 1 };
+const pedidoPendienteMock = {
+  id: 1,
+  estado: "Pendiente",
+  clienteId: 1,
+  sedeId: 1,
+};
 const entregadorMock = {
-  id: 3, nombreCompleto: "Carlos Entregador",
-  rol: "Entregador", activo: true,
+  id: 3,
+  nombreCompleto: "Carlos Entregador",
+  rol: "Entregador",
+  activo: true,
 };
 
 const asignacionMock = {
-  id: 1, pedidoId: 1, entregadorId: 3, asignadoPorId: 2,
-  estado: "Pendiente", montoCobrado: null, metodoPago: null,
-  fechaConfirmada: null, observacionesEntrega: null, asignadoEn: new Date(),
+  id: 1,
+  pedidoId: 1,
+  entregadorId: 3,
+  asignadoPorId: 2,
+  estado: "Pendiente",
+  montoCobrado: null,
+  metodoPago: null,
+  fechaConfirmada: null,
+  observacionesEntrega: null,
+  asignadoEn: new Date(),
   pedido: {
-    id: 1, estado: "Asignado", observaciones: null,
+    id: 1,
+    estado: "Asignado",
+    observaciones: null,
     cliente: { id: 1, nombre: "Juan Pérez", telefono: null },
   },
   entregador: { id: 3, nombreCompleto: "Carlos Entregador", telefono: null },
-  asignador:  { id: 2, nombreCompleto: "Bodega User" },
+  asignador: { id: 2, nombreCompleto: "Bodega User" },
 };
 
 const sesionAdminMock = {
-  id: 10, activa: true, expiraEn: new Date(Date.now() + 86400000),
+  id: 10,
+  activa: true,
+  expiraEn: new Date(Date.now() + 86400000),
   usuario: { id: 1, usuario: "admin", rol: "Admin", sedeId: 1, activo: true },
 };
 const sesionBodegaMock = {
-  ...sesionAdminMock, id: 11,
+  ...sesionAdminMock,
+  id: 11,
   usuario: { ...sesionAdminMock.usuario, id: 2, rol: "Bodega" },
 };
 const sesionEntregadorMock = {
-  ...sesionAdminMock, id: 12,
+  ...sesionAdminMock,
+  id: 12,
   usuario: { ...sesionAdminMock.usuario, id: 3, rol: "Entregador" },
 };
 
@@ -42,31 +62,45 @@ const sesionEntregadorMock = {
 let app, tokenAdmin, tokenBodega, tokenEntregador;
 
 beforeAll(async () => {
-  process.env.NODE_ENV     = "test";
-  process.env.JWT_SECRET   = "test-secret-clave-super-segura-32chars";
-  process.env.DATABASE_URL = "mysql://mock:mock@localhost/mock";
-
   app = await buildApp();
   app.prisma = prisma;
   await app.ready();
 
-  tokenAdmin      = app.jwt.sign({ sesionId: 10 });
-  tokenBodega     = app.jwt.sign({ sesionId: 11 });
+  tokenAdmin = app.jwt.sign({ sesionId: 10 });
+  tokenBodega = app.jwt.sign({ sesionId: 11 });
   tokenEntregador = app.jwt.sign({ sesionId: 12 });
+}, 30000);
+
+afterAll(async () => {
+  await app.close();
 });
 
-afterAll(async () => { await app.close(); });
-
-function authAdmin()      { return { Authorization: `Bearer ${tokenAdmin}` }; }
-function authBodega()     { return { Authorization: `Bearer ${tokenBodega}` }; }
-function authEntregador() { return { Authorization: `Bearer ${tokenEntregador}` }; }
-function mockSesion(mock) { prisma.sesion.findFirst.mockResolvedValue(mock); }
+function authAdmin() {
+  return { Authorization: `Bearer ${tokenAdmin}` };
+}
+function authBodega() {
+  return { Authorization: `Bearer ${tokenBodega}` };
+}
+function authEntregador() {
+  return { Authorization: `Bearer ${tokenEntregador}` };
+}
+function mockSesion(mock) {
+  prisma.sesion.findFirst.mockResolvedValue(mock);
+}
 
 // Helpers: mockear métodos individuales, NUNCA reemplazar el objeto entero
-function mockPedidoFindUnique(v)      { prisma.pedido.findUnique.mockResolvedValue(v); }
-function mockAsigFindUnique(v)        { prisma.asignacionEntrega.findUnique.mockResolvedValue(v); }
-function mockAsigFindMany(v)          { prisma.asignacionEntrega.findMany.mockResolvedValue(v); }
-function mockAsigUpdate(v)            { prisma.asignacionEntrega.update.mockResolvedValue(v); }
+function mockPedidoFindUnique(v) {
+  prisma.pedido.findUnique.mockResolvedValue(v);
+}
+function mockAsigFindUnique(v) {
+  prisma.asignacionEntrega.findUnique.mockResolvedValue(v);
+}
+function mockAsigFindMany(v) {
+  prisma.asignacionEntrega.findMany.mockResolvedValue(v);
+}
+function mockAsigUpdate(v) {
+  prisma.asignacionEntrega.update.mockResolvedValue(v);
+}
 
 // ── POST /api/v1/asignaciones ─────────────────────────────────────────────────
 
@@ -77,8 +111,9 @@ describe("POST /api/v1/asignaciones", () => {
 
   it("debería retornar 401 sin token", async () => {
     const res = await app.inject({
-      method: "POST", url: "/api/v1/asignaciones",
-      payload,  // body válido, sin token
+      method: "POST",
+      url: "/api/v1/asignaciones",
+      payload, // body válido, sin token
     });
     expect(res.statusCode).toBe(401);
   });
@@ -87,8 +122,10 @@ describe("POST /api/v1/asignaciones", () => {
     mockSesion(sesionEntregadorMock);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/asignaciones",
-      headers: authEntregador(), payload,
+      method: "POST",
+      url: "/api/v1/asignaciones",
+      headers: authEntregador(),
+      payload,
     });
     expect(res.statusCode).toBe(403);
   });
@@ -98,8 +135,10 @@ describe("POST /api/v1/asignaciones", () => {
     mockPedidoFindUnique(null);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/asignaciones",
-      headers: authBodega(), payload,
+      method: "POST",
+      url: "/api/v1/asignaciones",
+      headers: authBodega(),
+      payload,
     });
     expect(res.statusCode).toBe(404);
   });
@@ -109,8 +148,10 @@ describe("POST /api/v1/asignaciones", () => {
     mockPedidoFindUnique({ ...pedidoPendienteMock, estado: "Asignado" });
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/asignaciones",
-      headers: authBodega(), payload,
+      method: "POST",
+      url: "/api/v1/asignaciones",
+      headers: authBodega(),
+      payload,
     });
     expect(res.statusCode).toBe(400);
   });
@@ -121,8 +162,10 @@ describe("POST /api/v1/asignaciones", () => {
     prisma.usuario.findUnique.mockResolvedValue(null);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/asignaciones",
-      headers: authBodega(), payload,
+      method: "POST",
+      url: "/api/v1/asignaciones",
+      headers: authBodega(),
+      payload,
     });
     expect(res.statusCode).toBe(404);
   });
@@ -130,11 +173,16 @@ describe("POST /api/v1/asignaciones", () => {
   it("debería retornar 400 si el usuario no tiene rol Entregador", async () => {
     mockSesion(sesionBodegaMock);
     mockPedidoFindUnique(pedidoPendienteMock);
-    prisma.usuario.findUnique.mockResolvedValue({ ...entregadorMock, rol: "Bodega" });
+    prisma.usuario.findUnique.mockResolvedValue({
+      ...entregadorMock,
+      rol: "Bodega",
+    });
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/asignaciones",
-      headers: authBodega(), payload,
+      method: "POST",
+      url: "/api/v1/asignaciones",
+      headers: authBodega(),
+      payload,
     });
     expect(res.statusCode).toBe(400);
   });
@@ -142,11 +190,16 @@ describe("POST /api/v1/asignaciones", () => {
   it("debería retornar 400 si el entregador está inactivo", async () => {
     mockSesion(sesionBodegaMock);
     mockPedidoFindUnique(pedidoPendienteMock);
-    prisma.usuario.findUnique.mockResolvedValue({ ...entregadorMock, activo: false });
+    prisma.usuario.findUnique.mockResolvedValue({
+      ...entregadorMock,
+      activo: false,
+    });
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/asignaciones",
-      headers: authBodega(), payload,
+      method: "POST",
+      url: "/api/v1/asignaciones",
+      headers: authBodega(),
+      payload,
     });
     expect(res.statusCode).toBe(400);
   });
@@ -159,8 +212,10 @@ describe("POST /api/v1/asignaciones", () => {
     mockAsigFindUnique(asignacionMock);
 
     const res = await app.inject({
-      method: "POST", url: "/api/v1/asignaciones",
-      headers: authBodega(), payload,
+      method: "POST",
+      url: "/api/v1/asignaciones",
+      headers: authBodega(),
+      payload,
     });
     expect(res.statusCode).toBe(201);
     expect(res.json().pedidoId).toBe(1);
@@ -171,7 +226,10 @@ describe("POST /api/v1/asignaciones", () => {
 
 describe("GET /api/v1/asignaciones", () => {
   it("debería retornar 401 sin token", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/asignaciones" });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/asignaciones",
+    });
     expect(res.statusCode).toBe(401);
   });
 
@@ -179,7 +237,8 @@ describe("GET /api/v1/asignaciones", () => {
     mockSesion(sesionEntregadorMock);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/asignaciones",
+      method: "GET",
+      url: "/api/v1/asignaciones",
       headers: authEntregador(),
     });
     expect(res.statusCode).toBe(403);
@@ -190,7 +249,8 @@ describe("GET /api/v1/asignaciones", () => {
     mockAsigFindMany([asignacionMock]);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/asignaciones",
+      method: "GET",
+      url: "/api/v1/asignaciones",
       headers: authBodega(),
     });
     expect(res.statusCode).toBe(200);
@@ -202,7 +262,10 @@ describe("GET /api/v1/asignaciones", () => {
 
 describe("GET /api/v1/asignaciones/mis-entregas", () => {
   it("debería retornar 401 sin token", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/asignaciones/mis-entregas" });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/asignaciones/mis-entregas",
+    });
     expect(res.statusCode).toBe(401);
   });
 
@@ -211,7 +274,8 @@ describe("GET /api/v1/asignaciones/mis-entregas", () => {
     mockAsigFindMany([asignacionMock]);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/asignaciones/mis-entregas",
+      method: "GET",
+      url: "/api/v1/asignaciones/mis-entregas",
       headers: authEntregador(),
     });
     expect(res.statusCode).toBe(200);
@@ -222,7 +286,10 @@ describe("GET /api/v1/asignaciones/mis-entregas", () => {
 
 describe("GET /api/v1/asignaciones/:id", () => {
   it("debería retornar 401 sin token", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/asignaciones/1" });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/asignaciones/1",
+    });
     expect(res.statusCode).toBe(401);
   });
 
@@ -231,7 +298,8 @@ describe("GET /api/v1/asignaciones/:id", () => {
     mockAsigFindUnique(null);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/asignaciones/999",
+      method: "GET",
+      url: "/api/v1/asignaciones/999",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(404);
@@ -242,7 +310,8 @@ describe("GET /api/v1/asignaciones/:id", () => {
     mockAsigFindUnique(asignacionMock);
 
     const res = await app.inject({
-      method: "GET", url: "/api/v1/asignaciones/1",
+      method: "GET",
+      url: "/api/v1/asignaciones/1",
       headers: authAdmin(),
     });
     expect(res.statusCode).toBe(200);
@@ -255,7 +324,8 @@ describe("GET /api/v1/asignaciones/:id", () => {
 describe("PATCH /api/v1/asignaciones/:id/estado", () => {
   it("debería retornar 401 sin token", async () => {
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/asignaciones/1/estado",
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
       payload: { nuevoEstado: "EnRuta" },
     });
     expect(res.statusCode).toBe(401);
@@ -266,8 +336,10 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
     mockAsigFindUnique(null);
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/asignaciones/999/estado",
-      headers: authEntregador(), payload: { nuevoEstado: "EnRuta" },
+      method: "PATCH",
+      url: "/api/v1/asignaciones/999/estado",
+      headers: authEntregador(),
+      payload: { nuevoEstado: "EnRuta" },
     });
     expect(res.statusCode).toBe(404);
   });
@@ -277,8 +349,10 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
     mockAsigFindUnique({ ...asignacionMock, entregadorId: 99 });
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/asignaciones/1/estado",
-      headers: authEntregador(), payload: { nuevoEstado: "EnRuta" },
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: { nuevoEstado: "EnRuta" },
     });
     expect(res.statusCode).toBe(403);
   });
@@ -288,8 +362,10 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
     mockAsigFindUnique({ ...asignacionMock, estado: "Entregado" });
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/asignaciones/1/estado",
-      headers: authEntregador(), payload: { nuevoEstado: "EnRuta" },
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: { nuevoEstado: "EnRuta" },
     });
     expect(res.statusCode).toBe(400);
   });
@@ -299,7 +375,8 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
     mockAsigFindUnique({ ...asignacionMock, estado: "EnRuta" });
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/asignaciones/1/estado",
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
       headers: authEntregador(),
       payload: { nuevoEstado: "Entregado", metodoPago: "Efectivo" },
     });
@@ -313,15 +390,22 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
     mockAsigUpdate(enRuta);
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/asignaciones/1/estado",
-      headers: authEntregador(), payload: { nuevoEstado: "EnRuta" },
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: { nuevoEstado: "EnRuta" },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().estado).toBe("EnRuta");
   });
 
   it("debería retornar 200 al confirmar Entregado con todos los campos", async () => {
-    const entregado = { ...asignacionMock, estado: "Entregado", montoCobrado: 50000, metodoPago: "Efectivo" };
+    const entregado = {
+      ...asignacionMock,
+      estado: "Entregado",
+      montoCobrado: 50000,
+      metodoPago: "Efectivo",
+    };
     mockSesion(sesionEntregadorMock);
     prisma.asignacionEntrega.findUnique
       .mockResolvedValueOnce({ ...asignacionMock, estado: "EnRuta" })
@@ -329,15 +413,20 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
     prisma.$transaction.mockImplementation(async (fn) => {
       await fn({
         asignacionEntrega: { update: vi.fn() },
-        pedido:            { update: vi.fn() },
-        cliente:           { update: vi.fn() },
+        pedido: { update: vi.fn() },
+        cliente: { update: vi.fn() },
       });
     });
 
     const res = await app.inject({
-      method: "PATCH", url: "/api/v1/asignaciones/1/estado",
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
       headers: authEntregador(),
-      payload: { nuevoEstado: "Entregado", montoCobrado: 50000, metodoPago: "Efectivo" },
+      payload: {
+        nuevoEstado: "Entregado",
+        montoCobrado: 50000,
+        metodoPago: "Efectivo",
+      },
     });
     expect(res.statusCode).toBe(200);
   });
