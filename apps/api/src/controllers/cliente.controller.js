@@ -34,4 +34,10 @@ async function desactivar(request, reply) {
   return reply.send(result);
 }
 
-module.exports = { listar, obtenerPorId, crear, actualizar, desactivar };
+async function abonar(request, reply) {
+  const svc    = clienteService(request.server.prisma);
+  const result = await svc.abonar(Number(request.params.id), request.body.monto, request.user);
+  return reply.send(result);
+}
+
+module.exports = { listar, obtenerPorId, crear, actualizar, desactivar, abonar };

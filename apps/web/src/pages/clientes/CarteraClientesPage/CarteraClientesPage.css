@@ -1,0 +1,42 @@
+.cc-page {
+  min-height: 100vh;
+}
+
+.cc-spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+}
+
+.cc-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--outline-variant);
+  border-top-color: var(--secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.cc-abono-info {
+  font-family: var(--font-label);
+  font-size: 14px;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.cc-abono-saldo {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+  margin: 0 0 0.5rem 0;
+}

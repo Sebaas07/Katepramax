@@ -17,6 +17,7 @@ import InventarioPage   from "@/pages/inventario/InventarioPage/InventarioPage";
 import ProductosPage    from "@/pages/productos/ProductosPage/ProductosPage";
 import PedidosPage      from "@/pages/pedidos/PedidosPage/PedidosPage";
 import ClientesPage     from "@/pages/clientes/ClientePage/ClientePage";
+import CarteraClientesPage from "@/pages/clientes/CarteraClientesPage/CarteraClientesPage";
 import ProveedoresPage  from "@/pages/proveedores/ProveedoresPage/ProveedoresPage";
 import DistribucionPage from "@/pages/distribucion/DistribucionPage/DistribucionPage";
 import ContabilidadPage from "@/pages/contabilidad/ContabilidadPage/ContabilidadPage";
@@ -75,6 +76,7 @@ const AppRouter = () => (
           <Route path="/productos"    element={<ProductosPage />} />
           <Route path="/distribucion" element={<DistribucionPage />} />
           <Route path="/clientes"     element={<ClientesPage />} />
+          <Route path="/clientes/cartera" element={<CarteraClientesPage />} />
           <Route path="/proveedores"  element={<ProveedoresPage />} />
           <Route path="/contabilidad" element={<ContabilidadPage />} />
           <Route path="/reportes"     element={

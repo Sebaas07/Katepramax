@@ -13,6 +13,9 @@ async function clienteRoutes(app) {
 
   // Desactivar: solo Admin
   app.delete("/clientes/:id",   { schema: schemas.desactivarCliente, ...soloAdmin  }, ctrl.desactivar);
+
+  // Abonar a deuda: Admin y Bodega
+  app.post("/clientes/:id/abonar", { schema: schemas.abonarCliente, ...adminOBodega }, ctrl.abonar);
 }
 
 module.exports = clienteRoutes;

@@ -77,6 +77,21 @@ const clientesService = {
       throw error;
     }
   },
+
+  abonarCliente: async (id, monto) => {
+    try {
+      if (!id) throw new Error("Se requiere el ID del cliente.");
+      const valor = parseFloat(monto);
+      if (isNaN(valor) || valor <= 0) {
+        throw new Error("El monto del abono debe ser mayor a 0.");
+      }
+      const clienteActualizado = await clientesApi.abonarCliente(id, valor);
+      return clienteActualizado;
+    } catch (error) {
+      console.error("Error en clientesService.abonarCliente:", error);
+      throw error;
+    }
+  },
 };
 
 export default clientesService;

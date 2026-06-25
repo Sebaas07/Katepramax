@@ -89,6 +89,7 @@ const editarCliente = {
       telefono: { type: "string", maxLength: 20 },
       activo: { type: "boolean" },
       limiteCredito: { type: "number", minimum: 0 },
+      saldoDeuda: { type: "number", minimum: 0 }, 
     },
     additionalProperties: false,
   },
@@ -114,10 +115,36 @@ const desactivarCliente = {
   },
 };
 
+// POST /api/clientes/:id/abonar
+const abonarCliente = {
+  summary: "Abonar a la deuda de un cliente",
+  tags: ["Clientes"],
+  security: [{ bearerAuth: [] }],
+  params: {
+    type: "object",
+    required: ["id"],
+    properties: { id: { type: "string", pattern: "^[0-9]+$" } },
+  },
+  body: {
+    type: "object",
+    required: ["monto"],
+    properties: {
+      monto: { type: "number", minimum: 0.01 },
+    },
+    additionalProperties: false,
+  },
+  response: {
+    200: clienteBase,
+    400: { type: "object", properties: { error: { type: "string" } } },
+    404: { type: "object", properties: { error: { type: "string" } } },
+  },
+};
+
 module.exports = {
   crearCliente,
   listarClientes,
   obtenerCliente,
   editarCliente,
   desactivarCliente,
+  abonarCliente,
 };

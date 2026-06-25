@@ -27,8 +27,9 @@ const FORM_INICIAL = {
 const ClientePage = () => {
   const { esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
   const puedeEditar = esAdmin || esBodega;
-  const puedeCrear  = esAdmin || esBodega;
+  const puedeCrear = esAdmin || esBodega;
   const puedeDesactivar = esAdmin;
+  const puedeAbonar = esAdmin || esBodega;
 
   // ── Estado ────────────────────────────────────────────────
   const [clientes, setClientes] = useState([]);
@@ -55,11 +56,11 @@ const ClientePage = () => {
     }
   }, [filtros]);
 
-useEffect(() => {
-     if (!isSessionChecked || !isAuthenticated) return;
-     // eslint-disable-next-line react-hooks/set-state-in-effect
-     cargarClientes();
-   }, [cargarClientes, isSessionChecked, isAuthenticated]);
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarClientes();
+  }, [cargarClientes, isSessionChecked, isAuthenticated]);
 
   // ── Handlers ──────────────────────────────────────────────
   const handleCambioFiltro = (e) => {
@@ -84,11 +85,11 @@ useEffect(() => {
   const abrirModalEditar = (cliente) => {
     setClienteSeleccionado(cliente);
     setFormCliente({
-      nombre:        cliente.nombre        ?? "",
-      telefono:      cliente.telefono      ?? "",
+      nombre: cliente.nombre ?? "",
+      telefono: cliente.telefono ?? "",
       limiteCredito: String(cliente.limiteCredito ?? "10000000"),
-      saldoDeuda:    String(cliente.saldoDeuda    ?? "0"),
-      activo:        cliente.activo        ?? true,
+      saldoDeuda: String(cliente.saldoDeuda ?? "0"),
+      activo: cliente.activo ?? true,
     });
     setModalClienteAbierto(true);
   };
@@ -106,17 +107,20 @@ useEffect(() => {
     }
 
     const payload = {
-      nombre:        formCliente.nombre.trim(),
-      telefono:      formCliente.telefono.trim() || null,
+      nombre: formCliente.nombre.trim(),
+      telefono: formCliente.telefono.trim() || null,
       limiteCredito: parseFloat(formCliente.limiteCredito) || 10000000,
-      saldoDeuda:    parseFloat(formCliente.saldoDeuda)    || 0,
-      activo:        formCliente.activo,
+      saldoDeuda: parseFloat(formCliente.saldoDeuda) || 0,
+      activo: formCliente.activo,
     };
 
     setGuardando(true);
     try {
       if (clienteSeleccionado) {
-        await clientesService.actualizarCliente(clienteSeleccionado.id, payload);
+        await clientesService.actualizarCliente(
+          clienteSeleccionado.id,
+          payload,
+        );
         toast.success("Cliente actualizado correctamente.");
       } else {
         await clientesService.crearCliente(payload);
@@ -160,12 +164,12 @@ useEffect(() => {
 
   // ── Columnas ──────────────────────────────────────────────
   const columnas = [
-    { campo: "nombre",        label: "Nombre",         tipo: "texto"   },
-    { campo: "telefono",      label: "Teléfono",       tipo: "texto"   },
-    { campo: "saldoDeuda",    label: "Saldo deuda",    tipo: "moneda"  },
-    { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda"  },
-    { campo: "activo",        label: "Estado",         tipo: "booleano"},
-    { campo: "creadoEn",      label: "Registro",       tipo: "fecha"   },
+    { campo: "nombre", label: "Nombre", tipo: "texto" },
+    { campo: "telefono", label: "Teléfono", tipo: "texto" },
+    { campo: "saldoDeuda", label: "Saldo deuda", tipo: "moneda" },
+    { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda" },
+    { campo: "activo", label: "Estado", tipo: "booleano" },
+    { campo: "creadoEn", label: "Registro", tipo: "fecha" },
   ];
 
   const accionesCliente = (cliente) => {
@@ -231,6 +235,18 @@ useEffect(() => {
               Nuevo cliente
             </button>
           )}
+          {puedeAbonar && (
+            <button
+              className="btn-primary"
+              onClick={() => (window.location.href = "/clientes/cartera")}
+              type="button"
+            >
+              <span className="material-symbols-outlined">
+                account_balance_wallet
+              </span>
+              Cartera de clientes
+            </button>
+          )}
         </div>
       </div>
 
@@ -294,13 +310,12 @@ useEffect(() => {
             <label htmlFor="cli-limite">Límite de crédito (COP)</label>
             <input
               id="cli-limite"
-              type="number"
+              type="text" // ← CAMBIAR A TEXT
               name="limiteCredito"
               value={formCliente.limiteCredito}
               onChange={handleCambioForm}
               className="form-control"
-              min="0"
-              step="1000"
+              placeholder="0"
             />
           </div>
 
@@ -310,13 +325,12 @@ useEffect(() => {
               <label htmlFor="cli-deuda">Saldo de deuda (COP)</label>
               <input
                 id="cli-deuda"
-                type="number"
+                type="text" // ← CAMBIAR A TEXT
                 name="saldoDeuda"
                 value={formCliente.saldoDeuda}
                 onChange={handleCambioForm}
                 className="form-control"
-                min="0"
-                step="1000"
+                placeholder="0"
               />
             </div>
           )}

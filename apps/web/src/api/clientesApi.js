@@ -41,6 +41,11 @@ const clientesApi = {
     const response = await clienteApi.delete(`/clientes/${id}`);
     return response.data;
   },
+
+  abonarCliente: async (id, monto) => {
+    const response = await clienteApi.post(`/clientes/${id}/abonar`, { monto });
+    return response.data;
+  },
 };
 
 export default clientesApi;
