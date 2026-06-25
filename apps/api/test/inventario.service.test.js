@@ -1,6 +1,5 @@
 /**
  * Tests unitarios — inventario.service.js
- * El service recibe (app, ...args) directamente, no usa factory.
  */
 const { prisma } = require("./__mocks__/prisma");
 const inventarioService = require("../src/services/inventario.service");
@@ -18,6 +17,7 @@ const productoMock = {
   activo: true,
 };
 
+// FIX: campo correcto es costoUnitario, no costo
 const inventarioMock = {
   id: 1,
   fecha: new Date("2026-06-02"),
@@ -25,7 +25,8 @@ const inventarioMock = {
   sedeId: 1,
   productoId: "PROD-001",
   cantidadIngresada: 10,
-  costo: 180000,
+  costoUnitario: 18000,
+  tipo: "entrada",
   sede: { id: 1, nombre: "Sede Principal" },
   producto: {
     codigo: "PROD-001",
@@ -34,6 +35,9 @@ const inventarioMock = {
   },
 };
 
+const usuarioAdmin  = { id: 1, rol: "Admin",  sedeId: 1 };
+const usuarioBodega = { id: 2, rol: "Bodega", sedeId: 1 };
+
 // ── registrar ─────────────────────────────────────────────────────────────────
 
 describe("inventarioService.registrar", () => {
@@ -41,17 +45,12 @@ describe("inventarioService.registrar", () => {
     prisma.sede.findUnique.mockResolvedValue(null);
 
     await expect(
-      inventarioService.registrar(appMock, {
-        sedeId: 999,
-        productoId: "PROD-001",
-        cantidadIngresada: 10,
-        fecha: "2026-06-02",
-        semana: 23,
-      }),
-    ).rejects.toMatchObject({
-      statusCode: 404,
-      message: expect.stringMatching(/sede/i),
-    });
+      inventarioService.registrar(
+        appMock,
+        { sedeId: 999, productoId: "PROD-001", cantidadIngresada: 10, fecha: "2026-06-02", semana: 23 },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({ statusCode: 404, message: expect.stringMatching(/sede/i) });
   });
 
   it("debería lanzar AppError 404 si el producto no existe", async () => {
@@ -59,120 +58,141 @@ describe("inventarioService.registrar", () => {
     prisma.producto.findUnique.mockResolvedValue(null);
 
     await expect(
-      inventarioService.registrar(appMock, {
-        sedeId: 1,
-        productoId: "NO-EXISTE",
-        cantidadIngresada: 10,
-        fecha: "2026-06-02",
-        semana: 23,
-      }),
-    ).rejects.toMatchObject({
-      statusCode: 404,
-      message: expect.stringMatching(/producto/i),
-    });
+      inventarioService.registrar(
+        appMock,
+        { sedeId: 1, productoId: "NO-EXISTE", cantidadIngresada: 10, fecha: "2026-06-02", semana: 23 },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({ statusCode: 404, message: expect.stringMatching(/producto/i) });
   });
 
   it("debería lanzar AppError 422 si el producto está inactivo", async () => {
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
-    prisma.producto.findUnique.mockResolvedValue({
-      ...productoMock,
-      activo: false,
-    });
+    prisma.producto.findUnique.mockResolvedValue({ ...productoMock, activo: false });
 
     await expect(
-      inventarioService.registrar(appMock, {
-        sedeId: 1,
-        productoId: "PROD-001",
-        cantidadIngresada: 10,
-        fecha: "2026-06-02",
-        semana: 23,
-      }),
-    ).rejects.toMatchObject({
-      statusCode: 422,
-      message: expect.stringMatching(/inactivo/i),
-    });
+      inventarioService.registrar(
+        appMock,
+        { sedeId: 1, productoId: "PROD-001", cantidadIngresada: 10, fecha: "2026-06-02", semana: 23 },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({ statusCode: 422, message: expect.stringMatching(/inactivo/i) });
+  });
+
+  it("debería lanzar AppError 422 si salida deja stock negativo", async () => {
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    // stock actual = 3, quiere sacar 10
+    prisma.stockSede.findUnique.mockResolvedValue({ stockActual: 3 });
+
+    await expect(
+      inventarioService.registrar(
+        appMock,
+        { sedeId: 1, productoId: "PROD-001", cantidadIngresada: 10, tipo: "salida", fecha: "2026-06-02", semana: 23 },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({ statusCode: 422, message: expect.stringMatching(/stock insuficiente/i) });
   });
 
   it("debería normalizar la fecha a medianoche UTC", async () => {
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
     prisma.producto.findUnique.mockResolvedValue(productoMock);
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
     prisma.stockSede.upsert.mockResolvedValue({});
 
-    await inventarioService.registrar(appMock, {
-      sedeId: 1,
-      productoId: "PROD-001",
-      cantidadIngresada: 10,
-      fecha: "2026-06-02",
-      semana: 23,
-    });
+    await inventarioService.registrar(
+      appMock,
+      { sedeId: 1, productoId: "PROD-001", cantidadIngresada: 10, fecha: "2026-06-02", semana: 23 },
+      usuarioAdmin,
+    );
 
-    const callArg = prisma.inventario.upsert.mock.calls[0][0];
-    const fecha = callArg.create.fecha;
+    // FIX: service usa repo.crear → prisma.inventario.create (no upsert)
+    const callArg = prisma.inventario.create.mock.calls[0][0];
+    const fecha = callArg.data.fecha;
     expect(fecha.getUTCHours()).toBe(0);
     expect(fecha.getUTCMinutes()).toBe(0);
     expect(fecha.getUTCSeconds()).toBe(0);
   });
 
-  it("debería calcular el costo automáticamente si no se pasa", async () => {
+  it("debería usar precioCosto del producto como costoUnitario si no se pasa", async () => {
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
     prisma.producto.findUnique.mockResolvedValue(productoMock); // precioCosto: 18000
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
     prisma.stockSede.upsert.mockResolvedValue({});
 
-    await inventarioService.registrar(appMock, {
-      sedeId: 1,
-      productoId: "PROD-001",
-      cantidadIngresada: 5,
-      fecha: "2026-06-02",
-      semana: 23,
-      // sin costo
-    });
+    await inventarioService.registrar(
+      appMock,
+      { sedeId: 1, productoId: "PROD-001", cantidadIngresada: 5, fecha: "2026-06-02", semana: 23 },
+      usuarioAdmin,
+    );
 
-    const callCreate = prisma.inventario.upsert.mock.calls[0][0].create;
-    expect(callCreate.costo).toBe(18000 * 5); // 90000
+    // FIX: campo es costoUnitario, no costo
+    const callData = prisma.inventario.create.mock.calls[0][0].data;
+    expect(callData.costoUnitario).toBe(18000);
   });
 
-  it("debería respetar el costo si se pasa explícitamente", async () => {
+  it("debería respetar el costoUnitario si se pasa explícitamente", async () => {
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
     prisma.producto.findUnique.mockResolvedValue(productoMock);
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
     prisma.stockSede.upsert.mockResolvedValue({});
 
-    await inventarioService.registrar(appMock, {
-      sedeId: 1,
-      productoId: "PROD-001",
-      cantidadIngresada: 5,
-      fecha: "2026-06-02",
-      semana: 23,
-      costo: 50000,
-    });
+    await inventarioService.registrar(
+      appMock,
+      { sedeId: 1, productoId: "PROD-001", cantidadIngresada: 5, fecha: "2026-06-02", semana: 23, costoUnitario: 50000 },
+      usuarioAdmin,
+    );
 
-    const callCreate = prisma.inventario.upsert.mock.calls[0][0].create;
-    expect(callCreate.costo).toBe(50000);
+    const callData = prisma.inventario.create.mock.calls[0][0].data;
+    expect(callData.costoUnitario).toBe(50000);
+  });
+
+  it("debería guardar cantidadIngresada negativa para tipo salida", async () => {
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.stockSede.findUnique.mockResolvedValue({ stockActual: 20 });
+    prisma.inventario.create.mockResolvedValue({ ...inventarioMock, cantidadIngresada: -5 });
+    prisma.stockSede.upsert.mockResolvedValue({});
+
+    await inventarioService.registrar(
+      appMock,
+      { sedeId: 1, productoId: "PROD-001", cantidadIngresada: 5, tipo: "salida", fecha: "2026-06-02", semana: 23 },
+      usuarioAdmin,
+    );
+
+    const callData = prisma.inventario.create.mock.calls[0][0].data;
+    expect(callData.cantidadIngresada).toBe(-5);
   });
 
   it("debería hacer upsert del stockSede después de registrar", async () => {
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
     prisma.producto.findUnique.mockResolvedValue(productoMock);
-    prisma.inventario.upsert.mockResolvedValue(inventarioMock);
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
     prisma.stockSede.upsert.mockResolvedValue({});
 
-    await inventarioService.registrar(appMock, {
-      sedeId: 1,
-      productoId: "PROD-001",
-      cantidadIngresada: 10,
-      fecha: "2026-06-02",
-      semana: 23,
-    });
+    await inventarioService.registrar(
+      appMock,
+      { sedeId: 1, productoId: "PROD-001", cantidadIngresada: 10, fecha: "2026-06-02", semana: 23 },
+      usuarioAdmin,
+    );
 
     expect(prisma.stockSede.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { sedeId_productoId: { sedeId: 1, productoId: "PROD-001" } },
+        where:  { sedeId_productoId: { sedeId: 1, productoId: "PROD-001" } },
         update: { stockActual: { increment: 10 } },
         create: { sedeId: 1, productoId: "PROD-001", stockActual: 10 },
       }),
     );
+  });
+
+  it("debería lanzar AppError 403 si usuario Entregador intenta registrar", async () => {
+    await expect(
+      inventarioService.registrar(
+        appMock,
+        { sedeId: 1, productoId: "PROD-001", cantidadIngresada: 5, fecha: "2026-06-02", semana: 23 },
+        { id: 3, rol: "Entregador", sedeId: 1 },
+      ),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 });
 
@@ -182,7 +202,7 @@ describe("inventarioService.obtenerLista", () => {
   it("debería usar skip=0 y take=50 por defecto", async () => {
     prisma.inventario.findMany.mockResolvedValue([]);
 
-    await inventarioService.obtenerLista(appMock, {});
+    await inventarioService.obtenerLista(appMock, {}, usuarioAdmin);
 
     expect(prisma.inventario.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 0, take: 50 }),
@@ -192,18 +212,19 @@ describe("inventarioService.obtenerLista", () => {
   it("debería convertir semana a número", async () => {
     prisma.inventario.findMany.mockResolvedValue([]);
 
-    await inventarioService.obtenerLista(appMock, { semana: "23" });
+    await inventarioService.obtenerLista(appMock, { semana: "23" }, usuarioAdmin);
 
     const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
     expect(callWhere.semana).toBe(23);
   });
 
-  it("debería convertir sedeId a número", async () => {
+  it("Bodega solo ve su propia sede aunque pase sedeId diferente", async () => {
     prisma.inventario.findMany.mockResolvedValue([]);
 
-    await inventarioService.obtenerLista(appMock, { sedeId: "1" });
+    await inventarioService.obtenerLista(appMock, { sedeId: "99" }, usuarioBodega);
 
     const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
+    // filtro de sede debe ser el del usuario, no el del query
     expect(callWhere.sedeId).toBe(1);
   });
 });
@@ -214,7 +235,7 @@ describe("inventarioService.obtenerPorId", () => {
   it("debería retornar el registro si existe", async () => {
     prisma.inventario.findUnique.mockResolvedValue(inventarioMock);
 
-    const result = await inventarioService.obtenerPorId(appMock, 1);
+    const result = await inventarioService.obtenerPorId(appMock, 1, usuarioAdmin);
 
     expect(result.id).toBe(1);
   });
@@ -223,8 +244,16 @@ describe("inventarioService.obtenerPorId", () => {
     prisma.inventario.findUnique.mockResolvedValue(null);
 
     await expect(
-      inventarioService.obtenerPorId(appMock, 999),
+      inventarioService.obtenerPorId(appMock, 999, usuarioAdmin),
     ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("debería lanzar AppError 403 si Bodega intenta ver registro de otra sede", async () => {
+    prisma.inventario.findUnique.mockResolvedValue({ ...inventarioMock, sedeId: 99 });
+
+    await expect(
+      inventarioService.obtenerPorId(appMock, 1, usuarioBodega), // sedeId=1, registro.sedeId=99
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 });
 
@@ -235,54 +264,54 @@ describe("inventarioService.editar", () => {
     prisma.inventario.findUnique.mockResolvedValue(null);
 
     await expect(
-      inventarioService.editar(appMock, 999, { cantidadIngresada: 15 }),
+      inventarioService.editar(appMock, 999, { cantidadIngresada: 15 }, usuarioAdmin),
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
-  it("debería ajustar stockSede con el delta correcto al editar cantidadIngresada", async () => {
-    prisma.inventario.findUnique.mockResolvedValue(inventarioMock); // cantidadIngresada: 10
-    prisma.inventario.update.mockResolvedValue({
-      ...inventarioMock,
-      cantidadIngresada: 15,
-    });
+  it("debería ajustar stockSede con el delta correcto al aumentar cantidadIngresada", async () => {
+    prisma.inventario.findUnique.mockResolvedValue(inventarioMock); // cantidadIngresada: 10, tipo: entrada
+    prisma.inventario.update.mockResolvedValue({ ...inventarioMock, cantidadIngresada: 15 });
     prisma.stockSede.upsert.mockResolvedValue({});
 
-    await inventarioService.editar(appMock, 1, { cantidadIngresada: 15 });
+    await inventarioService.editar(appMock, 1, { cantidadIngresada: 15 }, usuarioAdmin);
 
-    // delta = 15 - 10 = +5
+    // deltaNuevo=15, deltaAnterior=10 → ajuste=+5
     expect(prisma.stockSede.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        update: { stockActual: { increment: 5 } },
-      }),
+      expect.objectContaining({ update: { stockActual: { increment: 5 } } }),
     );
   });
 
   it("debería aplicar delta negativo si la cantidad disminuye", async () => {
     prisma.inventario.findUnique.mockResolvedValue(inventarioMock); // cantidadIngresada: 10
-    prisma.inventario.update.mockResolvedValue({
-      ...inventarioMock,
-      cantidadIngresada: 6,
-    });
+    prisma.inventario.update.mockResolvedValue({ ...inventarioMock, cantidadIngresada: 6 });
     prisma.stockSede.upsert.mockResolvedValue({});
 
-    await inventarioService.editar(appMock, 1, { cantidadIngresada: 6 });
+    await inventarioService.editar(appMock, 1, { cantidadIngresada: 6 }, usuarioAdmin);
 
-    // delta = 6 - 10 = -4
+    // deltaNuevo=6, deltaAnterior=10 → ajuste=-4
     expect(prisma.stockSede.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        update: { stockActual: { increment: -4 } },
-      }),
+      expect.objectContaining({ update: { stockActual: { increment: -4 } } }),
     );
   });
 
-  it("no debería tocar stockSede si no cambia cantidadIngresada", async () => {
-    prisma.inventario.findUnique.mockResolvedValue(inventarioMock);
-    prisma.inventario.update.mockResolvedValue({
-      ...inventarioMock,
-      costo: 200000,
-    });
+  it("debería recalcular stock si cambia el tipo de entrada a salida", async () => {
+    prisma.inventario.findUnique.mockResolvedValue(inventarioMock); // cantidadIngresada: +10, tipo: entrada
+    prisma.inventario.update.mockResolvedValue({ ...inventarioMock, cantidadIngresada: -10, tipo: "salida" });
+    prisma.stockSede.upsert.mockResolvedValue({});
 
-    await inventarioService.editar(appMock, 1, { costo: 200000 });
+    await inventarioService.editar(appMock, 1, { tipo: "salida" }, usuarioAdmin);
+
+    // deltaNuevo=-10, deltaAnterior=+10 → ajuste=-20
+    expect(prisma.stockSede.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { stockActual: { increment: -20 } } }),
+    );
+  });
+
+  it("no debería tocar stockSede si solo cambia costoUnitario", async () => {
+    prisma.inventario.findUnique.mockResolvedValue(inventarioMock);
+    prisma.inventario.update.mockResolvedValue({ ...inventarioMock, costoUnitario: 20000 });
+
+    await inventarioService.editar(appMock, 1, { costoUnitario: 20000 }, usuarioAdmin);
 
     expect(prisma.stockSede.upsert).not.toHaveBeenCalled();
   });
@@ -294,23 +323,35 @@ describe("inventarioService.borrar", () => {
   it("debería lanzar AppError 404 si el registro no existe", async () => {
     prisma.inventario.findUnique.mockResolvedValue(null);
 
-    await expect(inventarioService.borrar(appMock, 999)).rejects.toMatchObject({
+    await expect(inventarioService.borrar(appMock, 999, usuarioAdmin)).rejects.toMatchObject({
       statusCode: 404,
     });
   });
 
-  it("debería eliminar el registro y decrementar el stock", async () => {
+  it("debería lanzar 422 si borrar una entrada dejaría stock negativo", async () => {
     prisma.inventario.findUnique.mockResolvedValue(inventarioMock); // cantidadIngresada: 10
+    prisma.stockSede.findUnique.mockResolvedValue({ stockActual: 5 }); // solo 5 disponibles
+
+    await expect(inventarioService.borrar(appMock, 1, usuarioAdmin)).rejects.toMatchObject({
+      statusCode: 422,
+      message: expect.stringMatching(/negativo/i),
+    });
+  });
+
+  it("debería eliminar el registro y decrementar el stock dentro de una transacción", async () => {
+    prisma.inventario.findUnique.mockResolvedValue(inventarioMock); // cantidadIngresada: 10
+    prisma.stockSede.findUnique.mockResolvedValue({ stockActual: 20 }); // suficiente
     prisma.inventario.delete.mockResolvedValue(inventarioMock);
     prisma.stockSede.update.mockResolvedValue({});
 
-    await inventarioService.borrar(appMock, 1);
+    await inventarioService.borrar(appMock, 1, usuarioAdmin);
 
+    expect(prisma.$transaction).toHaveBeenCalled();
     expect(prisma.inventario.delete).toHaveBeenCalledWith({ where: { id: 1 } });
     expect(prisma.stockSede.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { sedeId_productoId: { sedeId: 1, productoId: "PROD-001" } },
-        data: { stockActual: { decrement: 10 } },
+        data:  { stockActual: { decrement: 10 } },
       }),
     );
   });
@@ -320,43 +361,37 @@ describe("inventarioService.borrar", () => {
 
 describe("inventarioService.resumenSemanal", () => {
   it("debería mapear sedeId y productoId a nombres legibles", async () => {
+    prisma.sede.findMany.mockResolvedValue([sedeMock]);
+    // FIX: campo correcto en _sum es costoUnitario
     prisma.inventario.groupBy.mockResolvedValue([
       {
         sedeId: 1,
         productoId: "PROD-001",
-        _sum: { cantidadIngresada: 20, costo: 360000 },
-        _max: { fecha: new Date("2026-06-06") },
+        _sum: { cantidadIngresada: 20, costoUnitario: 18000 },
       },
     ]);
-    prisma.sede.findMany.mockResolvedValue([sedeMock]);
     prisma.producto.findMany.mockResolvedValue([
       { codigo: "PROD-001", descripcion: "Cemento Gris 50kg" },
     ]);
 
-    const result = await inventarioService.resumenSemanal(appMock, 23);
+    const result = await inventarioService.resumenSemanal(appMock, 23, usuarioAdmin);
 
     expect(result[0].sede).toBe("Sede Principal");
-    expect(result[0].producto).toBe("Cemento Gris 50kg");
-    expect(result[0].cantidad).toBe(20);
-    expect(result[0].costo).toBe(360000);
+    expect(result[0].detalle[0].producto).toBe("Cemento Gris 50kg");
+    expect(result[0].detalle[0].cantidad).toBe(20);
+    expect(result[0].detalle[0].costoUnitario).toBe(18000);
   });
 
-  it("debería usar fallback si la sede no está en el mapa", async () => {
+  it("debería retornar detalle vacío para sedes sin movimientos en la semana", async () => {
+    prisma.sede.findMany.mockResolvedValue([sedeMock, { id: 2, nombre: "Sede Norte" }]);
     prisma.inventario.groupBy.mockResolvedValue([
-      {
-        sedeId: 99,
-        productoId: "PROD-001",
-        _sum: { cantidadIngresada: 5, costo: 10000 },
-        _max: { fecha: new Date() },
-      },
+      { sedeId: 1, productoId: "PROD-001", _sum: { cantidadIngresada: 5, costoUnitario: 18000 } },
     ]);
-    prisma.sede.findMany.mockResolvedValue([]);
-    prisma.producto.findMany.mockResolvedValue([
-      { codigo: "PROD-001", descripcion: "Cemento" },
-    ]);
+    prisma.producto.findMany.mockResolvedValue([{ codigo: "PROD-001", descripcion: "Cemento" }]);
 
-    const result = await inventarioService.resumenSemanal(appMock, 23);
+    const result = await inventarioService.resumenSemanal(appMock, 23, usuarioAdmin);
 
-    expect(result[0].sede).toBe("Sede 99");
+    const sedeNorte = result.find((r) => r.sedeId === 2);
+    expect(sedeNorte.detalle).toHaveLength(0);
   });
 });

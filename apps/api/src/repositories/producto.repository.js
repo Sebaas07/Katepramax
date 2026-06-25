@@ -5,7 +5,7 @@
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
- * @param {{ codigo: string, descripcion: string, precioCosto: number, precioVenta: number, precioMayoreo?: number, porcentajeGanancia?: number, proveedorId?: number }} data
+ * @param {{ codigo: number, descripcion: string, precioCosto: number, precioVenta: number, precioMayoreo?: number, porcentajeGanancia?: number, proveedorId?: number }} data
  */
 async function crear(prisma, data) {
   return prisma.producto.create({ data, include: { proveedor: { select: { id: true, nombre: true } } } });

@@ -18,7 +18,7 @@ const stockSedeItem = {
 const productoBase = {
   type: "object",
   properties: {
-    codigo: { type: "string" },
+    codigo: { type: "integer" },
     descripcion: { type: "string" },
     precioCosto: { type: "number" },
     precioVenta: { type: "number" },
@@ -48,9 +48,8 @@ const crearProducto = {
   security: [{ bearerAuth: [] }],
   body: {
     type: "object",
-    required: ["codigo", "descripcion", "precioCosto", "precioVenta"],
+    required: ["descripcion", "precioCosto", "precioVenta"],
     properties: {
-      codigo: { type: "string", maxLength: 30 },
       descripcion: { type: "string", maxLength: 255 },
       precioCosto: { type: "number", minimum: 0 },
       precioVenta: { type: "number", minimum: 0 },
@@ -98,7 +97,7 @@ const obtenerProducto = {
   params: {
     type: "object",
     required: ["codigo"],
-    properties: { codigo: { type: "string" } },
+    properties: { codigo: { type: "integer" } },
   },
   response: {
     200: productoBase,
@@ -114,7 +113,7 @@ const editarProducto = {
   params: {
     type: "object",
     required: ["codigo"],
-    properties: { codigo: { type: "string" } },
+    properties: { codigo: { type: "integer" } },
   },
   body: {
     type: "object",
@@ -146,7 +145,7 @@ const desactivarProducto = {
   params: {
     type: "object",
     required: ["codigo"],
-    properties: { codigo: { type: "string" } },
+    properties: { codigo: { type: "integer" } },
   },
   response: {
     200: { type: "object", properties: { mensaje: { type: "string" } } },

@@ -29,7 +29,11 @@ function sanitizeProductos(items) {
 }
 
 function sedeEsPermitida(usuario) {
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";
+  return (
+    usuario.rol === "Admin" ||
+    usuario.rol === "Bodega" ||
+    usuario.rol === "AdminBogota"
+  );
 }
 
 function sedeWhere(usuario) {
@@ -45,21 +49,18 @@ async function crear(app, body, usuario) {
   }
 
   const { sedeId: _sedeId, ...datosProducto } = body;
-  const sedeId = usuario.rol !== "Admin" ? usuario.sedeId : (_sedeId ?? undefined);
-
-  const existente = await repo.buscarPorCodigo(app.prisma, datosProducto.codigo);
-  if (existente)
-    throw new AppError(
-      `Ya existe un producto con el código ${datosProducto.codigo}`,
-      409,
-    );
+  const sedeId =
+    usuario.rol !== "Admin" ? usuario.sedeId : (_sedeId ?? undefined);
 
   if (datosProducto.proveedorId) {
     const proveedor = await app.prisma.proveedor.findUnique({
       where: { id: datosProducto.proveedorId },
     });
     if (!proveedor)
-      throw new AppError(`Proveedor ${datosProducto.proveedorId} no encontrado`, 404);
+      throw new AppError(
+        `Proveedor ${datosProducto.proveedorId} no encontrado`,
+        404,
+      );
   }
 
   const nuevo = await repo.crear(app.prisma, datosProducto);
@@ -110,12 +111,14 @@ async function obtenerPorCodigo(app, codigo, usuario) {
     throw new AppError("No tienes permiso para ver productos.", 403);
   }
 
-  const producto = await repo.buscarPorCodigo(app.prisma, codigo);
+  const producto = await repo.buscarPorCodigo(app.prisma, Number(codigo));
   if (!producto) throw new AppError(`Producto ${codigo} no encontrado`, 404);
 
   if (usuario.rol !== "Admin") {
     const sedeId = usuario.sedeId;
-    const tieneStock = producto.stockSedes?.some((s) => Number(s.sedeId) === Number(sedeId));
+    const tieneStock = producto.stockSedes?.some(
+      (s) => Number(s.sedeId) === Number(sedeId),
+    );
     if (!tieneStock) {
       throw new AppError("No tienes permiso para ver este producto.", 403);
     }
@@ -129,12 +132,14 @@ async function editar(app, codigo, body, usuario) {
     throw new AppError("No tienes permiso para editar productos.", 403);
   }
 
-  const producto = await repo.buscarPorCodigo(app.prisma, codigo);
+  const producto = await repo.buscarPorCodigo(app.prisma, Number(codigo));
   if (!producto) throw new AppError(`Producto ${codigo} no encontrado`, 404);
 
   if (usuario.rol !== "Admin") {
     const sedeId = usuario.sedeId;
-    const tieneStock = producto.stockSedes?.some((s) => Number(s.sedeId) === Number(sedeId));
+    const tieneStock = producto.stockSedes?.some(
+      (s) => Number(s.sedeId) === Number(sedeId),
+    );
     if (!tieneStock) {
       throw new AppError("No tienes permiso para editar este producto.", 403);
     }
@@ -148,7 +153,9 @@ async function editar(app, codigo, body, usuario) {
       throw new AppError(`Proveedor ${body.proveedorId} no encontrado`, 404);
   }
 
-  return sanitizeProducto(await repo.actualizar(app.prisma, codigo, body));
+  return sanitizeProducto(
+    await repo.actualizar(app.prisma, Number(codigo), body),
+  );
 }
 
 async function desactivar(app, codigo, usuario) {
@@ -156,18 +163,25 @@ async function desactivar(app, codigo, usuario) {
     throw new AppError("No tienes permiso para desactivar productos.", 403);
   }
 
-  const producto = await repo.buscarPorCodigo(app.prisma, codigo);
+  const producto = await repo.buscarPorCodigo(app.prisma, Number(codigo));
   if (!producto) throw new AppError(`Producto ${codigo} no encontrado`, 404);
 
   if (usuario.rol !== "Admin") {
     const sedeId = usuario.sedeId;
-    const tieneStock = producto.stockSedes?.some((s) => Number(s.sedeId) === Number(sedeId));
+    const tieneStock = producto.stockSedes?.some(
+      (s) => Number(s.sedeId) === Number(sedeId),
+    );
     if (!tieneStock) {
-      throw new AppError("No tienes permiso para desactivar este producto.", 403);
+      throw new AppError(
+        "No tienes permiso para desactivar este producto.",
+        403,
+      );
     }
   }
 
-  return sanitizeProducto(await repo.actualizar(app.prisma, codigo, { activo: false }));
+  return sanitizeProducto(
+    await repo.actualizar(app.prisma, Number(codigo), { activo: false }),
+  );
 }
 
 module.exports = {

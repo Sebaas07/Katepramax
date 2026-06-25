@@ -81,6 +81,12 @@ const inventarioApi = {
     const response = await clienteApi.get("/productos", { params: { stockBajo: true, activo: true } });
     return response.data;
   },
+
+  // Backend: GET /sedes → Admin, Bodega
+  obtenerSedes: async () => {
+    const response = await clienteApi.get("/sedes");
+    return response.data;
+  },
 };
 
 export default inventarioApi;

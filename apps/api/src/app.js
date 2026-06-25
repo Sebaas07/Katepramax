@@ -77,6 +77,7 @@ async function buildApp() {
   app.register(require("./routes/cliente.routes"), routePrefix);
   app.register(require("./routes/asignacion.routes"), routePrefix);
   app.register(require("./routes/proveedor.routes"), routePrefix);
+  app.register(require("./routes/sede.routes"), routePrefix);
 
   // Módulos nuevos (contabilidad)
   app.register(require("./routes/ingreso.routes"), routePrefix);

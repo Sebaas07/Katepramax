@@ -9,12 +9,6 @@ import EmptyState from "@/components/common/EmptyState/EmptyState";
 import { formatCOP } from "@/utils/formatters";
 import "./ProductosPage.css";
 
-const SEDES = [
-  { id: 1, nombre: "Bogotá" },
-  { id: 2, nombre: "Cartagena" },
-  { id: 3, nombre: "Villavicencio" },
-];
-
 const DEPARTAMENTOS = [
   "Abastecimiento",
   "Lácteos",
@@ -58,7 +52,7 @@ const obtenerStock = (producto, sedeId) => {
   return toNumber(producto.existencia ?? producto.stockActual, 0);
 };
 
-const normalizarProducto = (producto, sedeId) => {
+const normalizarProducto = (producto, sedeId, sedes = []) => {
   const stockSedes = Array.isArray(producto.stockSedes)
     ? producto.stockSedes
     : [];
@@ -73,7 +67,7 @@ const normalizarProducto = (producto, sedeId) => {
   const sedeNombre =
     stockSede?.sede?.nombre ||
     (sedeId
-      ? SEDES.find((s) => String(s.id) === String(sedeId))?.nombre
+      ? sedes.find((s) => String(s.id) === String(sedeId))?.nombre
       : null) ||
     `Sede ${producto.sedeId || sedeId || ""}`.trim();
 
@@ -141,6 +135,8 @@ const ProductosPage = () => {
 
   const [productos, setProductos] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
+  const [sedes, setSedes] = useState([]);
+  const [cargandoSedes, setCargandoSedes] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [errorProductos, setErrorProductos] = useState(null);
   const [filtroSede, setFiltroSede] = useState("");
@@ -152,7 +148,6 @@ const ProductosPage = () => {
   const [productoSel, setProductoSel] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState({
-    codigo: "",
     descripcion: "",
     departamento: "",
     precioCosto: "",
@@ -166,6 +161,24 @@ const ProductosPage = () => {
   });
 
   const sedeActivaId = esAdmin ? filtroSede : String(sedeIdUsuario ?? "");
+
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+
+    const cargarSedes = async () => {
+      setCargandoSedes(true);
+      try {
+        const data = await inventarioService.obtenerSedes();
+        setSedes(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setSedes([]);
+      } finally {
+        setCargandoSedes(false);
+      }
+    };
+
+    void cargarSedes();
+  }, [isSessionChecked, isAuthenticated]);
 
   const cargarProductos = useCallback(async () => {
     setCargando(true);
@@ -223,15 +236,39 @@ const ProductosPage = () => {
 
   const handleCambioForm = useCallback((e) => {
     const { name, type, value, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setForm((prev) => {
+      const next =
+        type === "checkbox"
+          ? { ...prev, [name]: checked }
+          : { ...prev, [name]: value };
+
+      if (name === "precioCosto" || name === "precioVenta") {
+        const costo = toNumber(next.precioCosto, 0);
+        const venta = toNumber(next.precioVenta, 0);
+        if (costo > 0 && venta > 0) {
+          next.porcentajeGanancia = Number(
+            (((venta - costo) / costo) * 100).toFixed(2),
+          ).toString();
+        } else {
+          next.porcentajeGanancia = "0";
+        }
+      }
+
+      return next;
+    });
   }, []);
+
+  const porcentajeGanancia = useMemo(() => {
+    const costo = toNumber(form.precioCosto, 0);
+    const venta = toNumber(form.precioVenta, 0);
+    if (costo > 0 && venta > 0) {
+      return (((venta - costo) / costo) * 100).toFixed(2);
+    }
+    return "0";
+  }, [form.precioCosto, form.precioVenta]);
 
   const resetForm = useCallback(
     () => ({
-      codigo: "",
       descripcion: "",
       departamento: "",
       precioCosto: "",
@@ -257,10 +294,10 @@ const ProductosPage = () => {
       const producto = normalizarProducto(
         prod,
         prod.sedeId ?? sedeIdUsuario ?? "",
+        sedes,
       );
       setProductoSel(producto);
       setForm({
-        codigo: producto.codigo,
         descripcion: producto.descripcion || producto.nombre,
         departamento: producto.departamento,
         precioCosto: producto.precioCosto ? String(producto.precioCosto) : "",
@@ -282,23 +319,22 @@ const ProductosPage = () => {
       });
       setModalEditar(true);
     },
-    [sedeIdUsuario],
+    [sedeIdUsuario, sedes],
   );
 
   const abrirHistorial = useCallback(
     async (prod) => {
-      setProductoSel(normalizarProducto(prod, sedeActivaId));
+      setProductoSel(normalizarProducto(prod, sedeActivaId, sedes));
       await cargarMovimientos();
       setModalHistorial(true);
     },
-    [cargarMovimientos, sedeActivaId],
+    [cargarMovimientos, sedeActivaId, sedes],
   );
 
   const handleGuardar = useCallback(async () => {
     setGuardando(true);
     try {
       await inventarioService.crearProducto({
-        codigo: form.codigo,
         descripcion: form.descripcion,
         departamento: form.departamento,
         precioCosto: form.precioCosto,
@@ -312,7 +348,7 @@ const ProductosPage = () => {
       });
       toast.success("Producto creado correctamente.");
       setModalNuevo(false);
-      setForm(resetForm());
+      setForm(resetForm())
       await cargarProductos();
     } catch (err) {
       toast.error(
@@ -326,13 +362,13 @@ const ProductosPage = () => {
   const handleActualizar = useCallback(async () => {
     setGuardando(true);
     try {
-      await inventarioService.actualizarProducto(form.codigo, {
+      await inventarioService.actualizarProducto(productoSel.codigo, {
         descripcion: form.descripcion,
         departamento: form.departamento,
         precioCosto: form.precioCosto,
         precioVenta: form.precioVenta,
         precioMayoreo: form.precioMayoreo,
-        porcentajeGanancia: form.porcentajeGanancia,
+        porcentajeGanancia,
         stockMinimo: form.stockMinimo,
         proveedorId: form.proveedorId,
         activo: form.activo,
@@ -348,7 +384,7 @@ const ProductosPage = () => {
     } finally {
       setGuardando(false);
     }
-  }, [cargarProductos, form, resetForm]);
+  }, [cargarProductos, form, productoSel, resetForm, porcentajeGanancia]);
 
   const handleDesactivar = useCallback(
     async (prod) => {
@@ -368,9 +404,9 @@ const ProductosPage = () => {
 
   const productosNormalizados = useMemo(() => {
     return productos.map((producto) =>
-      normalizarProducto(producto, sedeActivaId),
+      normalizarProducto(producto, sedeActivaId, sedes),
     );
-  }, [productos, sedeActivaId]);
+  }, [productos, sedeActivaId, sedes]);
 
   const departamentos = useMemo(() => {
     const unicos = [
@@ -534,7 +570,7 @@ const ProductosPage = () => {
                 className="filter-select"
               >
                 <option value="">Todas</option>
-                {SEDES.map((sede) => (
+                {sedes.map((sede) => (
                   <option key={sede.id} value={sede.id}>
                     {sede.nombre}
                   </option>
@@ -705,20 +741,6 @@ const ProductosPage = () => {
         <div className="modal-form modal-form--producto">
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="prod-codigo">Código *</label>
-              <input
-                id="prod-codigo"
-                name="codigo"
-                type="text"
-                value={form.codigo}
-                onChange={handleCambioForm}
-                className="form-control"
-                placeholder="PROD-XXX"
-                autoComplete="off"
-              />
-            </div>
-
-            <div className="form-group">
               <label htmlFor="prod-depto">Departamento *</label>
               <select
                 id="prod-depto"
@@ -806,8 +828,8 @@ const ProductosPage = () => {
                 name="porcentajeGanancia"
                 type="number"
                 value={form.porcentajeGanancia}
-                onChange={handleCambioForm}
-                className="form-control"
+                className="form-control form-control--readonly"
+                readOnly
                 min="0"
                 step="0.01"
                 placeholder="0"
@@ -842,7 +864,7 @@ const ProductosPage = () => {
                   className="form-control"
                 >
                   <option value="">— Selecciona —</option>
-                  {SEDES.map((sede) => (
+                  {sedes.map((sede) => (
                     <option key={sede.id} value={sede.id}>
                       {sede.nombre}
                     </option>
@@ -898,18 +920,6 @@ const ProductosPage = () => {
       >
         <div className="modal-form modal-form--producto">
           <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="edit-codigo">Código</label>
-              <input
-                id="edit-codigo"
-                name="codigo"
-                type="text"
-                value={form.codigo}
-                className="form-control form-control--readonly"
-                readOnly
-              />
-            </div>
-
             <div className="form-group">
               <label htmlFor="edit-depto">Departamento *</label>
               <select
@@ -998,8 +1008,8 @@ const ProductosPage = () => {
                 name="porcentajeGanancia"
                 type="number"
                 value={form.porcentajeGanancia}
-                onChange={handleCambioForm}
-                className="form-control"
+                className="form-control form-control--readonly"
+                readOnly
                 min="0"
                 step="0.01"
                 placeholder="0"
@@ -1053,7 +1063,7 @@ const ProductosPage = () => {
                   onChange={handleCambioForm}
                   className="form-control"
                 >
-                  {SEDES.map((sede) => (
+                  {sedes.map((sede) => (
                     <option key={sede.id} value={sede.id}>
                       {sede.nombre}
                     </option>

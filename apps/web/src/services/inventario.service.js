@@ -37,10 +37,9 @@ const inventarioService = {
     }
   },
 
-  crearProducto: async (producto) => {
+   crearProducto: async (producto) => {
     try {
       const {
-        codigo,
         descripcion,
         departamento,
         precioCosto,
@@ -52,30 +51,22 @@ const inventarioService = {
         sedeId,
       } = producto;
 
-      if (!codigo) throw new Error("El código es obligatorio.");
       if (!descripcion) throw new Error("La descripción es obligatoria.");
       if (!departamento) throw new Error("Selecciona un departamento.");
 
       const costo = toNumber(precioCosto, 0);
       const venta = toNumber(precioVenta, 0);
-      const ganancia =
-        porcentajeGanancia !== undefined && porcentajeGanancia !== ""
-          ? toNumber(porcentajeGanancia, 0)
-          : costo > 0 && venta > 0
-            ? ((venta - costo) / costo) * 100
-            : 0;
 
       // Si no es Admin, usar sede del usuario
       const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
 
       return await inventarioApi.crearProducto({
-        codigo,
         descripcion,
         departamento,
         precioCosto: costo,
         precioVenta: venta,
         ...(precioMayoreo !== undefined && precioMayoreo !== "" ? { precioMayoreo: toNumber(precioMayoreo, 0) } : {}),
-        porcentajeGanancia: ganancia,
+        porcentajeGanancia: toNumber(porcentajeGanancia, 0),
         stockMinimo: toNumber(stockMinimo, 0),
         proveedorId: proveedorId ? Number(proveedorId) : null,
         ...(sedeFinal ? { sedeId: sedeFinal } : {}),
@@ -99,12 +90,11 @@ const inventarioService = {
         proveedorId: datos.proveedorId ? Number(datos.proveedorId) : null,
       };
 
-      if (datos.precioMayoreo !== undefined && datos.precioMayoreo !== "") {
-        payload.precioMayoreo = toNumber(datos.precioMayoreo, 0);
-      }
-      if (datos.porcentajeGanancia !== undefined && datos.porcentajeGanancia !== "") {
-        payload.porcentajeGanancia = toNumber(datos.porcentajeGanancia, 0);
-      }
+      payload.precioMayoreo =
+        datos.precioMayoreo !== undefined && datos.precioMayoreo !== ""
+          ? toNumber(datos.precioMayoreo, 0)
+          : undefined;
+      payload.porcentajeGanancia = toNumber(datos.porcentajeGanancia, 0);
       if (datos.activo !== undefined) {
         payload.activo = datos.activo;
       }
@@ -217,83 +207,16 @@ const inventarioService = {
 
   // ─── Stock Bajo ───────────────────────────────────────────────────────────
   obtenerStockBajo: async () => {
-    try {
-      const f = {};
-      // Si no es Admin, filtrar por sede automáticamente
-      if (!tieneAccesoTotal()) {
-        const sedeIdUsuario = obtenerSedeUsuario();
-        if (sedeIdUsuario) {
-          f.sedeId = sedeIdUsuario;
-        }
-      }
-      return await inventarioApi.obtenerStockBajo(f);
-    } catch (e) {
-      console.error("inventarioService.obtenerStockBajo:", e);
-      throw e;
-    }
+    const response = await inventarioApi.obtenerStockBajo();
+    return response.data;
   },
 
-  // ─── Aliases para InventarioPage ─────────────────────────────────────────
-  // InventarioPage usa estos nombres; internamente delegan a los métodos reales.
-  listarMovimientos: async (filtros = {}) => {
+  obtenerSedes: async () => {
     try {
-      const f = { ...filtros };
-      // Si no es Admin, filtrar por sede automáticamente
-      if (!tieneAccesoTotal()) {
-        const sedeIdUsuario = obtenerSedeUsuario();
-        if (sedeIdUsuario) {
-          f.sedeId = sedeIdUsuario;
-        }
-      }
-      const data = await inventarioApi.listarInventario(f);
-      return normalizeArrayResponse(data);
+      return await inventarioApi.obtenerSedes();
     } catch (error) {
-      console.error("inventarioService.listarMovimientos:", error);
-      throw error;
-    }
-  },
-
-  registrarMovimiento: async ({
-    tipo,
-    productoId,
-    cantidad,
-    nota,
-    sedeId,
-    fecha,
-  }) => {
-    try {
-      if (!productoId) throw new Error("Selecciona un producto.");
-      if (!cantidad || cantidad <= 0)
-        throw new Error("La cantidad debe ser mayor a 0.");
-
-      // Si no es Admin, usar sede del usuario
-      const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
-      if (!sedeFinal) throw new Error("Selecciona la sede.");
-      if (!fecha) throw new Error("La fecha es obligatoria.");
-
-      return await inventarioApi.crearEntradaDiaria({
-        productoId,
-        cantidadIngresada: parseInt(cantidad),
-        sedeId: parseInt(sedeFinal),
-        fecha,
-        semana: getSemanaISO(new Date(fecha)),
-        ...(nota ? { nota } : {}),
-        ...(tipo ? { tipo } : {}),
-      });
-    } catch (e) {
-      console.error("inventarioService.registrarMovimiento:", e);
-      throw e;
-    }
-  },
-
-  // ─── Resumen ────────────────────────────────────────────────────────────
-  resumenSemanal: async (semana) => {
-    try {
-      const sem = semana ?? getSemanaISO(new Date());
-      return await inventarioApi.resumenSemanal(sem);
-    } catch (e) {
-      console.error("inventarioService.resumenSemanal:", e);
-      throw e;
+      console.error("inventarioService.obtenerSedes:", error);
+      throw new Error(getApiErrorMessage(error), { cause: error });
     }
   },
 };
