@@ -334,7 +334,7 @@ const ProductosPage = () => {
   const handleGuardar = useCallback(async () => {
     setGuardando(true);
     try {
-      await inventarioService.crearProducto({
+      const payload = {
         descripcion: form.descripcion,
         departamento: form.departamento,
         precioCosto: form.precioCosto,
@@ -344,8 +344,12 @@ const ProductosPage = () => {
         stockMinimo: form.stockMinimo,
         proveedorId: form.proveedorId,
         activo: form.activo,
-        sedeId: form.sedeId || String(sedeIdUsuario ?? ""),
-      });
+      };
+      if (form.sedeId) {
+        payload.sedeId = Number(form.sedeId);
+      }
+
+      await inventarioService.crearProducto(payload);
       toast.success("Producto creado correctamente.");
       setModalNuevo(false);
       setForm(resetForm())

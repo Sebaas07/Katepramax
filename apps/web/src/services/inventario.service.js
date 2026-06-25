@@ -58,7 +58,13 @@ const inventarioService = {
       const venta = toNumber(precioVenta, 0);
 
       // Si no es Admin, usar sede del usuario
-      const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
+      const sedeFinalRaw = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
+      const sedeFinal = sedeFinalRaw !== undefined && sedeFinalRaw !== null && sedeFinalRaw !== ""
+        ? Number(sedeFinalRaw)
+        : undefined;
+      if (sedeFinalRaw !== undefined && sedeFinalRaw !== null && sedeFinalRaw !== "" && Number.isNaN(sedeFinal)) {
+        throw new Error("sedeId inválido");
+      }
 
       return await inventarioApi.crearProducto({
         descripcion,
@@ -69,7 +75,7 @@ const inventarioService = {
         porcentajeGanancia: toNumber(porcentajeGanancia, 0),
         stockMinimo: toNumber(stockMinimo, 0),
         proveedorId: proveedorId ? Number(proveedorId) : null,
-        ...(sedeFinal ? { sedeId: sedeFinal } : {}),
+        ...(sedeFinal !== undefined ? { sedeId: sedeFinal } : {}),
       });
     } catch (e) {
       console.error("inventarioService.crearProducto:", e);

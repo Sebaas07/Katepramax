@@ -7,6 +7,7 @@ const { prisma } = require("./__mocks__/prisma");
 const productoService = require("../src/services/producto.service");
 
 const appMock = { prisma };
+const usuarioAdmin = { id: 1, rol: "Admin", sedeId: 1 };
 
 // ── Datos de prueba ───────────────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ describe("productoService.crear", () => {
         descripcion: "Dup",
         precioCosto: 1000,
         precioVenta: 1500,
-      }),
+      }, usuarioAdmin),
     ).rejects.toMatchObject({
       statusCode: 409,
       message: expect.stringMatching(/ya existe/i),
@@ -56,7 +57,7 @@ describe("productoService.crear", () => {
         precioCosto: 1000,
         precioVenta: 1500,
         proveedorId: 999,
-      }),
+      }, usuarioAdmin),
     ).rejects.toMatchObject({
       statusCode: 404,
       message: expect.stringMatching(/proveedor/i),
@@ -64,17 +65,22 @@ describe("productoService.crear", () => {
   });
 
   it("debería crear el producto si el código es único y el proveedor existe", async () => {
-    prisma.producto.findUnique.mockResolvedValue(null);
+    prisma.producto.findUnique.mockResolvedValueOnce(null);
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
     prisma.producto.create.mockResolvedValue(productoMock);
+    prisma.producto.findUnique.mockResolvedValueOnce(productoMock);
 
-    const result = await productoService.crear(appMock, {
-      codigo: "PROD-001",
-      descripcion: "Cemento Gris 50kg",
-      precioCosto: 18000,
-      precioVenta: 25000,
-      proveedorId: 1,
-    });
+    const result = await productoService.crear(
+      appMock,
+      {
+        codigo: "PROD-001",
+        descripcion: "Cemento Gris 50kg",
+        precioCosto: 18000,
+        precioVenta: 25000,
+        proveedorId: 1,
+      },
+      usuarioAdmin,
+    );
 
     expect(result.codigo).toBe("PROD-001");
     expect(prisma.producto.create).toHaveBeenCalledOnce();
@@ -87,12 +93,16 @@ describe("productoService.crear", () => {
       proveedorId: null,
     });
 
-    await productoService.crear(appMock, {
-      codigo: "PROD-003",
-      descripcion: "Sin proveedor",
-      precioCosto: 5000,
-      precioVenta: 8000,
-    });
+    await productoService.crear(
+      appMock,
+      {
+        codigo: "PROD-003",
+        descripcion: "Sin proveedor",
+        precioCosto: 5000,
+        precioVenta: 8000,
+      },
+      usuarioAdmin,
+    );
 
     // No debe consultar proveedor si no se pasó
     expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
@@ -106,7 +116,7 @@ describe("productoService.obtenerLista", () => {
   it("debería usar skip=0 y take=50 por defecto", async () => {
     prisma.producto.findMany.mockResolvedValue([]);
 
-    await productoService.obtenerLista(appMock, {});
+    await productoService.obtenerLista(appMock, {}, usuarioAdmin);
 
     expect(prisma.producto.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 0, take: 50 }),
@@ -116,7 +126,7 @@ describe("productoService.obtenerLista", () => {
   it("debería convertir activo='true' a booleano true", async () => {
     prisma.producto.findMany.mockResolvedValue([]);
 
-    await productoService.obtenerLista(appMock, { activo: "true" });
+    await productoService.obtenerLista(appMock, { activo: "true" }, usuarioAdmin);
 
     const callWhere = prisma.producto.findMany.mock.calls[0][0].where;
     expect(callWhere.activo).toBe(true);
@@ -125,7 +135,7 @@ describe("productoService.obtenerLista", () => {
   it("debería convertir activo='false' a booleano false", async () => {
     prisma.producto.findMany.mockResolvedValue([]);
 
-    await productoService.obtenerLista(appMock, { activo: "false" });
+    await productoService.obtenerLista(appMock, { activo: "false" }, usuarioAdmin);
 
     const callWhere = prisma.producto.findMany.mock.calls[0][0].where;
     expect(callWhere.activo).toBe(false);
@@ -134,16 +144,16 @@ describe("productoService.obtenerLista", () => {
   it("debería filtrar por descripcion si se pasa", async () => {
     prisma.producto.findMany.mockResolvedValue([productoMock]);
 
-    await productoService.obtenerLista(appMock, { descripcion: "Cemento" });
+    await productoService.obtenerLista(appMock, { descripcion: "Cemento" }, usuarioAdmin);
 
     const callWhere = prisma.producto.findMany.mock.calls[0][0].where;
-    expect(callWhere.descripcion).toEqual({ contains: "Cemento" });
+    expect(callWhere.descripcion).toEqual({ contains: "Cemento", mode: "insensitive" });
   });
 
   it("debería filtrar por proveedorId como número", async () => {
     prisma.producto.findMany.mockResolvedValue([productoMock]);
 
-    await productoService.obtenerLista(appMock, { proveedorId: "1" });
+    await productoService.obtenerLista(appMock, { proveedorId: "1" }, usuarioAdmin);
 
     const callWhere = prisma.producto.findMany.mock.calls[0][0].where;
     expect(callWhere.proveedorId).toBe(1);
@@ -156,7 +166,7 @@ describe("productoService.obtenerPorCodigo", () => {
   it("debería retornar el producto si existe", async () => {
     prisma.producto.findUnique.mockResolvedValue(productoMock);
 
-    const result = await productoService.obtenerPorCodigo(appMock, "PROD-001");
+    const result = await productoService.obtenerPorCodigo(appMock, "PROD-001", usuarioAdmin);
 
     expect(result.codigo).toBe("PROD-001");
   });
@@ -165,7 +175,7 @@ describe("productoService.obtenerPorCodigo", () => {
     prisma.producto.findUnique.mockResolvedValue(null);
 
     await expect(
-      productoService.obtenerPorCodigo(appMock, "NO-EXISTE"),
+      productoService.obtenerPorCodigo(appMock, "NO-EXISTE", usuarioAdmin),
     ).rejects.toMatchObject({
       statusCode: 404,
       message: expect.stringMatching(/no encontrado/i),
@@ -180,7 +190,7 @@ describe("productoService.editar", () => {
     prisma.producto.findUnique.mockResolvedValue(null);
 
     await expect(
-      productoService.editar(appMock, "NO-EXISTE", { precioVenta: 9000 }),
+      productoService.editar(appMock, "NO-EXISTE", { precioVenta: 9000 }, usuarioAdmin),
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
@@ -189,7 +199,7 @@ describe("productoService.editar", () => {
     prisma.proveedor.findUnique.mockResolvedValue(null); // proveedor no existe
 
     await expect(
-      productoService.editar(appMock, "PROD-001", { proveedorId: 999 }),
+      productoService.editar(appMock, "PROD-001", { proveedorId: 999 }, usuarioAdmin),
     ).rejects.toMatchObject({
       statusCode: 404,
       message: expect.stringMatching(/proveedor/i),
@@ -204,10 +214,15 @@ describe("productoService.editar", () => {
       precioVenta: 30000,
     });
 
-    const result = await productoService.editar(appMock, "PROD-001", {
-      precioVenta: 30000,
-      proveedorId: 1,
-    });
+    const result = await productoService.editar(
+      appMock,
+      "PROD-001",
+      {
+        precioVenta: 30000,
+        proveedorId: 1,
+      },
+      usuarioAdmin,
+    );
 
     expect(result.precioVenta).toBe(30000);
     expect(prisma.producto.update).toHaveBeenCalledWith(
@@ -223,7 +238,7 @@ describe("productoService.desactivar", () => {
     prisma.producto.findUnique.mockResolvedValue(null);
 
     await expect(
-      productoService.desactivar(appMock, "NO-EXISTE"),
+      productoService.desactivar(appMock, "NO-EXISTE", usuarioAdmin),
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
@@ -234,7 +249,7 @@ describe("productoService.desactivar", () => {
       activo: false,
     });
 
-    await productoService.desactivar(appMock, "PROD-001");
+    await productoService.desactivar(appMock, "PROD-001", usuarioAdmin);
 
     expect(prisma.producto.update).toHaveBeenCalledWith(
       expect.objectContaining({
