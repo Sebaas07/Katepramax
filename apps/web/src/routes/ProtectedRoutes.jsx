@@ -1,8 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
+// ── Pantalla de carga de sesión ───────────────────────────────
 export const AuthLoading = () => (
-  <div className="auth-loading">
+  <div className="auth-loading" role="status" aria-label="Verificando sesión">
     <div className="auth-loading__orb" aria-hidden="true" />
     <div>
       <strong>Verificando sesión</strong>
@@ -12,61 +13,41 @@ export const AuthLoading = () => (
 );
 
 /**
- * Ruta que requiere autenticación
- * Si no está logueado -> redirige a login
+ * RequireAuth — Requiere usuario autenticado.
+ * Si no está logueado → /login
  */
 export const RequireAuth = () => {
   const { isAuthenticated, isSessionChecked } = useAuth();
-
-  if (!isSessionChecked) {
-    return <AuthLoading />;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!isSessionChecked) return <AuthLoading />;
+  if (!isAuthenticated)  return <Navigate to="/login" replace />;
   return <Outlet />;
 };
 
 /**
- * Ruta que requiere un rol específico
- * @param {string|string[]} roles - Rol o roles permitidos
+ * RequireRole — Requiere uno de los roles indicados.
+ * Si no está logueado → /login
+ * Si no tiene el rol  → /acceso-denegado
+ *
+ * @param {{ roles: string | string[] }} props
  */
 export const RequireRole = ({ roles }) => {
   const { isAuthenticated, isSessionChecked, verificarRol } = useAuth();
-
-  if (!isSessionChecked) {
-    return <AuthLoading />;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!verificarRol(roles)) {
-    return <Navigate to="/acceso-denegado" replace />;
-  }
-
+  if (!isSessionChecked) return <AuthLoading />;
+  if (!isAuthenticated)  return <Navigate to="/login"           replace />;
+  if (!verificarRol(roles)) return <Navigate to="/acceso-denegado" replace />;
   return <Outlet />;
 };
 
 /**
- * Ruta pública (solo para no autenticados)
- * Si ya está logueado -> redirige según su rol
+ * PublicRoute — Solo para usuarios NO autenticados.
+ * Si ya está logueado → redirige según su rol.
  */
 export const PublicRoute = () => {
   const { isAuthenticated, isSessionChecked, usuario } = useAuth();
-
-  if (!isSessionChecked) {
-    return <AuthLoading />;
-  }
-
+  if (!isSessionChecked) return <AuthLoading />;
   if (isAuthenticated) {
-    const redirectPath =
-      usuario?.rol === "Entregador" ? "/entregas" : "/dashboard";
-    return <Navigate to={redirectPath} replace />;
+    const dest = usuario?.rol === "Entregador" ? "/entregas" : "/dashboard";
+    return <Navigate to={dest} replace />;
   }
-
   return <Outlet />;
 };

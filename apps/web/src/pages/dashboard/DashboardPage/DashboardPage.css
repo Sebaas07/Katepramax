@@ -1,16 +1,35 @@
 /* ============================================================
    DashboardPage.css — Katepramax
-   Estilos del dashboard — paleta oscura sobre Bootstrap
    ============================================================ */
 
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
 /* ─── Encabezado ─────────────────────────────────────────────*/
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dashboard-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .dashboard-header__saludo {
   font-family: var(--font-headline);
   font-size: 1.625rem;
   font-weight: 700;
   color: var(--on-surface);
   letter-spacing: -0.02em;
-  margin-bottom: 0.25rem;
+  margin: 0;
 }
 
 .dashboard-header__sede {
@@ -31,11 +50,11 @@
   font-family: var(--font-label);
   font-size: 12px;
   color: var(--on-surface-variant);
-  text-align: right;
   text-transform: capitalize;
+  text-align: right;
+  padding-top: 4px;
 }
 
-/* Badge "Demo" cuando se usan mocks */
 .dashboard-badge-mock {
   font-family: var(--font-label);
   font-size: 10px;
@@ -49,22 +68,26 @@
   border-radius: var(--radius-full);
 }
 
-/* ─── KPI Cards ──────────────────────────────────────────────*/
+/* ─── KPI Grid ───────────────────────────────────────────────*/
+.dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
 .kpi-card {
-  background: var(--surface-container) !important;
-  border: 1px solid rgba(233, 195, 73, 0.12) !important;
-  border-radius: var(--radius-lg) !important;
-  padding: 1.25rem !important;
+  background: var(--surface-container);
+  border: 1px solid rgba(233, 195, 73, 0.12);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  transition: border-color var(--transition-fast),
-              transform var(--transition-fast);
-  height: 100%;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .kpi-card:hover {
-  border-color: rgba(233, 195, 73, 0.3) !important;
+  border-color: rgba(233, 195, 73, 0.3);
   transform: translateY(-2px);
 }
 
@@ -78,13 +101,11 @@
   flex-shrink: 0;
 }
 
-.kpi-card__icon .material-symbols-outlined {
-  font-size: 24px;
-}
+.kpi-card__icon .material-symbols-outlined { font-size: 24px; }
 
 .kpi-card__valor {
   font-family: var(--font-headline);
-  font-size: 1.625rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--on-surface);
   line-height: 1.1;
@@ -97,25 +118,24 @@
   margin-top: 2px;
 }
 
-/* Spinner dentro de KPI */
 .kpi-spinner {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border: 2px solid var(--outline-variant);
   border-top-color: var(--secondary);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 4px;
+  animation: kpi-spin 0.7s linear infinite;
+  margin-bottom: 2px;
 }
 
-@keyframes spin {
+@keyframes kpi-spin {
   to { transform: rotate(360deg); }
 }
 
-/* ─── Tabla ──────────────────────────────────────────────────*/
+/* ─── Tabla últimos pedidos ──────────────────────────────────*/
 .dashboard-tabla {
-  background-color: var(--surface-container) !important;
-  border: 1px solid rgba(233, 195, 73, 0.12);
+  background: var(--surface-container);
+  border: 1px solid rgba(233, 195, 73, 0.1);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -124,18 +144,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(233, 195, 73, 0.1);
+  padding: 1.125rem 1.5rem;
+  border-bottom: 1px solid rgba(76, 68, 81, 0.25);
 }
 
 .dashboard-tabla__titulo {
-  font-family: var(--font-headline);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--on-surface);
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-family: var(--font-headline);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--on-surface);
   margin: 0;
 }
 
@@ -146,59 +166,45 @@
 
 .dashboard-tabla__badge {
   font-family: var(--font-label);
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--on-surface-variant);
-  background: var(--surface-container-high);
-  border: 1px solid var(--outline-variant);
-  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  padding: 2px 10px;
   border-radius: var(--radius-full);
-  letter-spacing: 0.03em;
 }
 
-/* Celdas de la tabla */
-.dashboard-tabla .table {
-  margin: 0;
-  color: var(--on-surface) !important;
-}
-
-.dashboard-tabla .table > :not(caption) > * > * {
-  background-color: transparent !important;
-  border-color: rgba(80, 67, 77, 0.25) !important;
-  color: var(--on-surface) !important;
-  padding: 0.875rem 1.5rem;
-}
-
-.dashboard-tabla thead tr {
-  background-color: var(--surface-container-high) !important;
-}
-
-.dashboard-tabla thead th {
-  font-family: var(--font-label) !important;
-  font-size: 11px !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.06em !important;
-  text-transform: uppercase !important;
+/* Filas de la tabla */
+.table thead th {
+  background: var(--surface-container-high) !important;
   color: var(--on-surface-variant) !important;
-  background-color: var(--surface-container-high) !important;
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-color: rgba(76, 68, 81, 0.3) !important;
+  padding: 0.625rem 1.25rem !important;
 }
 
-.dashboard-tabla tbody tr {
-  background-color: var(--surface-container) !important;
-  transition: background-color var(--transition-fast);
-}
-
-.dashboard-tabla tbody tr:hover {
-  background-color: var(--surface-container-high) !important;
-}
-
-.dashboard-tabla tbody td {
+.table tbody td {
   font-family: var(--font-label);
   font-size: 13px;
+  color: var(--on-surface);
+  border-color: rgba(76, 68, 81, 0.2) !important;
   vertical-align: middle;
+  padding: 0.75rem 1.25rem !important;
+  background: var(--surface-container) !important;
+}
+
+.table-hover tbody tr:hover td {
+  background: var(--surface-container-high) !important;
 }
 
 .dashboard-tabla__num {
+  font-weight: 700;
   color: var(--on-surface-variant) !important;
   font-size: 12px !important;
 }
@@ -206,55 +212,84 @@
 .dashboard-tabla__codigo {
   font-family: var(--font-label);
   font-size: 12px;
-  color: var(--secondary);
   font-weight: 600;
+  color: var(--secondary) !important;
+  background: rgba(233, 195, 73, 0.1);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
 }
 
-.dashboard-tabla__cliente {
-  font-weight: 600 !important;
-  color: var(--on-surface) !important;
-}
+.dashboard-tabla__cliente { font-weight: 500; }
 
 .dashboard-tabla__sede {
-  color: var(--on-surface-variant) !important;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--on-surface-variant);
 }
 
 .dashboard-tabla__sede .material-symbols-outlined {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--secondary);
 }
 
 .dashboard-tabla__total {
-  font-weight: 600 !important;
-  color: var(--secondary) !important;
+  font-weight: 700;
+  color: #4ade80 !important;
 }
 
 .dashboard-tabla__fecha {
+  font-size: 11px !important;
   color: var(--on-surface-variant) !important;
-  font-size: 12px !important;
 }
 
 .dashboard-tabla__cargando,
 .dashboard-tabla__vacio {
   text-align: center !important;
   color: var(--on-surface-variant) !important;
-  font-family: var(--font-label);
-  font-size: 13px;
+  font-style: italic;
   padding: 2rem !important;
 }
 
-/* ─── Badge de estado (usado inline en esta tabla) ───────────*/
-.estado-badge {
-  font-family: var(--font-label);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid;
-  letter-spacing: 0.03em;
-  display: inline-block;
-  white-space: nowrap;
+/* ─── Responsive ─────────────────────────────────────────────*/
+@media (max-width: 1199.98px) {
+  .dashboard-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .dashboard-header__fecha {
+    text-align: left;
+  }
+  .dashboard-header__saludo {
+    font-size: 1.375rem;
+  }
+  .kpi-card__valor {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .dashboard-kpis {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .kpi-card {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+  .kpi-card__icon {
+    width: 40px;
+    height: 40px;
+  }
+  .kpi-card__valor {
+    font-size: 1.125rem;
+  }
 }

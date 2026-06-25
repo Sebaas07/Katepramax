@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   obtenerSesion,
   estaLogueado,
@@ -9,107 +9,114 @@ import {
   iniciarSesion as loginService,
   obtenerUsuarioActual,
   cerrarSesionUsuario,
-  refreshToken as refreshTokenService,
 } from "@/services/auth.service";
-
 import { AuthContext } from "@/hooks/useAuth";
 
-const AUTH_VERIFY_TIMEOUT_MS = 2500;
+const AUTH_VERIFY_TIMEOUT_MS = 3000;
 
-const verificarUsuarioConBackend = async () => {
-
-   if (import.meta.env.VITE_SKIP_AUTH_VERIFY === "true") {
-    return { exitoso: true };
-  }
-
-  const controller = new AbortController();
-  const timeout = window.setTimeout(
-    () => controller.abort(),
-    AUTH_VERIFY_TIMEOUT_MS,
-  );
-
+/**
+ * Verifica la sesión con el backend.
+ * Si el servidor tarda más de AUTH_VERIFY_TIMEOUT_MS, conserva la sesión local.
+ * Si responde con error de autenticación (401/403), cierra sesión.
+ */
+const verificarConBackend = async (signal) => {
   try {
-    return await obtenerUsuarioActual({ signal: controller.signal });
+    const result = await obtenerUsuarioActual({ signal });
+    return result;
   } catch (error) {
-    if (error?.name === "AbortError") {
-      console.warn("Tiempo de verificación de sesión excedido; se mantiene la sesión local.");
-      return { exitoso: true };
+    if (error?.name === "AbortError" || error?.name === "CanceledError") {
+      // Timeout — conservar sesión local silenciosamente
+      return { exitoso: true, datos: null };
     }
-
-    console.warn("No se pudo validar sesión con backend:", error);
-    return { exitoso: false, mensaje: error?.message || "Error al validar sesión" };
-  } finally {
-    window.clearTimeout(timeout);
+    const status = error?.response?.status;
+    if (status === 401 || status === 403) {
+      return { exitoso: false, forzarCierre: true };
+    }
+    // Error de red u otro — conservar sesión local
+    console.warn("[AuthContext] No se pudo verificar sesión con backend:", error?.message);
+    return { exitoso: true, datos: null };
   }
 };
 
 export const AuthProvider = ({ children }) => {
-  const [usuario, setUsuario] = useState(() => obtenerSesion());
-  const [isAuthenticated, setIsAuthenticated] = useState(() =>
-    estaLogueado() && Boolean(obtenerSesion()),
-  );
-  const [isSessionChecked, setIsSessionChecked] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [usuario,           setUsuario]          = useState(() => obtenerSesion());
+  const [isAuthenticated,   setIsAuthenticated]  = useState(() => estaLogueado() && Boolean(obtenerSesion()));
+  const [isSessionChecked,  setIsSessionChecked] = useState(false);
+  const [isLoading,         setIsLoading]        = useState(true);
+  const [error,             setError]            = useState(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
 
     const cargarSesion = async () => {
-      const sesionGuardada = obtenerSesion();
-      const tieneSesionLocal = estaLogueado() && Boolean(sesionGuardada);
+      const sesionLocal     = obtenerSesion();
+      const tieneSesionLocal = estaLogueado() && Boolean(sesionLocal);
 
-      if (tieneSesionLocal) {
-        setUsuario(sesionGuardada);
+      if (!tieneSesionLocal) {
+        cerrarSesion();
+        if (mountedRef.current) {
+          setUsuario(null);
+          setIsAuthenticated(false);
+        }
+        return;
+      }
+
+      // Sesión local presente → mostrar UI inmediatamente
+      if (mountedRef.current) {
+        setUsuario(sesionLocal);
         setIsAuthenticated(true);
-      } else {
+      }
+
+      // Verificar con el backend en segundo plano
+      const controller = new AbortController();
+      const timeoutId  = window.setTimeout(() => controller.abort(), AUTH_VERIFY_TIMEOUT_MS);
+
+      const result = await verificarConBackend(controller.signal);
+      window.clearTimeout(timeoutId);
+
+      if (!mountedRef.current) return;
+
+      if (result.forzarCierre) {
         cerrarSesion();
         setUsuario(null);
         setIsAuthenticated(false);
+        return;
       }
 
-      if (tieneSesionLocal) {
-        const response = await verificarUsuarioConBackend();
-
-        if (!mounted) return;
-
-        if (response.exitoso && response.datos) {
-          if (JSON.stringify(response.datos) !== JSON.stringify(sesionGuardada)) {
-            guardarSesion(response.datos);
-            setUsuario(response.datos);
-          }
-        } else if (response.mensaje) {
-          setError(response.mensaje);
+      // Si el backend devolvió datos actualizados, sincronizar
+      if (result.exitoso && result.datos) {
+        const datosNormalizados = result.datos;
+        if (JSON.stringify(datosNormalizados) !== JSON.stringify(sesionLocal)) {
+          guardarSesion(datosNormalizados);
+          setUsuario(datosNormalizados);
         }
       }
     };
 
     cargarSesion().finally(() => {
-      if (mounted) {
+      if (mountedRef.current) {
         setIsSessionChecked(true);
         setIsLoading(false);
       }
     });
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
     };
   }, []);
 
   const login = useCallback(async (usuarioInput, contrasena) => {
     setError(null);
     setIsLoading(true);
-
     try {
       const result = await loginService(usuarioInput, contrasena);
-
       if (result.exitoso) {
         setUsuario(result.datos);
         setIsAuthenticated(true);
         setIsSessionChecked(true);
         return true;
       }
-
       setError(result.mensaje || "Error al iniciar sesión");
       return false;
     } catch (err) {
@@ -121,32 +128,26 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
-    await cerrarSesionUsuario();
-    setUsuario(null);
-    setIsAuthenticated(false);
-    setIsSessionChecked(true);
-    setError(null);
+    try {
+      await cerrarSesionUsuario();
+    } catch {
+      // El servidor puede haber revocado la sesión ya — continuar igualmente
+    } finally {
+      cerrarSesion();
+      setUsuario(null);
+      setIsAuthenticated(false);
+      setIsSessionChecked(true);
+      setError(null);
+    }
   }, []);
 
   const verificarRol = useCallback(
     (roles) => {
-      const rolesPermitidos = Array.isArray(roles) ? roles : [roles];
-      return rolesPermitidos.includes(usuario?.rol);
+      const permitidos = Array.isArray(roles) ? roles : [roles];
+      return permitidos.includes(usuario?.rol);
     },
     [usuario],
   );
-
-  const refreshToken = useCallback(async () => {
-    const result = await refreshTokenService();
-    if (result.exitoso) {
-      setUsuario(result.datos);
-      setIsAuthenticated(true);
-      return true;
-    }
-    setUsuario(null);
-    setIsAuthenticated(false);
-    return false;
-  }, []);
 
   const value = {
     usuario,
@@ -156,14 +157,16 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     logout,
-    refreshToken,
     verificarRol,
-    esAdmin: usuario?.rol === "Admin",
-    esBodega: usuario?.rol === "Bodega" || usuario?.rol === "AdminBogota",
-    esEntregador: usuario?.rol === "Entregador",
-    esBodegaBogota:
-      usuario?.rol === "AdminBogota" ||
-      usuario?.esBogota === true,
+
+    // Booleanos derivados del rol — única fuente de verdad en el frontend
+    esAdmin:        usuario?.rol === "Admin",
+    esBodega:       usuario?.rol === "Bodega" || usuario?.rol === "AdminBogota",
+    esEntregador:   usuario?.rol === "Entregador",
+    esAdminBogota:  usuario?.rol === "AdminBogota",
+
+    // Puede ver y editar datos de gestión (inventario, productos, pedidos, etc.)
+    puedeGestionar: ["Admin", "Bodega", "AdminBogota"].includes(usuario?.rol),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

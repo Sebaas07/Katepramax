@@ -10,45 +10,41 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 /**
- * Instancia principal de Axios.
- * Todos los módulos de la app deben usar esta instancia para hacer peticiones al backend.
- * Nunca usar axios directamente fuera de este archivo.
+ * clienteApi — instancia principal de Axios.
+ * Todos los módulos usan esta instancia. Nunca llamar axios directamente.
  */
 export const clienteApi = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  timeout: 12000,
+  headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });
 
-// ─── Interceptor de REQUEST ───────────────────────────────────────────────────
-// Se ejecuta ANTES de cada petición.
-// Lee el token de la cookie y lo adjunta al header Authorization.
+// ── Interceptor REQUEST ───────────────────────────────────────
 clienteApi.interceptors.request.use(
   (config) => {
     const token = obtenerAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   (error) => Promise.reject(error),
 );
 
-// ─── Interceptor de RESPONSE ──────────────────────────────────────────────────
-// Se ejecuta DESPUÉS de cada respuesta del servidor.
-// Si llega un 401 (token expirado), renueva el token de forma transparente.
+// ── Interceptor RESPONSE ──────────────────────────────────────
+// Gestiona la renovación transparente del access token.
+// Cola de peticiones: evita que múltiples 401 simultáneos
+// disparen varios refresh en paralelo (race condition).
 
-// Estas dos variables evitan que si llegan 3 peticiones al mismo tiempo
-// y todas fallan con 401, las 3 intenten renovar el token a la vez.
-// Solo la primera lo renueva, las otras dos esperan en la cola.
-let estaRenovando = false;
-let peticionesEnEspera = [];
+let estaRenovando        = false;
+let peticionesEnEspera   = [];
 
 const procesarCola = (nuevoToken) => {
   peticionesEnEspera.forEach((cb) => cb(nuevoToken));
+  peticionesEnEspera = [];
+};
+
+const rechazarCola = (error) => {
+  peticionesEnEspera.forEach((cb) => cb(null, error));
   peticionesEnEspera = [];
 };
 
@@ -56,27 +52,34 @@ clienteApi.interceptors.response.use(
   (response) => response,
 
   async (error) => {
-    const config = error.config || {};
+    const config   = error.config || {};
     const response = error.response;
 
-    // Sin respuesta = servidor caído o sin internet
+    // Sin respuesta del servidor (red caída)
     if (!response) {
-      if (axios.isCancel(error)) return Promise.reject(error);
-      console.warn("Sin conexión al servidor:", error.message);
+      if (!axios.isCancel(error)) {
+        console.warn("[axiosConfig] Sin conexión al servidor:", error.message);
+      }
       return Promise.reject(error);
     }
 
-    // El endpoint de login no debe intentar renovar token
+    // No reintentar el endpoint de login
     if (config?.url?.includes("/auth/login")) {
       return Promise.reject(error);
     }
 
-    // Solo actuar en 401 y solo si no reintentamos esta petición antes
+    // No reintentar el propio refresh (evita bucle infinito)
+    if (config?.url?.includes("/auth/refresh")) {
+      return Promise.reject(error);
+    }
+
+    // Solo actuar en 401 y solo si no reintentamos ya esta petición
     if (response.status === 401 && !config._reintentado) {
-      // Si ya hay una renovación en curso, encolar y esperar
+      // Si ya hay un refresh en vuelo, encolar y esperar
       if (estaRenovando) {
-        return new Promise((resolve) => {
-          peticionesEnEspera.push((nuevoToken) => {
+        return new Promise((resolve, reject) => {
+          peticionesEnEspera.push((nuevoToken, err) => {
+            if (err) return reject(err);
             config.headers.Authorization = `Bearer ${nuevoToken}`;
             resolve(clienteApi(config));
           });
@@ -84,30 +87,31 @@ clienteApi.interceptors.response.use(
       }
 
       config._reintentado = true;
-      estaRenovando = true;
+      estaRenovando       = true;
 
       try {
         const refreshToken = obtenerRefreshToken();
-        if (!refreshToken) throw new Error("Sin refresh token");
+        if (!refreshToken) throw new Error("Sin refresh token almacenado.");
 
-        // Instancia LIMPIA para no pasar por este mismo interceptor
-        // y evitar un bucle infinito
-        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-          refreshToken,
-        });
-
-        guardarTokens(
-          data.accessToken || data.token,
-          data.refreshToken || data.refreshToken || data.refresh_token,
+        // Instancia limpia para no pasar por este interceptor de nuevo
+        const { data } = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          { refreshToken },
+          { timeout: 8000 },
         );
-        estaRenovando = false;
-        procesarCola(data.accessToken || data.token);
 
-        config.headers.Authorization = `Bearer ${data.accessToken}`;
+        const nuevoAccess  = data.accessToken  ?? data.token;
+        const nuevoRefresh = data.refreshToken ?? data.refresh_token;
+
+        guardarTokens(nuevoAccess, nuevoRefresh);
+        estaRenovando = false;
+        procesarCola(nuevoAccess);
+
+        config.headers.Authorization = `Bearer ${nuevoAccess}`;
         return clienteApi(config);
       } catch (err) {
         estaRenovando = false;
-        peticionesEnEspera = [];
+        rechazarCola(err);
         cerrarSesion();
         if (!window.location.pathname.includes("/login")) {
           window.location.href = "/login";

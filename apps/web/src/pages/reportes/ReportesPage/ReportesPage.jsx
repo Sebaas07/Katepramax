@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { filtrarPorSede } from "@/utils/permisos";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import reporteService from "@/services/reporte.service";
@@ -74,7 +75,10 @@ const ReportesPage = () => {
   const cargarDatos = useCallback(async () => {
     setCargando(true);
     try {
-      const sede = filtroSedeId ? parseInt(filtroSedeId, 10) : undefined;
+      // filtrarPorSede garantiza que Bodega/AdminBogota solo vea su sede
+      const filtrosBase = filtroSedeId ? { sedeId: parseInt(filtroSedeId, 10) } : {};
+      const filtrosSede = filtrarPorSede(filtrosBase);
+      const sede = filtrosSede.sedeId;
 
       if (tab === "resumen") {
         const data = await reporteService.obtenerResumenGeneral({

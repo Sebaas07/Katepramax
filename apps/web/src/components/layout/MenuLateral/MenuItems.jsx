@@ -3,112 +3,136 @@ import { useAuth } from "@/hooks/useAuth";
 import SidebarLink from "./SidebarLink";
 import "./MenuItems.css";
 
-// ─── Definición del menú ──────────────────────────────────────
-// Cada ítem tiene: ruta, label, icono Material Symbols y roles
-// que lo pueden ver.
+/**
+ * MENU — Definición centralizada.
+ * Cada ítem declara los roles que lo pueden ver.
+ * Si se agrega un rol nuevo, solo hay que actualizar aquí.
+ */
 const MENU = [
   {
-    path: "/dashboard",
+    path:  "/dashboard",
     label: "Dashboard",
-    icon: "dashboard",
+    icon:  "dashboard",
     roles: ["Admin", "AdminBogota", "Bodega", "Entregador"],
   },
   {
-    path: "/entregas",
+    path:  "/entregas",
     label: "Mis Entregas",
-    icon: "local_shipping",
+    icon:  "local_shipping",
     roles: ["Entregador"],
   },
   {
-    path: "/pedidos",
+    path:  "/pedidos",
     label: "Pedidos",
-    icon: "shopping_cart",
+    icon:  "shopping_cart",
     roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
-    path: "/inventario",
+    path:  "/inventario",
     label: "Inventario",
-    icon: "inventory_2",
+    icon:  "inventory_2",
     roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
-    path: "/productos",
+    path:  "/productos",
     label: "Productos",
-    icon: "category",
+    icon:  "category",
     roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
-    path: "/distribucion",
+    path:  "/distribucion",
     label: "Distribución",
-    icon: "sync_alt",
+    icon:  "sync_alt",
     roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
-    path: "/proveedores",
+    path:  "/proveedores",
     label: "Proveedores",
-    icon: "conveyor_belt",
+    icon:  "conveyor_belt",
     roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
-    path: "/contabilidad",
-    label: "Contabilidad",
-    icon: "account_balance",
-    roles: ["Admin", "AdminBogota", "Bodega"],
-  },
-  {
-    path: "/reportes",
-    label: "Reportes",
-    icon: "assessment",
-    roles: ["Admin", "AdminBogota", "Bodega"],
-  },
-  {
-    path: "/clientes",
+    path:  "/clientes",
     label: "Clientes",
-    icon: "people",
+    icon:  "people",
     roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
-    path: "/admin/usuarios",
-    label: "Usuarios",
-    icon: "group",
-    roles: ["Admin"],
+    path:  "/contabilidad",
+    label: "Contabilidad",
+    icon:  "account_balance",
+    roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
-    path: "/admin/audit-log",
-    label: "Audit Log",
-    icon: "history_edu",
+    path:  "/reportes",
+    label: "Reportes",
+    icon:  "assessment",
+    roles: ["Admin", "AdminBogota", "Bodega"],
+  },
+  // Sección Admin
+  {
+    path:  "/admin/usuarios",
+    label: "Usuarios",
+    icon:  "group",
     roles: ["Admin"],
+    seccion: "admin",
+  },
+  {
+    path:  "/admin/audit-log",
+    label: "Audit Log",
+    icon:  "history_edu",
+    roles: ["Admin"],
+    seccion: "admin",
   },
 ];
 
 export default function MenuItems({ cerrar }) {
   const location = useLocation();
-  const { usuario, esBodegaBogota } = useAuth();
-  const rol = usuario?.rol || "";
+  const { usuario, esAdminBogota } = useAuth();
+  const rol = usuario?.rol ?? "";
 
-  const esActivo = (ruta) => location.pathname === ruta;
-
-  // Filtrar según rol del usuario
   const menuFiltrado = MENU.filter((item) => item.roles.includes(rol));
+
+  // Separar sección admin del resto para mostrar un divisor
+  const menuGeneral = menuFiltrado.filter((i) => i.seccion !== "admin");
+  const menuAdmin   = menuFiltrado.filter((i) => i.seccion === "admin");
 
   return (
     <>
-      {menuFiltrado.map((item) => (
+      {menuGeneral.map((item) => (
         <SidebarLink
-          key={item.path + item.label}
+          key={item.path}
           icon={item.icon}
           label={item.label}
           to={item.path}
-          activo={esActivo(item.path)}
+          activo={location.pathname === item.path}
           onClick={cerrar}
         />
       ))}
 
-      {/* Badge especial para Bodega Bogotá */}
-      {esBodegaBogota && (
+      {menuAdmin.length > 0 && (
+        <>
+          <div className="menu-items__seccion-divider">
+            <span>Administración</span>
+          </div>
+          {menuAdmin.map((item) => (
+            <SidebarLink
+              key={item.path}
+              icon={item.icon}
+              label={item.label}
+              to={item.path}
+              activo={location.pathname === item.path}
+              onClick={cerrar}
+            />
+          ))}
+        </>
+      )}
+
+      {/* Badge Bodega Principal solo para AdminBogota */}
+      {esAdminBogota && (
         <div className="menu-items__bogota-badge">
           <span className="material-symbols-outlined">verified</span>
-          <span>Bodega Principal (Bogotá)</span>
+          <span>Bodega Principal · Bogotá</span>
         </div>
       )}
     </>

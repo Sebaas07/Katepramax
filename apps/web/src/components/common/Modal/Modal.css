@@ -175,3 +175,23 @@
     padding: 0.875rem 1rem;
   }
 }
+/* ─── Bottom-sheet en móviles pequeños ──────────────────────*/
+@media (max-width: 480px) {
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 92dvh;
+    animation: sheetIn var(--transition-base) ease;
+  }
+
+  @keyframes sheetIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+}
