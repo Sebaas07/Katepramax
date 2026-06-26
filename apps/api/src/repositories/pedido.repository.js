@@ -5,6 +5,7 @@
 const incluirDetalle = {
   cliente: { select: { id: true, nombre: true, telefono: true } },
   creador: { select: { id: true, nombreCompleto: true } },
+  sede: { select: { id: true, nombre: true } },
   detalles: {
     include: { producto: { select: { codigo: true, descripcion: true } } },
   },

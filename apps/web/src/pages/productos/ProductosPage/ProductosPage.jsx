@@ -147,7 +147,7 @@ const ProductosPage = () => {
   const [modalHistorial, setModalHistorial] = useState(false);
   const [productoSel, setProductoSel] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const [form, setForm] = useState({
+const [form, setForm] = useState({
     descripcion: "",
     departamento: "",
     precioCosto: "",
@@ -155,6 +155,7 @@ const ProductosPage = () => {
     precioMayoreo: "",
     porcentajeGanancia: "",
     stockMinimo: "",
+    stockInicial: "",
     proveedorId: "",
     activo: true,
     sedeId: "",
@@ -267,7 +268,7 @@ const ProductosPage = () => {
     return "0";
   }, [form.precioCosto, form.precioVenta]);
 
-  const resetForm = useCallback(
+const resetForm = useCallback(
     () => ({
       descripcion: "",
       departamento: "",
@@ -276,6 +277,7 @@ const ProductosPage = () => {
       precioMayoreo: "",
       porcentajeGanancia: "",
       stockMinimo: "",
+      stockInicial: "",
       proveedorId: "",
       activo: true,
       sedeId: esAdmin ? "" : String(sedeIdUsuario ?? ""),
@@ -331,7 +333,7 @@ const ProductosPage = () => {
     [cargarMovimientos, sedeActivaId, sedes],
   );
 
-  const handleGuardar = useCallback(async () => {
+const handleGuardar = useCallback(async () => {
     setGuardando(true);
     try {
       const payload = {
@@ -342,6 +344,7 @@ const ProductosPage = () => {
         precioMayoreo: form.precioMayoreo,
         porcentajeGanancia: form.porcentajeGanancia,
         stockMinimo: form.stockMinimo,
+        stockInicial: form.stockInicial,
         proveedorId: form.proveedorId,
         activo: form.activo,
       };
@@ -857,7 +860,24 @@ const ProductosPage = () => {
               />
             </div>
 
-            {esAdmin && (
+            <div className="form-group">
+              <label htmlFor="prod-stock-inicial">Stock Inicial</label>
+              <input
+                id="prod-stock-inicial"
+                name="stockInicial"
+                type="number"
+                value={form.stockInicial}
+                onChange={handleCambioForm}
+                className="form-control"
+                min="0"
+                step="1"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          {esAdmin && (
+            <div className="form-row">
               <div className="form-group">
                 <label htmlFor="prod-sede">Sede *</label>
                 <select
@@ -875,8 +895,8 @@ const ProductosPage = () => {
                   ))}
                 </select>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="form-row">
             <div className="form-group">

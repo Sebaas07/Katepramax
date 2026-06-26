@@ -47,6 +47,7 @@ const inventarioService = {
         precioMayoreo,
         porcentajeGanancia,
         stockMinimo,
+        stockInicial,
         proveedorId,
         sedeId,
       } = producto;
@@ -74,6 +75,7 @@ const inventarioService = {
         ...(precioMayoreo !== undefined && precioMayoreo !== "" ? { precioMayoreo: toNumber(precioMayoreo, 0) } : {}),
         porcentajeGanancia: toNumber(porcentajeGanancia, 0),
         stockMinimo: toNumber(stockMinimo, 0),
+        stockInicial: stockInicial ? toNumber(stockInicial, 0) : undefined,
         proveedorId: proveedorId ? Number(proveedorId) : null,
         ...(sedeFinal !== undefined ? { sedeId: sedeFinal } : {}),
       });

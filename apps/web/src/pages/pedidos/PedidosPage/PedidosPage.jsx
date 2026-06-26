@@ -43,13 +43,14 @@ const PedidosPage = () => {
    const puedeAsignar  = esAdmin || esBodega;
    const sedeIdUsuario = usuario?.sedeId ?? null;
 
-  const [pedidos,      setPedidos]      = useState([]);
-  const [productos,    setProductos]    = useState([]);
-  const [clientes,     setClientes]     = useState([]);
-  const [entregadores, setEntregadores] = useState([]);
-  const [cargando,     setCargando]     = useState(false);
-  const [guardando,    setGuardando]    = useState(false);
-  const [errorDatos,   setErrorDatos]   = useState(null);
+const [pedidos,      setPedidos]      = useState([]);
+   const [productos,    setProductos]    = useState([]);
+   const [clientes,     setClientes]     = useState([]);
+   const [entregadores, setEntregadores] = useState([]);
+   const [sedes,        setSedes]        = useState([]);
+   const [cargando,     setCargando]     = useState(false);
+   const [guardando,    setGuardando]    = useState(false);
+   const [errorDatos,   setErrorDatos]   = useState(null);
 
   const [tabActiva,    setTabActiva]    = useState("");
   const [filtroTexto,  setFiltroTexto]  = useState("");
@@ -78,41 +79,44 @@ const [modalPedidoAbierto,    setModalPedidoAbierto]    = useState(false);
   );
 
   const sedesDisponibles = useMemo(() => {
+    if (sedes.length > 0) return sedes.map((s) => s.id).sort((a, b) => a - b);
     const s = new Set();
     productos.forEach((p) => {
       const sid = p.sedeId ?? p.sede?.id;
       if (sid != null) s.add(sid);
     });
-    return Array.from(s).sort();
-  }, [productos]);
+    return Array.from(s).sort((a, b) => a - b);
+  }, [sedes, productos]);
 
 const nombreSede = useCallback(
     (sedeId) => {
       const id = typeof sedeId === "string" ? parseInt(sedeId, 10) : sedeId;
       if (!id) return "—";
+      const sedeEncontrada = sedes.find((s) => s.id === id);
+      if (sedeEncontrada?.nombre) return sedeEncontrada.nombre;
       const nombres = { 1: "Bogotá", 2: "Cartagena", 3: "Villavicencio" };
-      const primero = productos.find((p) => {
-        const sid = p.sedeId ?? p.sede?.id;
-        return sid === id;
-      });
-      return nombres[id] ?? primero?.sede?.nombre ?? `Sede ${id}`;
+      return nombres[id] ?? `Sede ${id}`;
     },
-    [productos]
+    [sedes]
   );
 
   const cargarDatos = useCallback(async () => {
     setCargando(true);
     setErrorDatos(null);
     try {
-      const [pedidosData, productosData, clientesData] =
+      const [pedidosData, productosData, clientesData, sedesData] =
         await Promise.all([
           pedidosService.obtenerPedidos(),
           inventarioService.obtenerProductos({ activo: "true" }),
           clientesService.obtenerClientes({ activo: "true" }),
+          esAdmin ? inventarioService.obtenerSedes() : Promise.resolve([]),
         ]);
       setPedidos(pedidosData);
+      // Log para diagnóstico: mostrar las primeras entradas
+      console.debug("pedidos cargados:", pedidosData?.slice?.(0, 5));
       setProductos(productosData);
       setClientes(clientesData);
+      setSedes(Array.isArray(sedesData) ? sedesData : []);
       if (esAdmin) {
         setEntregadores(await pedidosService.obtenerEntregadores());
       } else {
@@ -122,6 +126,7 @@ const nombreSede = useCallback(
       setErrorDatos("No fue posible cargar los pedidos. Revisa la conexión o credenciales.");
       toast.error("Error al cargar datos: " + (err?.message || "desconocido"));
       setEntregadores([]);
+      setSedes([]);
     } finally {
       setCargando(false);
     }
@@ -145,6 +150,7 @@ useEffect(() => {
 
         let sedeFinal = p.sedeId ?? p.sede?.id ?? null;
         if (!sedeFinal && clienteObj?.sedeId) sedeFinal = clienteObj.sedeId;
+        const sedeNombreDirecta = p.sede?.nombre ?? p.sedeNombre ?? null;
         if (!sedeFinal) {
           const it = p.items?.[0] ?? p.detalles?.[0];
           if (it) {
@@ -173,7 +179,7 @@ useEffect(() => {
           estado,
           cliente: clienteObj?.nombre ?? p.cliente?.nombre ?? `Cliente #${clienteId ?? "—"}`,
           sedeId: sedeFinal,
-          sedeNombre: nombreSede(sedeFinal),
+          sedeNombre: sedeNombreDirecta ?? nombreSede(sedeFinal),
           entregador: nombreEntregador,
           totalPedido,
           direccion: p.observaciones ?? "",
@@ -283,7 +289,18 @@ useEffect(() => {
       setModalPedidoAbierto(false);
       await cargarDatos();
     } catch (err) {
-      toast.error(err.message);
+      const serverMsg = err?.response?.data?.error || err?.message || "Error desconocido";
+      console.error("pedidosService.crearPedido:", err?.response?.data || err);
+
+      // Manejo especial para falta de stock: mostrar una alerta amigable
+      if (String(serverMsg).toLowerCase().includes("stock insuficiente")) {
+        toast(
+          "No hay stock suficiente para uno o más productos. Ve a Inventario para registrar entrada.",
+          { icon: "⚠️" },
+        );
+      } else {
+        toast.error(serverMsg);
+      }
     } finally {
       setGuardando(false);
     }
@@ -541,20 +558,31 @@ useEffect(() => {
                               ? `[${prodSel.codigo}] ${prodSel.nombre ?? prodSel.descripcion}`
                               : ""
                           }
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            const match = raw.match(/\[(\d+)\]/);
-                            if (match) handleSeleccionProducto(index, match[1]);
-                          }}
-                        />
-                        <datalist id={`ped-buscar-dl-${index}`}>
-                          {productos.map((p) => (
-                            <option key={p.codigo} value={`[${p.codigo}] ${p.nombre ?? p.descripcion}`}>
-                              {p.sede?.nombre ?? nombreSede(p.sedeId)}
-                            </option>
-                          ))}
-                        </datalist>
-                      </div>
+onChange={(e) => {
+                             const raw = e.target.value;
+                             const match = raw.match(/\[(\d+)\]/);
+                             if (match) {
+                               handleSeleccionProducto(index, match[1]);
+                             } else {
+                               const prodPorNombre = productos.find((p) =>
+                                 String(p.nombre ?? p.descripcion ?? "")
+                                   .toLowerCase()
+                                   .includes(raw.toLowerCase())
+                               );
+                               if (prodPorNombre && !item.productoId) {
+                                 handleSeleccionProducto(index, prodPorNombre.codigo);
+                               }
+                             }
+                           }}
+                         />
+                         <datalist id={`ped-buscar-dl-${index}`}>
+                           {productos.map((p) => (
+                             <option key={p.codigo} value={`[${p.codigo}] ${p.nombre ?? p.descripcion ?? ""}`}>
+                               {p.sede?.nombre ?? nombreSede(p.sedeId)}
+                             </option>
+                           ))}
+                         </datalist>
+                       </div>
 
                       <div className="item-field--cantidad">
                         <label htmlFor={`ped-cant-${index}`}>Cant.</label>

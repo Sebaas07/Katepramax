@@ -49,7 +49,7 @@ async function crear(app, body, usuario) {
     throw new AppError("No tienes permiso para crear productos.", 403);
   }
 
-  const { sedeId: _sedeId, ...datosProducto } = body;
+  const { sedeId: _sedeId, stockInicial, ...datosProducto } = body;
 
   let sedeId;
   if (usuario?.rol !== "Admin") {
@@ -82,6 +82,10 @@ async function crear(app, body, usuario) {
 
   const nuevo = await repo.crear(app.prisma, datosProducto);
 
+  const stockValue = stockInicial !== undefined && stockInicial !== null && stockInicial !== ""
+    ? Number(stockInicial)
+    : 0;
+
   if (sedeId) {
     await app.prisma.stockSede.upsert({
       where: {
@@ -93,7 +97,7 @@ async function crear(app, body, usuario) {
       create: {
         productoId: nuevo.codigo,
         sedeId: Number(sedeId),
-        stockActual: 0,
+        stockActual: Number.isFinite(stockValue) ? stockValue : 0,
       },
       update: {},
     });

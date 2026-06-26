@@ -46,6 +46,15 @@ const pedidoBase = {
         nombreCompleto: { type: "string" },
       },
     },
+    sedeId: { type: "integer" },
+    sede: {
+      type: "object",
+      properties: {
+        id:     { type: "integer" },
+        nombre: { type: "string" },
+      },
+      additionalProperties: false,
+    },
     detalles:     { type: "array", items: detalleItem },
     asignaciones: { type: "array" },
   },

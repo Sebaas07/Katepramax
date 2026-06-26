@@ -57,6 +57,7 @@ const crearProducto = {
       porcentajeGanancia: { type: "number", minimum: 0 },
       departamento: { type: "string", maxLength: 100 },
       stockMinimo: { type: "integer", minimum: 0 },
+      stockInicial: { type: "integer", minimum: 0 },
       proveedorId: { type: ["integer", "null"] },
       sedeId: { type: "integer" },
     },

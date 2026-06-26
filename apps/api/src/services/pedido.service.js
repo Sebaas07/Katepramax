@@ -60,8 +60,11 @@ async function crear(app, body, usuarioId) {
   let totalPedido = 0;
 
   for (const item of items) {
+    const codigoProd = Number(item.productoId);
+    const cantidadReq = Number(item.cantidad);
+
     const producto = await app.prisma.producto.findUnique({
-      where: { codigo: item.productoId },
+      where: { codigo: codigoProd },
     });
     if (!producto)
       throw new AppError(`Producto ${item.productoId} no encontrado`, 404);
@@ -73,25 +76,25 @@ async function crear(app, body, usuarioId) {
 
     const stock = await app.prisma.stockSede.findUnique({
       where: {
-        sedeId_productoId: { sedeId: sedePedido, productoId: item.productoId },
+        sedeId_productoId: { sedeId: sedePedido, productoId: codigoProd },
       },
     });
     const stockDisponible = stock?.stockActual ?? 0;
-    if (stockDisponible < item.cantidad) {
+    if (stockDisponible < cantidadReq) {
       throw new AppError(
-        `Stock insuficiente para ${producto.descripcion}. Disponible: ${stockDisponible}, solicitado: ${item.cantidad}`,
+        `Stock insuficiente para ${producto.descripcion}. Disponible: ${stockDisponible}, solicitado: ${cantidadReq}`,
         400,
       );
     }
 
     const precioUnitario = item.precioUnitario ?? producto.precioVenta;
-    const subtotal = Number(precioUnitario) * item.cantidad;
+    const subtotal = Number(precioUnitario) * cantidadReq;
     totalPedido += subtotal;
 
     detallesPreparados.push({
-      productoId: item.productoId,
+      productoId: codigoProd,
       productoNombre: producto.descripcion,
-      cantidad: item.cantidad,
+      cantidad: cantidadReq,
       precioUnitario,
       subtotal,
     });
@@ -117,19 +120,22 @@ async function crear(app, body, usuarioId) {
       include: {
         cliente: { select: { id: true, nombre: true } },
         creador: { select: { id: true, nombreCompleto: true } },
+        sede: { select: { id: true, nombre: true } },
         detalles: true,
       },
     });
 
     for (const item of items) {
+      const codigoProd = Number(item.productoId);
+      const cantidadReq = Number(item.cantidad);
       await tx.stockSede.update({
         where: {
           sedeId_productoId: {
             sedeId: sedePedido,
-            productoId: item.productoId,
+            productoId: codigoProd,
           },
         },
-        data: { stockActual: { decrement: item.cantidad } },
+        data: { stockActual: { decrement: cantidadReq } },
       });
     }
 
