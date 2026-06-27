@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import "./TablaGenerica.css";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 
@@ -47,20 +47,20 @@ const TablaGenerica = ({
       camposABuscar.some(
         (campo) =>
           fila[campo] != null &&
-          String(fila[campo]).toLowerCase().includes(termino)
-      )
+          String(fila[campo]).toLowerCase().includes(termino),
+      ),
     );
   }, [datos, terminoBusqueda, columnas, buscarEnCampos]);
 
   // ── Paginación ────────────────────────────────────────────
   const totalPaginas = useMemo(
     () => Math.max(1, Math.ceil(datosFiltrados.length / filasPorPagina)),
-    [datosFiltrados, filasPorPagina]
+    [datosFiltrados, filasPorPagina],
   );
 
   const paginaValida = useMemo(
     () => Math.min(paginaActual, totalPaginas),
-    [paginaActual, totalPaginas]
+    [paginaActual, totalPaginas],
   );
 
   const datosPagina = useMemo(() => {
@@ -132,7 +132,10 @@ const TablaGenerica = ({
 
   // ── Columnas con acciones ─────────────────────────────────
   const columnasFinales = renderAcciones
-    ? [...columnas, { campo: "__acciones", label: "Acciones", tipo: "acciones" }]
+    ? [
+        ...columnas,
+        { campo: "__acciones", label: "Acciones", tipo: "acciones" },
+      ]
     : columnas;
 
   // ── Render ────────────────────────────────────────────────
@@ -178,8 +181,8 @@ const TablaGenerica = ({
                                 accion.variante === "danger"
                                   ? "tabla-accion-btn--danger"
                                   : accion.variante === "success"
-                                  ? "tabla-accion-btn--success"
-                                  : ""
+                                    ? "tabla-accion-btn--success"
+                                    : ""
                               }`}
                               type="button"
                             >

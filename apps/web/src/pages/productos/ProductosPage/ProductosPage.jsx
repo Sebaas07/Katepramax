@@ -147,7 +147,7 @@ const ProductosPage = () => {
   const [modalHistorial, setModalHistorial] = useState(false);
   const [productoSel, setProductoSel] = useState(null);
   const [guardando, setGuardando] = useState(false);
-const [form, setForm] = useState({
+  const [form, setForm] = useState({
     descripcion: "",
     departamento: "",
     precioCosto: "",
@@ -268,7 +268,7 @@ const [form, setForm] = useState({
     return "0";
   }, [form.precioCosto, form.precioVenta]);
 
-const resetForm = useCallback(
+  const resetForm = useCallback(
     () => ({
       descripcion: "",
       departamento: "",
@@ -333,7 +333,7 @@ const resetForm = useCallback(
     [cargarMovimientos, sedeActivaId, sedes],
   );
 
-const handleGuardar = useCallback(async () => {
+  const handleGuardar = useCallback(async () => {
     setGuardando(true);
     try {
       const payload = {
@@ -355,7 +355,7 @@ const handleGuardar = useCallback(async () => {
       await inventarioService.crearProducto(payload);
       toast.success("Producto creado correctamente.");
       setModalNuevo(false);
-      setForm(resetForm())
+      setForm(resetForm());
       await cargarProductos();
     } catch (err) {
       toast.error(
@@ -364,7 +364,7 @@ const handleGuardar = useCallback(async () => {
     } finally {
       setGuardando(false);
     }
-  }, [cargarProductos, form, resetForm, sedeIdUsuario]);
+  }, [cargarProductos, form, resetForm]);
 
   const handleActualizar = useCallback(async () => {
     setGuardando(true);

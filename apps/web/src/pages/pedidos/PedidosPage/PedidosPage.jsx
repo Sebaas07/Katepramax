@@ -21,15 +21,25 @@ const Spinner = () => (
   </div>
 );
 
-const ITEM_VACIO = { productoId: "", cantidad: "", precioUnitario: "" };
+// Contador simple para generar ids estables de ítems en el formulario.
+// No son ids de base de datos (estos ítems aún no existen ahí); solo
+// sirven para que React tenga una key estable que no dependa del índice
+// del array, así un ítem no "salta" de identidad al agregar/quitar otros.
+let contadorItemId = 0;
+const crearItemVacio = () => ({
+  id: `item-${++contadorItemId}`,
+  productoId: "",
+  cantidad: "",
+  precioUnitario: "",
+});
 
-const FORM_INICIAL = {
+const crearFormInicial = () => ({
   clienteId: "",
   direccion: "",
   observaciones: "",
   sedeId: "",
-  items: [{ ...ITEM_VACIO }],
-};
+  items: [crearItemVacio()],
+});
 
 const normalizarEstado = (raw) => {
   if (!raw && raw !== 0) return null;
@@ -83,7 +93,7 @@ const PedidosPage = () => {
     fechaConfirmada: new Date().toISOString().slice(0, 16),
   });
 
-  const [formPedido, setFormPedido] = useState(FORM_INICIAL);
+  const [formPedido, setFormPedido] = useState(crearFormInicial);
   const [entregadorId, setEntregadorId] = useState("");
 
   const mapaProductosPorCodigo = useMemo(
@@ -302,7 +312,7 @@ const PedidosPage = () => {
   const handleAgregarItem = () => {
     setFormPedido((prev) => ({
       ...prev,
-      items: [...prev.items, { ...ITEM_VACIO }],
+      items: [...prev.items, crearItemVacio()],
     }));
   };
 
@@ -316,7 +326,7 @@ const PedidosPage = () => {
 
   const abrirModalNuevo = () => {
     setFormPedido({
-      ...FORM_INICIAL,
+      ...crearFormInicial(),
       sedeId: esAdmin ? "" : String(sedeIdUsuario ?? ""),
     });
     setModalPedidoAbierto(true);
@@ -716,8 +726,15 @@ const PedidosPage = () => {
           )}
 
           <div className="form-group">
-            <label>Productos *</label>
-            <div className="ped-items">
+            <label htmlFor="productos-label" id="productos-label">
+              Productos *
+            </label>
+
+            <div
+              className="ped-items"
+              role="list"
+              aria-labelledby="productos-label"
+            >
               {formPedido.items.map((item, index) => {
                 const prodSel = productos.find(
                   (p) => String(p.codigo) === String(item.productoId),
@@ -731,7 +748,7 @@ const PedidosPage = () => {
                   (parseFloat(item.precioUnitario || String(precioBase)) || 0);
 
                 return (
-                  <div key={index} className="item-group">
+                  <div key={item.id} className="item-group" role="listitem">
                     <div className="item-group-header">
                       <h4>Ítem {index + 1}</h4>
                       {formPedido.items.length > 1 && (
@@ -739,13 +756,18 @@ const PedidosPage = () => {
                           type="button"
                           className="btn-remove-item"
                           onClick={() => handleEliminarItem(index)}
+                          aria-label={`Eliminar ítem ${index + 1}`}
                         >
-                          <span className="material-symbols-outlined">
+                          <span
+                            className="material-symbols-outlined"
+                            aria-hidden="true"
+                          >
                             close
                           </span>
                         </button>
                       )}
                     </div>
+
                     <div className="item-fields">
                       <div className="item-field--producto">
                         <label htmlFor={`ped-buscar-${index}`}>Producto</label>
@@ -836,7 +858,7 @@ const PedidosPage = () => {
                       </div>
 
                       <div className="item-field--subtotal">
-                        <label>Subtotal</label>
+                        <span className="item-label">Subtotal</span>
                         <span className="item-subtotal">
                           $
                           {subtotal.toLocaleString("es-CO", {
@@ -849,12 +871,16 @@ const PedidosPage = () => {
                 );
               })}
             </div>
+
             <button
               type="button"
               className="btn-add-item"
               onClick={handleAgregarItem}
+              aria-label="Agregar nuevo producto al pedido"
             >
-              <span className="material-symbols-outlined">add</span>
+              <span className="material-symbols-outlined" aria-hidden="true">
+                add
+              </span>
               Agregar producto
             </button>
           </div>
@@ -986,8 +1012,11 @@ const PedidosPage = () => {
       >
         <div className="modal-form">
           <div className="form-group">
-            <label>Fecha y Hora Confirmada *</label>
+            <label htmlFor="ped-fecha-confirmar">
+              Fecha y Hora Confirmada *
+            </label>
             <input
+              id="ped-fecha-confirmar"
               type="datetime-local"
               value={formConfirmarPedido.fechaConfirmada}
               onChange={(e) =>
