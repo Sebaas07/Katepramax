@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
 import "./Modal.css";
 
+/**
+ * Modal — Katepramax
+ * Usa <dialog> nativo: focus trap, Escape y backdrop incluidos.
+ */
 const Modal = ({
   isOpen,
   onClose,
@@ -14,93 +18,98 @@ const Modal = ({
   className = "",
   maxWidth,
 }) => {
-  const modalRef = useRef(null);
-
+  const dialogRef = useRef(null);
   const onCloseRef = useRef(onClose);
+
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  const handleConfirmar = () => {
-    if (onConfirmar) {
-      onConfirmar();
-    }
-  };
-
-  const handleCancelar = () => {
-    onCloseRef.current();
-  };
-
+  // Abrir / cerrar el <dialog> nativo según la prop isOpen
   useEffect(() => {
-    if (!isOpen) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
 
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") onCloseRef.current();
-    };
-
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-    // Foco inicial al abrir, una sola vez por apertura del modal.
-    const timer = window.setTimeout(() => modalRef.current?.focus(), 50);
+    if (isOpen) {
+      if (!dialog.open) dialog.showModal();
+      document.body.style.overflow = "hidden";
+    } else {
+      if (dialog.open) dialog.close();
+      document.body.style.overflow = "";
+    }
 
     return () => {
       document.body.style.overflow = "";
-      document.removeEventListener("keydown", handleKeyDown);
-      window.clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  // El evento "cancel" se dispara con Escape; lo redirigimos a onClose
+  const handleCancel = (e) => {
+    e.preventDefault(); // evita que el browser cierre el dialog sin que React se entere
+    onCloseRef.current();
+  };
+
+  const handleConfirmar = () => {
+    if (onConfirmar) onConfirmar();
+  };
+
+  // Clic en el backdrop (fuera de .modal-content) cierra el modal
+  const handleBackdropClick = (e) => {
+    if (e.target === dialogRef.current) {
+      onCloseRef.current();
+    }
+  };
 
   return (
-    <>
-      <div className="modal-backdrop" onClick={handleCancelar}>
-        <div
-          ref={modalRef}
-          className={`modal-content ${className}`}
-          style={maxWidth ? { maxWidth } : undefined}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-titulo"
-          tabIndex={-1}
-        >
-          <div className="modal-header">
-            <h5 className="modal-title" id="modal-titulo">
-              {titulo}
-            </h5>
-            <button
-              className="modal-close"
-              onClick={handleCancelar}
-              aria-label="Cerrar"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
+    <dialog
+      ref={dialogRef}
+      className="modal-dialog"
+      onCancel={handleCancel}
+      onClick={handleBackdropClick}
+      aria-labelledby="modal-titulo"
+    >
+      <div
+        className={`modal-content ${className}`}
+        style={maxWidth ? { maxWidth } : undefined}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <h5 className="modal-title" id="modal-titulo">
+            {titulo}
+          </h5>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={() => onCloseRef.current()}
+            aria-label="Cerrar"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
 
-          <div className="modal-body">{children}</div>
+        <div className="modal-body">{children}</div>
 
-          <div className="modal-footer">
-            {mostrarCancelar && (
-              <button
-                className="modal-btn modal-btn--cancelar"
-                onClick={handleCancelar}
-              >
-                {textoBotonCancelar}
-              </button>
-            )}
+        <div className="modal-footer">
+          {mostrarCancelar && (
             <button
-              className="modal-btn modal-btn--confirmar"
-              onClick={handleConfirmar}
-              disabled={disabled}
+              type="button"
+              className="modal-btn modal-btn--cancelar"
+              onClick={() => onCloseRef.current()}
             >
-              {textoBotonConfirmar}
+              {textoBotonCancelar}
             </button>
-          </div>
+          )}
+          <button
+            type="button"
+            className="modal-btn modal-btn--confirmar"
+            onClick={handleConfirmar}
+            disabled={disabled}
+          >
+            {textoBotonConfirmar}
+          </button>
         </div>
       </div>
-    </>
+    </dialog>
   );
 };
 

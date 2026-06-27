@@ -3,24 +3,37 @@
    Modal reutilizable con paleta oscura del sistema de diseño
    ============================================================ */
 
-/* ─── Backdrop ───────────────────────────────────────────────*/
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+/* ─── <dialog> base ──────────────────────────────────────────*/
+.modal-dialog {
+  /* Resetear estilos por defecto del browser */
+  border: none;
+  padding: 0;
+  background: transparent;
+  /* Centrado y límite de tamaño */
+  max-width: 100dvw;
+  max-height: 100dvh;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1050;
   padding: 1rem;
+}
+
+/* Backdrop nativo — reemplaza .modal-backdrop */
+.modal-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   animation: backdropIn var(--transition-base) ease;
 }
 
 @keyframes backdropIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ─── Contenido ──────────────────────────────────────────────*/
@@ -77,8 +90,9 @@
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
-  transition: color var(--transition-fast),
-              background var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
   flex-shrink: 0;
 }
 
@@ -175,9 +189,10 @@
     padding: 0.875rem 1rem;
   }
 }
+
 /* ─── Bottom-sheet en móviles pequeños ──────────────────────*/
 @media (max-width: 480px) {
-  .modal-backdrop {
+  .modal-dialog {
     align-items: flex-end;
     padding: 0;
   }
@@ -191,7 +206,13 @@
   }
 
   @keyframes sheetIn {
-    from { transform: translateY(100%); opacity: 0; }
-    to   { transform: translateY(0);   opacity: 1; }
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 }

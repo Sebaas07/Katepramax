@@ -25,7 +25,9 @@
 }
 
 @media (min-width: 992px) {
-  .login__brand { display: flex; }
+  .login__brand {
+    display: flex;
+  }
 }
 
 /* Fondo geométrico con SVG inline */
@@ -49,7 +51,7 @@
   inset: 0;
   background: linear-gradient(
     160deg,
-    rgba(19, 19, 22, 0.0) 0%,
+    rgba(19, 19, 22, 0) 0%,
     rgba(19, 19, 22, 0.5) 100%
   );
 }
@@ -199,7 +201,9 @@
 }
 
 @media (max-width: 991.98px) {
-  .login__logo-mobile { display: flex; }
+  .login__logo-mobile {
+    display: flex;
+  }
 }
 
 .login__logo-mobile .material-symbols-outlined {
@@ -289,8 +293,9 @@
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  transition: border-color var(--transition-fast),
-              box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .login__field-wrap:focus-within {
@@ -472,7 +477,9 @@
 }
 
 @keyframes loginSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Footer card */
@@ -522,22 +529,30 @@
 }
 
 .login__legal span,
-.login__legal a {
+.login__legal a,
+.login__legal-btn {
   font-family: var(--font-label);
   font-size: 11px;
   color: rgba(151, 141, 157, 0.35);
   transition: color var(--transition-fast);
 }
 
-.login__legal a:hover {
+.login__legal a:hover,
+.login__legal-btn:hover {
   color: var(--on-surface-variant);
+}
+
+.login__legal-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .login__legal-links {
   display: flex;
   gap: 1.25rem;
 }
-
 
 /* ============================================================
    RESPONSIVE BREAKPOINTS

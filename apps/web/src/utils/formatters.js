@@ -4,17 +4,23 @@
  * Centraliza: pesos colombianos, fechas, números, porcentajes.
  */
 
+// ── Formateadores Intl hoistados al módulo ────────────────────
+// Se construyen una sola vez y se reusan en cada llamada.
+const _copFormatter = new Intl.NumberFormat("es-CO", {
+  style: "currency",
+  currency: "COP",
+  minimumFractionDigits: 0,
+});
+
+const _numFormatter = new Intl.NumberFormat("es-CO");
+
 /**
  * Formatea un número como peso colombiano.
  * Ej: 1270000 → "$1.270.000"
  */
 export const formatCOP = (valor) => {
   if (valor === null || valor === undefined || valor === "") return "$0";
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    minimumFractionDigits: 0,
-  }).format(Number(valor));
+  return _copFormatter.format(Number(valor));
 };
 
 /**
@@ -53,7 +59,7 @@ export const formatRelativo = (iso) => {
   if (!iso) return "—";
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1)  return "Ahora mismo";
+  if (mins < 1) return "Ahora mismo";
   if (mins < 60) return `Hace ${mins} min`;
   const horas = Math.floor(mins / 60);
   if (horas < 24) return `Hace ${horas} h`;
@@ -64,17 +70,19 @@ export const formatRelativo = (iso) => {
 /**
  * Formatea un número con separador de miles.
  * Ej: 1270000 → "1.270.000"
+ * (Sin export — no se usa en ningún módulo actualmente)
  */
-export const formatNumero = (valor) => {
+const formatNumero = (valor) => {
   if (valor === null || valor === undefined) return "0";
-  return new Intl.NumberFormat("es-CO").format(Number(valor));
+  return _numFormatter.format(Number(valor));
 };
 
 /**
  * Formatea un porcentaje.
  * Ej: 0.1523 → "15,23%"
+ * (Sin export — no se usa en ningún módulo actualmente)
  */
-export const formatPorcentaje = (valor, decimales = 1) => {
+const formatPorcentaje = (valor, decimales = 1) => {
   if (valor === null || valor === undefined) return "0%";
   return `${Number(valor).toFixed(decimales)}%`;
 };
@@ -90,8 +98,9 @@ export const truncar = (texto, max = 40) => {
 
 /**
  * Capitaliza la primera letra de un string.
+ * (Sin export — no se usa en ningún módulo actualmente)
  */
-export const capitalizar = (texto) => {
+const capitalizar = (texto) => {
   if (!texto) return "";
   return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
 };
@@ -101,7 +110,9 @@ export const capitalizar = (texto) => {
  * Ej: new Date("2025-05-11") → 19
  */
 export const getSemanaISO = (fecha = new Date()) => {
-  const d = new Date(Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()));
+  const d = new Date(
+    Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()),
+  );
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
@@ -125,3 +136,6 @@ export const getRangoSemana = (semana, anio = new Date().getFullYear()) => {
     fin: end.toISOString().split("T")[0],
   };
 };
+
+// formatNumero, formatPorcentaje y capitalizar están disponibles internamente
+// si en el futuro se necesitan exportar, agregar el keyword export.

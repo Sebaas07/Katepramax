@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import "./TablaGenerica.css";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 
@@ -17,12 +17,25 @@ import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
  *  renderAcciones    (fila) => Array<{ label, onClick, variante? }>
  *                    variante: "danger" | "success" | undefined
  */
+
+// Constante fuera del componente para no romper memo en cada render
+const BUSCAR_EN_CAMPOS_DEFAULT = [];
+
+// Formateador de moneda hoisted para no reconstruirlo en cada render
+const formatearMoneda = new Intl.NumberFormat("es-CO", {
+  style: "currency",
+  currency: "COP",
+  minimumFractionDigits: 0,
+});
+
 const TablaGenerica = ({
   columnas,
   datos,
+  // filasPorPagina viene como prop de configuración inicial;
+  // se usa directamente como estado inicial — no se copia en useEffect
   filasPorPagina: filasPorPaginaInicial = 10,
   mostrarBuscador = true,
-  buscarEnCampos = [],
+  buscarEnCampos = BUSCAR_EN_CAMPOS_DEFAULT,
   paginacion = true,
   mostrarIndicadorFilas = true,
   renderAcciones,
@@ -30,7 +43,6 @@ const TablaGenerica = ({
 }) => {
   const [paginaActual, setPaginaActual] = useState(1);
   const [terminoBusqueda, setTerminoBusqueda] = useState("");
-  // ← Bug corregido: filasPorPagina como estado local, no solo prop
   const [filasPorPagina, setFilasPorPagina] = useState(filasPorPaginaInicial);
 
   // ── Filtrado ──────────────────────────────────────────────
@@ -52,16 +64,12 @@ const TablaGenerica = ({
     );
   }, [datos, terminoBusqueda, columnas, buscarEnCampos]);
 
-  // ── Paginación ────────────────────────────────────────────
-  const totalPaginas = useMemo(
-    () => Math.max(1, Math.ceil(datosFiltrados.length / filasPorPagina)),
-    [datosFiltrados, filasPorPagina],
+  // ── Paginación — expresiones baratas, sin useMemo ─────────
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(datosFiltrados.length / filasPorPagina),
   );
-
-  const paginaValida = useMemo(
-    () => Math.min(paginaActual, totalPaginas),
-    [paginaActual, totalPaginas],
-  );
+  const paginaValida = Math.min(paginaActual, totalPaginas);
 
   const datosPagina = useMemo(() => {
     const inicio = (paginaValida - 1) * filasPorPagina;
@@ -97,13 +105,7 @@ const TablaGenerica = ({
         return <EstadoBadge estado={valor} />;
 
       case "moneda":
-        return valor != null
-          ? new Intl.NumberFormat("es-CO", {
-              style: "currency",
-              currency: "COP",
-              minimumFractionDigits: 0,
-            }).format(valor)
-          : "$0";
+        return valor != null ? formatearMoneda.format(valor) : "$0";
 
       case "fecha":
         return valor != null
@@ -147,6 +149,7 @@ const TablaGenerica = ({
           <span className="material-symbols-outlined search-icon">search</span>
           <input
             type="text"
+            aria-label="Buscar en la tabla"
             placeholder="Buscar..."
             value={terminoBusqueda}
             onChange={manejarCambioBusqueda}
@@ -173,9 +176,10 @@ const TablaGenerica = ({
                     <td key={col.campo}>
                       {col.tipo === "acciones" ? (
                         <div className="tabla-acciones">
-                          {renderAcciones(fila).map((accion, i) => (
+                          {renderAcciones(fila).map((accion) => (
                             <button
-                              key={i}
+                              key={accion.label}
+                              type="button"
                               onClick={accion.onClick}
                               className={`tabla-accion-btn ${
                                 accion.variante === "danger"
@@ -184,7 +188,6 @@ const TablaGenerica = ({
                                     ? "tabla-accion-btn--success"
                                     : ""
                               }`}
-                              type="button"
                             >
                               {accion.icon && (
                                 <span className="material-symbols-outlined">
@@ -224,6 +227,7 @@ const TablaGenerica = ({
 
           <div className="pagination-controls">
             <button
+              type="button"
               onClick={() => manejarCambioPagina(1)}
               disabled={paginaValida === 1}
               className="pagination-btn"
@@ -231,6 +235,7 @@ const TablaGenerica = ({
               «
             </button>
             <button
+              type="button"
               onClick={() => manejarCambioPagina(paginaValida - 1)}
               disabled={paginaValida === 1}
               className="pagination-btn"
@@ -241,6 +246,7 @@ const TablaGenerica = ({
               {paginaValida} / {totalPaginas}
             </span>
             <button
+              type="button"
               onClick={() => manejarCambioPagina(paginaValida + 1)}
               disabled={paginaValida === totalPaginas}
               className="pagination-btn"
@@ -248,6 +254,7 @@ const TablaGenerica = ({
               Siguiente ›
             </button>
             <button
+              type="button"
               onClick={() => manejarCambioPagina(totalPaginas)}
               disabled={paginaValida === totalPaginas}
               className="pagination-btn"

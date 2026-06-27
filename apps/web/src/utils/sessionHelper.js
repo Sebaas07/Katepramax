@@ -5,6 +5,10 @@ const COOKIE_OPTIONS = {
   sameSite: "Strict",
 };
 
+// ─── Keys versionadas — cambiar la versión invalida datos guardados con shape antiguo
+const KEY_USUARIO = "usuario:v1";
+const KEY_LOGUEADO = "logueado:v1";
+
 // ─── Tokens (cookies) ─────────────────────────────────────────────────────────
 export const guardarTokens = (token, refreshToken) => {
   Cookies.set("token", token, COOKIE_OPTIONS);
@@ -22,10 +26,8 @@ const eliminarTokens = () => {
 // ─── Sesión del usuario (localStorage) ───────────────────────────────────────
 const normalizarUsuario = (usuario) => {
   if (!usuario) return null;
-
   return {
     ...usuario,
-    // Asegurar que sede sea string
     sede:
       typeof usuario.sede === "object" && usuario.sede !== null
         ? usuario.sede.nombre || usuario.sede.name || "Bogotá"
@@ -41,34 +43,30 @@ export const guardarSesion = (usuario) => {
       : usuario.sede
     : "Bogotá";
 
-  const usuarioNormalizado = {
-    ...usuario,
-    sede: sedeNormalizada,
-  };
+  const usuarioNormalizado = { ...usuario, sede: sedeNormalizada };
 
-  localStorage.setItem("logueado", "true");
-  localStorage.setItem("usuario", JSON.stringify(usuarioNormalizado));
+  localStorage.setItem(KEY_LOGUEADO, "true");
+  localStorage.setItem(KEY_USUARIO, JSON.stringify(usuarioNormalizado));
 };
 
 export const obtenerSesion = () => {
-  const usuario = localStorage.getItem("usuario");
-  if (!usuario) return null;
+  const raw = localStorage.getItem(KEY_USUARIO);
+  if (!raw) return null;
   try {
-    const parsed = JSON.parse(usuario);
-    return normalizarUsuario(parsed);
+    return normalizarUsuario(JSON.parse(raw));
   } catch {
     return null;
   }
 };
 
 export const estaLogueado = () =>
-  localStorage.getItem("logueado") === "true" && !!obtenerAccessToken();
+  localStorage.getItem(KEY_LOGUEADO) === "true" && !!obtenerAccessToken();
 
 export const actualizarSesion = (datosNuevos) => {
   const actual = obtenerSesion();
   if (actual) {
     localStorage.setItem(
-      "usuario",
+      KEY_USUARIO,
       JSON.stringify({ ...actual, ...datosNuevos }),
     );
   }
@@ -86,12 +84,10 @@ export const tieneRol = (...roles) => {
 
 /**
  * Verifica si el usuario es Bodega de la sede Bogotá (Admin Bogotá).
- * Condición: rol === "AdminBogota" o (rol === "Admin" y sede === "Bogotá")
  */
 export const esBodegaBogota = () => {
   const sesion = obtenerSesion();
   if (!sesion) return false;
-
   return (
     sesion.rol === "AdminBogota" ||
     (sesion.rol === "Admin" && sesion.sede === "Bogotá")
@@ -102,8 +98,8 @@ export const esBodegaBogota = () => {
  * Cierra la sesión completamente.
  */
 export const cerrarSesion = () => {
-  localStorage.removeItem("logueado");
-  localStorage.removeItem("usuario");
+  localStorage.removeItem(KEY_LOGUEADO);
+  localStorage.removeItem(KEY_USUARIO);
   sessionStorage.clear();
   eliminarTokens();
 };

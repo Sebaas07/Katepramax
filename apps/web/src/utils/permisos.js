@@ -13,18 +13,16 @@
 import { obtenerSesion } from "@/utils/sessionHelper";
 
 // ── Helpers de rol ────────────────────────────────────────────
-export const obtenerUsuario = () => obtenerSesion();
+// Sin export — no se importan en ningún módulo actualmente
+const obtenerUsuario = () => obtenerSesion();
+const esRolBodega = () => {
+  const r = obtenerSesion()?.rol;
+  return r === "Bodega" || r === "AdminBogota";
+};
+const esRolEntregador = () => obtenerSesion()?.rol === "Entregador";
+const esRolAdmin = () => obtenerSesion()?.rol === "Admin";
 
 export const tieneAccesoTotal = () => obtenerSesion()?.rol === "Admin";
-
-export const esRolBodega = () => {
-  const rol = obtenerSesion()?.rol;
-  return rol === "Bodega" || rol === "AdminBogota";
-};
-
-export const esRolEntregador = () => obtenerSesion()?.rol === "Entregador";
-
-export const esRolAdmin = () => obtenerSesion()?.rol === "Admin";
 
 // ── Sede ──────────────────────────────────────────────────────
 export const obtenerSedeUsuario = () => obtenerSesion()?.sedeId ?? null;
@@ -42,10 +40,8 @@ export const filtrarPorSede = (filtrosBase = {}) => {
   const usuario = obtenerSesion();
   if (!usuario) return filtrosBase;
 
-  // Admin puede pasar sedeId como filtro opcional desde la UI
   if (usuario.rol === "Admin") return { ...filtrosBase };
 
-  // Bodega y AdminBogota: sedeId forzado, ignorar cualquier sedeId del formulario
   if (usuario.rol === "Bodega" || usuario.rol === "AdminBogota") {
     const { sedeId: _ignorar, ...restoFiltros } = filtrosBase;
     return { ...restoFiltros, sedeId: usuario.sedeId };
@@ -56,10 +52,11 @@ export const filtrarPorSede = (filtrosBase = {}) => {
 
 /**
  * Verifica si el usuario puede ver datos de una sede específica.
+ * Sin export — no se importa en ningún módulo actualmente.
  * @param {number} sedeIdDestino
  * @returns {boolean}
  */
-export const puedeVerSede = (sedeIdDestino) => {
+const puedeVerSede = (sedeIdDestino) => {
   const usuario = obtenerSesion();
   if (!usuario) return false;
   if (usuario.rol === "Admin") return true;

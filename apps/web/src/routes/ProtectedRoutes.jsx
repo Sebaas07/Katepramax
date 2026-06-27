@@ -3,13 +3,13 @@ import { useAuth } from "@/hooks/useAuth";
 
 // ── Pantalla de carga de sesión ───────────────────────────────
 export const AuthLoading = () => (
-  <div className="auth-loading" role="status" aria-label="Verificando sesión">
+  <output className="auth-loading" aria-label="Verificando sesión">
     <div className="auth-loading__orb" aria-hidden="true" />
     <div>
       <strong>Verificando sesión</strong>
       <span>Preparando el acceso seguro a Katepramax...</span>
     </div>
-  </div>
+  </output>
 );
 
 /**
@@ -19,7 +19,7 @@ export const AuthLoading = () => (
 export const RequireAuth = () => {
   const { isAuthenticated, isSessionChecked } = useAuth();
   if (!isSessionChecked) return <AuthLoading />;
-  if (!isAuthenticated)  return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <Outlet />;
 };
 
@@ -33,7 +33,7 @@ export const RequireAuth = () => {
 export const RequireRole = ({ roles }) => {
   const { isAuthenticated, isSessionChecked, verificarRol } = useAuth();
   if (!isSessionChecked) return <AuthLoading />;
-  if (!isAuthenticated)  return <Navigate to="/login"           replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!verificarRol(roles)) return <Navigate to="/acceso-denegado" replace />;
   return <Outlet />;
 };

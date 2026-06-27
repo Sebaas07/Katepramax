@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { obtenerSesion } from "@/utils/sessionHelper";
 import "./LoginPage.css";
 
 const LoginPage = () => {
@@ -13,32 +14,29 @@ const LoginPage = () => {
     error: authError,
   } = useAuth();
 
-  // Estados locales del formulario
+  // Leer localStorage una sola vez al inicializar
   const [form, setForm] = useState(() => {
     const usuarioRecordado = localStorage.getItem("usuario_recordado");
     return {
-      usuario: usuarioRecordado || "",
+      usuario: usuarioRecordado ?? "",
       contrasena: "",
+      _recordadoInicial: usuarioRecordado,
     };
   });
+
   const [errorLocal, setErrorLocal] = useState("");
   const [cargandoLocal, setCargandoLocal] = useState(false);
   const [mostrarClave, setMostrarClave] = useState(false);
-  const [recordar, setRecordar] = useState(() => {
-    return localStorage.getItem("usuario_recordado") !== null;
-  });
+  // Reusar el valor ya leído en el estado del form — evita segunda lectura de localStorage
+  const [recordar, setRecordar] = useState(form._recordadoInicial !== null);
 
-  // Si hay un error en el contexto lo muestra; si no, muestra el error local del formulario
   const error = authError || errorLocal;
-
-  // Si el auth está cargando o nuestro botón local se activó, entonces está cargando
-  // Pero si el contexto arroja un error, forzamos a que deje de cargar
   const cargando = authError ? false : authLoading || cargandoLocal;
 
-  // Si ya está autenticado, redirigir
+  // Redirigir si ya está autenticado — usa obtenerSesion() en vez de leer localStorage directo
   useEffect(() => {
     if (isAuthenticated && isSessionChecked) {
-      const sesion = JSON.parse(localStorage.getItem("usuario") || "{}");
+      const sesion = obtenerSesion();
       const redirectPath =
         sesion?.rol === "Entregador" ? "/entregas" : "/dashboard";
       navigate(redirectPath, { replace: true });
@@ -47,7 +45,7 @@ const LoginPage = () => {
 
   const manejarCambio = (e) => {
     setErrorLocal("");
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const manejarSubmit = async (e) => {
@@ -63,12 +61,18 @@ const LoginPage = () => {
 
     const exito = await login(form.usuario.trim(), form.contrasena);
 
-    if (!exito) {
+    if (exito) {
+      // Guardar o limpiar el usuario recordado según la preferencia
+      if (recordar) {
+        localStorage.setItem("usuario_recordado", form.usuario.trim());
+      } else {
+        localStorage.removeItem("usuario_recordado");
+      }
+    } else {
       setCargandoLocal(false);
     }
   };
 
-  // Guardar usuario si selecciona "recordarme"
   const handleRecordarChange = (e) => {
     const checked = e.target.checked;
     setRecordar(checked);
@@ -232,7 +236,6 @@ const LoginPage = () => {
             <span className="login__logo-mobile-sub">ERP Distribution</span>
           </div>
 
-          {/* Card */}
           <div className="login__card">
             <div className="login__card-header">
               <h3 className="login__card-title">Iniciar Sesión</h3>
@@ -267,7 +270,6 @@ const LoginPage = () => {
                     value={form.usuario}
                     onChange={manejarCambio}
                     autoComplete="username"
-                    autoFocus
                     disabled={cargando}
                   />
                 </div>
@@ -296,7 +298,10 @@ const LoginPage = () => {
                   <button
                     type="button"
                     className="login__field-toggle"
-                    onClick={() => setMostrarClave(!mostrarClave)}
+                    onClick={() => setMostrarClave((v) => !v)}
+                    aria-label={
+                      mostrarClave ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
                     tabIndex={-1}
                   >
                     <span className="material-symbols-outlined">
@@ -341,8 +346,12 @@ const LoginPage = () => {
           <div className="login__legal">
             <span>© 2026 Katepramax</span>
             <div className="login__legal-links">
-              <a href="#">Privacidad</a>
-              <a href="#">Términos</a>
+              <button type="button" className="login__legal-btn">
+                Privacidad
+              </button>
+              <button type="button" className="login__legal-btn">
+                Términos
+              </button>
             </div>
           </div>
         </div>

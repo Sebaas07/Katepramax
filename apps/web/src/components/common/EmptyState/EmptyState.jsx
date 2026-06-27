@@ -7,18 +7,28 @@ import "./EmptyState.css";
  *   - icono / titulo / detalle (alias usados en páginas refactorizadas)
  */
 const EmptyState = ({
-  icon, title, description, subDescription, actionLabel, onAction,
+  icon,
+  title,
+  description,
+  subDescription,
+  actionLabel,
+  onAction,
   // Aliases
-  icono, titulo, detalle,
+  icono,
+  titulo,
+  detalle,
 }) => {
-  const iconFinal  = icon  ?? icono;
+  const iconFinal = icon ?? icono;
   const titleFinal = title ?? titulo;
-  const descFinal  = description  ?? detalle;
+  const descFinal = description ?? detalle;
 
   return (
-    <div className="empty-state-container" role="status">
+    <output className="empty-state-container">
       {iconFinal && (
-        <span className="material-symbols-outlined empty-state-icon" aria-hidden="true">
+        <span
+          className="material-symbols-outlined empty-state-icon"
+          aria-hidden="true"
+        >
           {iconFinal}
         </span>
       )}
@@ -26,11 +36,15 @@ const EmptyState = ({
       {descFinal && <p className="empty-state-description">{descFinal}</p>}
       {subDescription && <p className="empty-state-sub">{subDescription}</p>}
       {actionLabel && onAction && (
-        <button className="btn-outline empty-state-action" onClick={onAction} type="button">
+        <button
+          className="btn-outline empty-state-action"
+          onClick={onAction}
+          type="button"
+        >
           {actionLabel}
         </button>
       )}
-    </div>
+    </output>
   );
 };
 
