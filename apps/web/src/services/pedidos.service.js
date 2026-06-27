@@ -40,7 +40,10 @@ const pedidosService = {
       }
       // Si el usuario envía estado en mayúscula, el backend portable acepta ambos formatos
       return await pedidosApi.obtenerPedidos(f);
-    } catch (e) { console.error("pedidosService.obtenerPedidos:", e); throw e; }
+    } catch (e) {
+      console.error("pedidosService.obtenerPedidos:", e);
+      throw e;
+    }
   },
   obtenerPedidoPorId: async (id) => {
     try {
@@ -50,56 +53,89 @@ const pedidosService = {
         ...p,
         estado: normalizarEstado(p.estado),
       };
-    } catch (e) { console.error("pedidosService.obtenerPedidoPorId:", e); throw e; }
+    } catch (e) {
+      console.error("pedidosService.obtenerPedidoPorId:", e);
+      throw e;
+    }
   },
-  crearPedido: async ({ clienteId, items, observaciones, sedeId }) => {
+  crearPedido: async ({
+    clienteId,
+    items,
+    direccion,
+    observaciones,
+    sedeId,
+  }) => {
     try {
       if (!clienteId) throw new Error("Selecciona un cliente.");
-      if (!items || items.length === 0) throw new Error("El pedido debe tener al menos un producto.");
+      if (!items || items.length === 0)
+        throw new Error("El pedido debe tener al menos un producto.");
       for (const item of items) {
-        if (!item.productoId) throw new Error("Todos los ítems deben tener un producto seleccionado.");
-        if (!item.cantidad || parseInt(item.cantidad) < 1) throw new Error("La cantidad de cada ítem debe ser mayor a 0.");
+        if (!item.productoId)
+          throw new Error(
+            "Todos los ítems deben tener un producto seleccionado.",
+          );
+        if (!item.cantidad || parseInt(item.cantidad) < 1)
+          throw new Error("La cantidad de cada ítem debe ser mayor a 0.");
       }
 
       // Si no es Admin, usar sede del usuario
-      const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
+      const sedeFinal =
+        sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
 
       const payload = {
         clienteId: parseInt(clienteId),
         ...(sedeFinal ? { sedeId: parseInt(sedeFinal, 10) } : {}),
+        direccion: direccion?.trim() || undefined,
         observaciones: observaciones?.trim() || undefined,
         items: items.map((item) => ({
           productoId: item.productoId,
-          cantidad:   parseInt(item.cantidad),
+          cantidad: parseInt(item.cantidad),
           ...(item.precioUnitario !== "" && item.precioUnitario != null
-            ? { precioUnitario: parseFloat(item.precioUnitario) } : {}),
+            ? { precioUnitario: parseFloat(item.precioUnitario) }
+            : {}),
         })),
       };
       return await pedidosApi.crearPedido(payload);
-    } catch (e) { console.error("pedidosService.crearPedido:", e); throw e; }
+    } catch (e) {
+      console.error("pedidosService.crearPedido:", e);
+      throw e;
+    }
   },
   asignarEntregador: async (pedidoId, entregadorId) => {
     try {
-      if (!pedidoId)     throw new Error("Se requiere el ID del pedido.");
+      if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
       if (!entregadorId) throw new Error("Selecciona un entregador.");
       return await pedidosApi.asignarEntregador(pedidoId, entregadorId);
-    } catch (e) { console.error("pedidosService.asignarEntregador:", e); throw e; }
+    } catch (e) {
+      console.error("pedidosService.asignarEntregador:", e);
+      throw e;
+    }
   },
   obtenerEntregadores: async () => {
-    try { return await pedidosApi.obtenerEntregadores(); }
-    catch (e) { console.error("pedidosService.obtenerEntregadores:", e); throw e; }
+    try {
+      return await pedidosApi.obtenerEntregadores();
+    } catch (e) {
+      console.error("pedidosService.obtenerEntregadores:", e);
+      throw e;
+    }
   },
   cancelarPedido: async (pedidoId) => {
     try {
       if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
       return await pedidosApi.actualizarEstadoPedido(pedidoId, "Cancelado");
-    } catch (e) { console.error("pedidosService.cancelarPedido:", e); throw e; }
+    } catch (e) {
+      console.error("pedidosService.cancelarPedido:", e);
+      throw e;
+    }
   },
   actualizarEstadoPedido: async (pedidoId, estado) => {
     try {
       if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
       return await pedidosApi.actualizarEstadoPedido(pedidoId, estado);
-    } catch (e) { console.error("pedidosService.actualizarEstadoPedido:", e); throw e; }
+    } catch (e) {
+      console.error("pedidosService.actualizarEstadoPedido:", e);
+      throw e;
+    }
   },
 
   obtenerHistorial: async (pedidoId) => {

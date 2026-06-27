@@ -42,7 +42,7 @@ const CarteraClientesPage = () => {
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
     cargarClientes();
-  }, [cargando, isSessionChecked, isAuthenticated, cargarClientes]);
+  }, [isSessionChecked, isAuthenticated, cargarClientes]);
 
   const handleCambioFiltro = (e) => {
     const { name, value } = e.target;
@@ -82,10 +82,10 @@ const CarteraClientesPage = () => {
   };
 
   const columnas = [
-    { campo: "nombre",        label: "Nombre",         tipo: "texto"   },
-    { campo: "telefono",      label: "Teléfono",       tipo: "texto"   },
-    { campo: "saldoDeuda",    label: "Saldo deuda",    tipo: "moneda"  },
-    { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda"  },
+    { campo: "nombre", label: "Nombre", tipo: "texto" },
+    { campo: "telefono", label: "Teléfono", tipo: "texto" },
+    { campo: "saldoDeuda", label: "Saldo deuda", tipo: "moneda" },
+    { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda" },
   ];
 
   const accionesCliente = (cliente) => {
@@ -152,7 +152,13 @@ const CarteraClientesPage = () => {
             Cliente: <strong>{clienteSeleccionado?.nombre}</strong>
           </p>
           <p className="cc-abono-saldo">
-            Saldo actual: <strong>${Number(clienteSeleccionado?.saldoDeuda ?? 0).toLocaleString("es-CO")}</strong>
+            Saldo actual:{" "}
+            <strong>
+              $
+              {Number(clienteSeleccionado?.saldoDeuda ?? 0).toLocaleString(
+                "es-CO",
+              )}
+            </strong>
           </p>
           <div className="form-group">
             <label htmlFor="cc-monto">Monto del abono (COP) *</label>

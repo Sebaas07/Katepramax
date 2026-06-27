@@ -25,7 +25,13 @@ function sedeEsPermitida(usuario) {
 }
 
 async function crear(app, body, usuarioId) {
-  const { clienteId, items, observaciones, sedeId: sedeIdBody } = body;
+  const {
+    clienteId,
+    items,
+    direccion,
+    observaciones,
+    sedeId: sedeIdBody,
+  } = body;
 
   if (!clienteId) throw new AppError("Se requiere clienteId", 400);
   if (!items || items.length === 0)
@@ -114,6 +120,7 @@ async function crear(app, body, usuarioId) {
         clienteId,
         creadoPorId: usuarioId,
         sedeId: sedePedido,
+        direccion,
         observaciones,
         detalles: { create: detallesPreparados },
       },

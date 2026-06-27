@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import entregaService from "@/services/entrega.service";
+import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
@@ -18,28 +19,48 @@ const Spinner = () => (
   </div>
 );
 
-const TarjetaEntrega = ({ asignacion, onSalida, onConfirmar, onFallo }) => {
-   const estado = asignacion.estado;
-   const pedido = asignacion.pedido;
-   const estadoNormalizado = estado === "EnRuta" ? "en_ruta" : estado?.toLowerCase();
+const TarjetaEntrega = ({
+  asignacion,
+  sedes,
+  onSalida,
+  onConfirmar,
+  onFallo,
+}) => {
+  const estado = asignacion.estado;
+  const pedido = asignacion.pedido;
+  const estadoNormalizado =
+    estado === "EnRuta" ? "en_ruta" : estado?.toLowerCase();
 
-   const totalPedido = useMemo(() => {
+  const totalPedido = useMemo(() => {
     const items = pedido?.detalles ?? pedido?.items ?? [];
     return items.reduce((acc, it) => {
       const cant = parseInt(it.cantidad ?? 0, 10);
-      const precio = parseFloat(it.precioUnitario ?? it.precio_unitario ?? it.precio ?? 0);
-      return acc + (Number.isNaN(cant) ? 0 : cant) * (Number.isNaN(precio) ? 0 : precio);
+      const precio = parseFloat(
+        it.precioUnitario ?? it.precio_unitario ?? it.precio ?? 0,
+      );
+      return (
+        acc +
+        (Number.isNaN(cant) ? 0 : cant) * (Number.isNaN(precio) ? 0 : precio)
+      );
     }, 0);
   }, [pedido]);
 
   const resumenProductos = useMemo(() => {
     const items = pedido?.detalles ?? pedido?.items ?? [];
-    return items.slice(0, 3).map((it) => it.producto?.descripcion ?? it.producto?.nombre ?? `#${it.productoId}`).join(", ");
+    return items
+      .slice(0, 3)
+      .map(
+        (it) =>
+          it.producto?.descripcion ??
+          it.producto?.nombre ??
+          `#${it.productoId}`,
+      )
+      .join(", ");
   }, [pedido]);
 
   const nombreSede = (sedeId) => {
-    const nombres = { 1: "Bogotá", 2: "Cartagena", 3: "Villavicencio" };
-    return nombres[sedeId] ?? `Sede ${sedeId ?? "—"}`;
+    const sede = sedes.find((s) => s.id === sedeId);
+    return sede?.nombre ?? `Sede ${sedeId ?? "—"}`;
   };
 
   return (
@@ -59,8 +80,10 @@ const TarjetaEntrega = ({ asignacion, onSalida, onConfirmar, onFallo }) => {
         </div>
 
         <div className="entr-info-row">
-          <span className="material-symbols-outlined entr-icon">location_on</span>
-          <span>{pedido?.observaciones ?? "—"}</span>
+          <span className="material-symbols-outlined entr-icon">
+            location_on
+          </span>
+          <span>{pedido?.direccion ?? "—"}</span>
         </div>
 
         <div className="entr-info-row">
@@ -70,19 +93,25 @@ const TarjetaEntrega = ({ asignacion, onSalida, onConfirmar, onFallo }) => {
 
         {resumenProductos && (
           <div className="entr-info-row">
-            <span className="material-symbols-outlined entr-icon">inventory</span>
+            <span className="material-symbols-outlined entr-icon">
+              inventory
+            </span>
             <span className="entr-productos-resumen">{resumenProductos}</span>
           </div>
         )}
 
         <div className="entr-info-row">
-          <span className="material-symbols-outlined entr-icon">attach_money</span>
+          <span className="material-symbols-outlined entr-icon">
+            attach_money
+          </span>
           <strong className="entr-total">{formatCOP(totalPedido)}</strong>
         </div>
 
         {pedido?.creadoEn && (
           <div className="entr-info-row">
-            <span className="material-symbols-outlined entr-icon">schedule</span>
+            <span className="material-symbols-outlined entr-icon">
+              schedule
+            </span>
             <span>{formatFecha(pedido.creadoEn)}</span>
           </div>
         )}
@@ -136,7 +165,10 @@ const TarjetaEntrega = ({ asignacion, onSalida, onConfirmar, onFallo }) => {
             <span className="material-symbols-outlined">cancel</span>
             <span>Entrega fallida</span>
             {asignacion.observacionesEntrega && (
-              <span className="entr-obs"> — {asignacion.observacionesEntrega}</span>
+              <span className="entr-obs">
+                {" "}
+                — {asignacion.observacionesEntrega}
+              </span>
             )}
           </div>
         )}
@@ -152,6 +184,8 @@ const EntregasPage = () => {
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [errorDatos, setErrorDatos] = useState(null);
+  const [sedes, setSedes] = useState([]);
+  const [cargandoSedes, setCargandoSedes] = useState(false);
 
   const [modalConfirmarAbierto, setModalConfirmarAbierto] = useState(false);
   const [modalFalloAbierto, setModalFalloAbierto] = useState(false);
@@ -161,6 +195,7 @@ const EntregasPage = () => {
     montoCobrado: "",
     metodoPago: "Efectivo",
     observaciones: "",
+    fechaConfirmada: new Date().toISOString().slice(0, 16),
   });
   const [motivoFallo, setMotivoFallo] = useState("");
 
@@ -174,6 +209,24 @@ const EntregasPage = () => {
 
   const usarTarjetas = anchoPantalla < 768;
 
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+
+    const cargarSedes = async () => {
+      setCargandoSedes(true);
+      try {
+        const data = await inventarioService.obtenerSedes();
+        setSedes(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setSedes([]);
+      } finally {
+        setCargandoSedes(false);
+      }
+    };
+
+    void cargarSedes();
+  }, [isSessionChecked, isAuthenticated]);
+
   // ── Carga de datos ───────────────────────────────────────────────
   const cargarEntregas = useCallback(async () => {
     setCargando(true);
@@ -182,21 +235,23 @@ const EntregasPage = () => {
       const data = await entregaService.obtenerMisEntregas();
       setEntregas(data);
     } catch (err) {
-      setErrorDatos("No se pudieron cargar las entregas. Verifica tu conexión.");
+      setErrorDatos(
+        "No se pudieron cargar las entregas. Verifica tu conexión.",
+      );
       toast.error("Error al cargar entregas: " + err.message);
     } finally {
       setCargando(false);
     }
   }, []);
 
-useEffect(() => {
-      if (!isSessionChecked || !isAuthenticated) return;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      cargarEntregas();
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarEntregas();
 
-      const intervalo = setInterval(cargarEntregas, POLLING_INTERVAL_MS);
-      return () => clearInterval(intervalo);
-    }, [cargarEntregas, isSessionChecked, isAuthenticated]);
+    const intervalo = setInterval(cargarEntregas, POLLING_INTERVAL_MS);
+    return () => clearInterval(intervalo);
+  }, [cargarEntregas, isSessionChecked, isAuthenticated]);
 
   // ── Handlers de acciones ───────────────────────────────────────────
   const handleSalida = async (asignacion) => {
@@ -211,7 +266,12 @@ useEffect(() => {
 
   const abrirConfirmar = (asignacion) => {
     setAsignacionActiva(asignacion);
-    setFormConfirmar({ montoCobrado: "", metodoPago: "Efectivo", observaciones: "" });
+    setFormConfirmar({
+      montoCobrado: "",
+      metodoPago: "Efectivo",
+      observaciones: "",
+      fechaConfirmada: new Date().toISOString().slice(0, 16),
+    });
     setModalConfirmarAbierto(true);
   };
 
@@ -222,6 +282,7 @@ useEffect(() => {
         montoCobrado: formConfirmar.montoCobrado,
         metodoPago: formConfirmar.metodoPago,
         observaciones: formConfirmar.observaciones,
+        fechaConfirmada: formConfirmar.fechaConfirmada,
       });
       toast.success("Entrega confirmada correctamente.");
       setModalConfirmarAbierto(false);
@@ -259,7 +320,8 @@ useEffect(() => {
     { campo: "cliente", label: "Cliente", tipo: "texto" },
     { campo: "direccion", label: "Dirección", tipo: "texto" },
     { campo: "sede", label: "Sede", tipo: "texto" },
-    { campo: "total", label: "Total ($)", tipo: "moneda" },
+    { campo: "total", label: "Total Pedido ($)", tipo: "moneda" },
+    { campo: "costoRecibido", label: "Costo Recibido ($)", tipo: "moneda" },
     { campo: "estado", label: "Estado", tipo: "estado" },
   ];
 
@@ -270,24 +332,71 @@ useEffect(() => {
       const items = pedido.detalles ?? pedido.items ?? [];
       const total = items.reduce((acc, it) => {
         const cant = parseInt(it.cantidad ?? 0, 10);
-        const precio = parseFloat(it.precioUnitario ?? it.precio_unitario ?? it.precio ?? 0);
-        return acc + (Number.isNaN(cant) ? 0 : cant) * (Number.isNaN(precio) ? 0 : precio);
+        const precio = parseFloat(
+          it.precioUnitario ?? it.precio_unitario ?? it.precio ?? 0,
+        );
+        return (
+          acc +
+          (Number.isNaN(cant) ? 0 : cant) * (Number.isNaN(precio) ? 0 : precio)
+        );
       }, 0);
+
+      const sedeObj = sedes.find((s) => s.id === pedido.sedeId);
 
       return {
         id: `#${pedido.id ?? asig.pedidoId ?? ""}`,
-        cliente: pedido.cliente?.nombre ?? `Cliente #${pedido.clienteId ?? "—"}`,
-        direccion: pedido.observaciones ?? "—",
-        sede: { 1: "Bogotá", 2: "Cartagena", 3: "Villavicencio" }[pedido.sedeId] ?? `Sede ${pedido.sedeId ?? "—"}`,
+        cliente:
+          pedido.cliente?.nombre ?? `Cliente #${pedido.clienteId ?? "—"}`,
+        direccion: pedido.direccion ?? "—",
+        sede: sedeObj?.nombre ?? `Sede ${pedido.sedeId ?? "—"}`,
         total,
-        estado: asig.estado === "EnRuta" ? "en_ruta" : asig.estado?.toLowerCase(),
+        costoRecibido:
+          asig.estado === "Entregado" ? Number(asig.montoCobrado ?? 0) : 0,
+        estado:
+          asig.estado === "EnRuta" ? "en_ruta" : asig.estado?.toLowerCase(),
+        asignacionId: asig.id,
+        pedidoId: pedido.id ?? asig.pedidoId,
       };
     });
-  }, [entregas]);
+  }, [entregas, sedes]);
 
   // Contadores
   const pendientes = entregas.filter((e) => e.estado === "Pendiente").length;
   const enRuta = entregas.filter((e) => e.estado === "EnRuta").length;
+
+  const accionesEntregas = (fila) => {
+    const asig = entregas.find((a) => a.id === fila.asignacionId);
+    if (!asig) return [];
+    const accs = [];
+    if (asig.estado === "Pendiente") {
+      accs.push({
+        label: "En Ruta",
+        icon: "directions_bike",
+        onClick: () => handleSalida(asig),
+        variante: "success",
+      });
+      accs.push({
+        label: "Fallido",
+        icon: "cancel",
+        onClick: () => abrirFallo(asig),
+        variante: "danger",
+      });
+    } else if (asig.estado === "EnRuta") {
+      accs.push({
+        label: "Entregado",
+        icon: "check_circle",
+        onClick: () => abrirConfirmar(asig),
+        variante: "success",
+      });
+      accs.push({
+        label: "Fallido",
+        icon: "cancel",
+        onClick: () => abrirFallo(asig),
+        variante: "danger",
+      });
+    }
+    return accs;
+  };
 
   // ── Render ─────────────────────────────────────────────────────────
   return (
@@ -327,42 +436,44 @@ useEffect(() => {
       <div className="tab-content">
         {cargando ? (
           <Spinner />
-) : errorDatos ? (
-           <EmptyState
-             icon="cloud_off"
-             title="Error de conexión"
-             description={errorDatos}
-             actionLabel="Reintentar"
-             onAction={cargarEntregas}
-           />
-         ) : entregas.length === 0 ? (
-           <EmptyState
-             icon="local_shipping"
-             title="Sin entregas"
-             description="No tienes entregas asignadas."
-             subDescription="Cuando se asignen pedidos, aparecerán aquí."
-           />
-         ) : usarTarjetas ? (
-           <div className="entr-grid">
-             {entregas.map((asignacion) => (
-               <TarjetaEntrega
-                 key={asignacion.id}
-                 asignacion={asignacion}
-                 onSalida={handleSalida}
-                 onConfirmar={abrirConfirmar}
-                 onFallo={abrirFallo}
-               />
-             ))}
-           </div>
-         ) : (
-           <TablaGenerica
-             columnas={columnas}
-             datos={entregasMapeadas}
-             filasPorPagina={10}
-             mostrarBuscador={false}
-             paginacion
-           />
-         )}
+        ) : errorDatos ? (
+          <EmptyState
+            icon="cloud_off"
+            title="Error de conexión"
+            description={errorDatos}
+            actionLabel="Reintentar"
+            onAction={cargarEntregas}
+          />
+        ) : entregas.length === 0 ? (
+          <EmptyState
+            icon="local_shipping"
+            title="Sin entregas"
+            description="No tienes entregas asignadas."
+            subDescription="Cuando se asignen pedidos, aparecerán aquí."
+          />
+        ) : usarTarjetas ? (
+          <div className="entr-grid">
+            {entregas.map((asignacion) => (
+              <TarjetaEntrega
+                key={asignacion.id}
+                asignacion={asignacion}
+                sedes={sedes}
+                onSalida={handleSalida}
+                onConfirmar={abrirConfirmar}
+                onFallo={abrirFallo}
+              />
+            ))}
+          </div>
+        ) : (
+          <TablaGenerica
+            columnas={columnas}
+            datos={entregasMapeadas}
+            filasPorPagina={10}
+            mostrarBuscador={false}
+            paginacion
+            renderAcciones={accionesEntregas}
+          />
+        )}
       </div>
 
       {/* Modal — Confirmar entrega */}
@@ -376,26 +487,59 @@ useEffect(() => {
         disabled={guardando}
       >
         <div className="modal-form">
-{asignacionActiva && (
-             <div className="form-group">
-               <label>Pedido #{asignacionActiva.pedido?.id ?? asignacionActiva.pedidoId}</label>
-               <p className="entr-pedido-info">
-                 {asignacionActiva.pedido?.cliente?.nombre ?? "—"}
-                 {asignacionActiva.pedido?.observaciones && (
-                   <span className="entr-pedido-dir"> — {asignacionActiva.pedido.observaciones}</span>
-                 )}
-               </p>
-               {asignacionActiva.pedido && (
-                 <p className="entr-pedido-total">
-                   Total del pedido: <strong>{formatCOP(
-                     (asignacionActiva.pedido.detalles ?? asignacionActiva.pedido.items ?? []).reduce(
-                       (acc, it) => acc + (parseInt(it.cantidad ?? 0, 10) * parseFloat(it.precioUnitario ?? 0)), 0
-                     )
-                   )}</strong>
-                 </p>
-               )}
-             </div>
-           )}
+          {asignacionActiva && (
+            <div className="form-group">
+              <label>
+                Pedido #
+                {asignacionActiva.pedido?.id ?? asignacionActiva.pedidoId}
+              </label>
+              <p className="entr-pedido-info">
+                {asignacionActiva.pedido?.cliente?.nombre ?? "—"}
+                {asignacionActiva.pedido?.direccion && (
+                  <span className="entr-pedido-dir">
+                    {" "}
+                    — {asignacionActiva.pedido.direccion}
+                  </span>
+                )}
+              </p>
+              {asignacionActiva.pedido && (
+                <p className="entr-pedido-total">
+                  Total del pedido:{" "}
+                  <strong>
+                    {formatCOP(
+                      (
+                        asignacionActiva.pedido.detalles ??
+                        asignacionActiva.pedido.items ??
+                        []
+                      ).reduce(
+                        (acc, it) =>
+                          acc +
+                          parseInt(it.cantidad ?? 0, 10) *
+                            parseFloat(it.precioUnitario ?? 0),
+                        0,
+                      ),
+                    )}
+                  </strong>
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="entr-fecha">Fecha y Hora Confirmada *</label>
+            <input
+              id="entr-fecha"
+              type="datetime-local"
+              value={formConfirmar.fechaConfirmada}
+              onChange={(e) =>
+                setFormConfirmar((p) => ({
+                  ...p,
+                  fechaConfirmada: e.target.value,
+                }))
+              }
+              className="form-control"
+            />
+          </div>
 
           <div className="form-group">
             <label htmlFor="entr-monto">Monto Cobrado ($) *</label>
@@ -403,7 +547,12 @@ useEffect(() => {
               id="entr-monto"
               type="number"
               value={formConfirmar.montoCobrado}
-              onChange={(e) => setFormConfirmar((p) => ({ ...p, montoCobrado: e.target.value }))}
+              onChange={(e) =>
+                setFormConfirmar((p) => ({
+                  ...p,
+                  montoCobrado: e.target.value,
+                }))
+              }
               className="form-control"
               min="0"
               step="100"
@@ -416,7 +565,9 @@ useEffect(() => {
             <select
               id="entr-metodo"
               value={formConfirmar.metodoPago}
-              onChange={(e) => setFormConfirmar((p) => ({ ...p, metodoPago: e.target.value }))}
+              onChange={(e) =>
+                setFormConfirmar((p) => ({ ...p, metodoPago: e.target.value }))
+              }
               className="form-control"
             >
               <option value="Efectivo">Efectivo</option>
@@ -430,7 +581,12 @@ useEffect(() => {
             <textarea
               id="entr-obs"
               value={formConfirmar.observaciones}
-              onChange={(e) => setFormConfirmar((p) => ({ ...p, observaciones: e.target.value }))}
+              onChange={(e) =>
+                setFormConfirmar((p) => ({
+                  ...p,
+                  observaciones: e.target.value,
+                }))
+              }
               className="form-control"
               rows={2}
               placeholder="Observaciones de la entrega..."
@@ -452,7 +608,10 @@ useEffect(() => {
         <div className="modal-form">
           {asignacionActiva && (
             <div className="form-group">
-              <label>Pedido #{asignacionActiva.pedido?.id ?? asignacionActiva.pedidoId}</label>
+              <label>
+                Pedido #
+                {asignacionActiva.pedido?.id ?? asignacionActiva.pedidoId}
+              </label>
               <p className="entr-pedido-info">
                 {asignacionActiva.pedido?.cliente?.nombre ?? "—"}
               </p>

@@ -25,12 +25,13 @@ const entregasApi = {
     return response.data;
   },
 
-  confirmarEntrega: async (asignacionId, { montoCobrado, metodoPago, observacionesEntrega }) => {
+  confirmarEntrega: async (asignacionId, { montoCobrado, metodoPago, observacionesEntrega, fechaConfirmada }) => {
     const response = await clienteApi.patch(`/asignaciones/${asignacionId}/estado`, {
       nuevoEstado: "Entregado",
       montoCobrado: parseFloat(montoCobrado),
       metodoPago,
       ...(observacionesEntrega ? { observacionesEntrega } : {}),
+      ...(fechaConfirmada ? { fechaConfirmada } : {}),
     });
     return response.data;
   },

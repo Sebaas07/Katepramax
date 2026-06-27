@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useRef } from "react";
 import "./Modal.css";
 
 const Modal = ({
@@ -14,6 +14,13 @@ const Modal = ({
   className = "",
   maxWidth,
 }) => {
+  const modalRef = useRef(null);
+
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   const handleConfirmar = () => {
     if (onConfirmar) {
       onConfirmar();
@@ -21,28 +28,28 @@ const Modal = ({
   };
 
   const handleCancelar = () => {
-    onClose();
+    onCloseRef.current();
   };
 
-  const modalRef = useRef(null);
-
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === "Escape") onClose();
-  }, [onClose]);
-
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      document.addEventListener("keydown", handleKeyDown);
-      // Focus the modal for keyboard navigation
-      const timer = window.setTimeout(() => modalRef.current?.focus(), 50);
-      return () => {
-        document.body.style.overflow = "";
-        document.removeEventListener("keydown", handleKeyDown);
-        window.clearTimeout(timer);
-      };
-    }
-  }, [isOpen, handleKeyDown]);
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") onCloseRef.current();
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    // Foco inicial al abrir, una sola vez por apertura del modal.
+    const timer = window.setTimeout(() => modalRef.current?.focus(), 50);
+
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -60,7 +67,9 @@ const Modal = ({
           tabIndex={-1}
         >
           <div className="modal-header">
-            <h5 className="modal-title" id="modal-titulo">{titulo}</h5>
+            <h5 className="modal-title" id="modal-titulo">
+              {titulo}
+            </h5>
             <button
               className="modal-close"
               onClick={handleCancelar}

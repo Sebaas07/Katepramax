@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import pedidosService from "@/services/pedidos.service";
 import inventarioService from "@/services/inventario.service";
 import clientesService from "@/services/clientes.service";
+import entregaService from "@/services/entrega.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
@@ -23,59 +24,79 @@ const Spinner = () => (
 const ITEM_VACIO = { productoId: "", cantidad: "", precioUnitario: "" };
 
 const FORM_INICIAL = {
-  clienteId:    "",
+  clienteId: "",
+  direccion: "",
   observaciones: "",
-  sedeId:       "",
-  items:        [{ ...ITEM_VACIO }],
+  sedeId: "",
+  items: [{ ...ITEM_VACIO }],
 };
 
 const normalizarEstado = (raw) => {
   if (!raw && raw !== 0) return null;
   if (typeof raw === "string" && /^[A-Za-z]/.test(raw)) return raw;
-  const MAPA = { 1: "Pendiente", 2: "Asignado", 3: "En ruta", 4: "Entregado", 5: "Fallido" };
+  const MAPA = {
+    1: "Pendiente",
+    2: "Asignado",
+    3: "En ruta",
+    4: "Entregado",
+    5: "Fallido",
+  };
   const n = typeof raw === "number" ? raw : parseInt(String(raw), 10);
   return MAPA[n] ?? String(raw);
 };
 
 const PedidosPage = () => {
-   const { esAdmin, esBodega, usuario, isAuthenticated, isSessionChecked } = useAuth();
-   const puedeCrear    = esAdmin || esBodega;
-   const puedeAsignar  = esAdmin || esBodega;
-   const sedeIdUsuario = usuario?.sedeId ?? null;
+  const { esAdmin, esBodega, usuario, isAuthenticated, isSessionChecked } =
+    useAuth();
+  const puedeCrear = esAdmin || esBodega;
+  const puedeAsignar = esAdmin || esBodega;
+  const sedeIdUsuario = usuario?.sedeId ?? null;
+  const esEntregador = usuario?.rol === "Entregador";
 
-const [pedidos,      setPedidos]      = useState([]);
-   const [productos,    setProductos]    = useState([]);
-   const [clientes,     setClientes]     = useState([]);
-   const [entregadores, setEntregadores] = useState([]);
-   const [sedes,        setSedes]        = useState([]);
-   const [cargando,     setCargando]     = useState(false);
-   const [guardando,    setGuardando]    = useState(false);
-   const [errorDatos,   setErrorDatos]   = useState(null);
+  const [pedidos, setPedidos] = useState([]);
+  const [productos, setProductos] = useState([]);
+  const [clientes, setClientes] = useState([]);
+  const [entregadores, setEntregadores] = useState([]);
+  const [sedes, setSedes] = useState([]);
+  const [cargando, setCargando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [errorDatos, setErrorDatos] = useState(null);
 
-  const [tabActiva,    setTabActiva]    = useState("");
-  const [filtroTexto,  setFiltroTexto]  = useState("");
-  const [filtroSede,   setFiltroSede]   = useState("");
+  const [tabActiva, setTabActiva] = useState("");
+  const [filtroTexto, setFiltroTexto] = useState("");
+  const [filtroSede, setFiltroSede] = useState("");
 
-const [modalPedidoAbierto,    setModalPedidoAbierto]    = useState(false);
-   const [modalAsignarAbierto,   setModalAsignarAbierto]   = useState(false);
-   const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false);
-   const [pedidoSeleccionado,    setPedidoSeleccionado]    = useState(null);
-   const [historialPedido, setHistorialPedido] = useState([]);
+  const [modalPedidoAbierto, setModalPedidoAbierto] = useState(false);
+  const [modalAsignarAbierto, setModalAsignarAbierto] = useState(false);
+  const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false);
+  const [modalFalloPedidoAbierto, setModalFalloPedidoAbierto] = useState(false);
+  const [modalConfirmarPedidoAbierto, setModalConfirmarPedidoAbierto] =
+    useState(false);
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
+  const [historialPedido, setHistorialPedido] = useState([]);
+  const [asignacionAccion, setAsignacionAccion] = useState(null);
+  const [motivoFalloPedido, setMotivoFalloPedido] = useState("");
+  const [formConfirmarPedido, setFormConfirmarPedido] = useState({
+    montoCobrado: "",
+    metodoPago: "Efectivo",
+    observaciones: "",
+    fechaConfirmada: new Date().toISOString().slice(0, 16),
+  });
 
-  const [formPedido,     setFormPedido]     = useState(FORM_INICIAL);
-  const [entregadorId,   setEntregadorId]   = useState("");
+  const [formPedido, setFormPedido] = useState(FORM_INICIAL);
+  const [entregadorId, setEntregadorId] = useState("");
 
   const mapaProductosPorCodigo = useMemo(
     () => Object.fromEntries(productos.map((p) => [String(p.codigo), p])),
-    [productos]
+    [productos],
   );
   const mapaClientesPorId = useMemo(
     () => Object.fromEntries(clientes.map((c) => [c.id, c])),
-    [clientes]
+    [clientes],
   );
   const mapaEntregadoresPorId = useMemo(
     () => Object.fromEntries(entregadores.map((e) => [e.id, e])),
-    [entregadores]
+    [entregadores],
   );
 
   const sedesDisponibles = useMemo(() => {
@@ -88,7 +109,7 @@ const [modalPedidoAbierto,    setModalPedidoAbierto]    = useState(false);
     return Array.from(s).sort((a, b) => a - b);
   }, [sedes, productos]);
 
-const nombreSede = useCallback(
+  const nombreSede = useCallback(
     (sedeId) => {
       const id = typeof sedeId === "string" ? parseInt(sedeId, 10) : sedeId;
       if (!id) return "—";
@@ -97,7 +118,7 @@ const nombreSede = useCallback(
       const nombres = { 1: "Bogotá", 2: "Cartagena", 3: "Villavicencio" };
       return nombres[id] ?? `Sede ${id}`;
     },
-    [sedes]
+    [sedes],
   );
 
   const cargarDatos = useCallback(async () => {
@@ -123,7 +144,9 @@ const nombreSede = useCallback(
         setEntregadores([]);
       }
     } catch (err) {
-      setErrorDatos("No fue posible cargar los pedidos. Revisa la conexión o credenciales.");
+      setErrorDatos(
+        "No fue posible cargar los pedidos. Revisa la conexión o credenciales.",
+      );
       toast.error("Error al cargar datos: " + (err?.message || "desconocido"));
       setEntregadores([]);
       setSedes([]);
@@ -132,14 +155,14 @@ const nombreSede = useCallback(
     }
   }, [esAdmin]);
 
-useEffect(() => {
-      if (!isSessionChecked || !isAuthenticated) return;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      cargarDatos();
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarDatos();
 
-      const intervalo = setInterval(cargarDatos, POLLING_INTERVAL_MS);
-      return () => clearInterval(intervalo);
-    }, [cargarDatos, isSessionChecked, isAuthenticated]);
+    const intervalo = setInterval(cargarDatos, POLLING_INTERVAL_MS);
+    return () => clearInterval(intervalo);
+  }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
   const pedidosNormalizados = useMemo(
     () =>
@@ -154,7 +177,9 @@ useEffect(() => {
         if (!sedeFinal) {
           const it = p.items?.[0] ?? p.detalles?.[0];
           if (it) {
-            const cod = String(it.productoId ?? it.producto?.codigo ?? it.productoCodigo ?? "");
+            const cod = String(
+              it.productoId ?? it.producto?.codigo ?? it.productoCodigo ?? "",
+            );
             const prod = mapaProductosPorCodigo[cod];
             sedeFinal = prod?.sedeId ?? prod?.sede?.id ?? null;
           }
@@ -164,28 +189,44 @@ useEffect(() => {
           ? (p.asignaciones[0].entregador?.nombreCompleto ??
             p.asignaciones[0].entregador?.nombre ??
             (typeof p.asignaciones[0].entregadorId === "number"
-              ? (mapaEntregadoresPorId[p.asignaciones[0].entregadorId]?.nombreCompleto ?? "—")
+              ? (mapaEntregadoresPorId[p.asignaciones[0].entregadorId]
+                  ?.nombreCompleto ?? "—")
               : "—"))
           : "Sin asignar";
 
         const totalPedido = (p.items ?? p.detalles ?? []).reduce((acc, it) => {
           const cant = parseInt(it.cantidad ?? 0, 10);
-          const precio = parseFloat(it.precioUnitario ?? it.precio_unitario ?? 0);
-          return acc + (Number.isNaN(cant) ? 0 : cant) * (Number.isNaN(precio) ? 0 : precio);
+          const precio = parseFloat(
+            it.precioUnitario ?? it.precio_unitario ?? 0,
+          );
+          return (
+            acc +
+            (Number.isNaN(cant) ? 0 : cant) *
+              (Number.isNaN(precio) ? 0 : precio)
+          );
         }, 0);
 
         return {
           ...p,
           estado,
-          cliente: clienteObj?.nombre ?? p.cliente?.nombre ?? `Cliente #${clienteId ?? "—"}`,
+          cliente:
+            clienteObj?.nombre ??
+            p.cliente?.nombre ??
+            `Cliente #${clienteId ?? "—"}`,
           sedeId: sedeFinal,
           sedeNombre: sedeNombreDirecta ?? nombreSede(sedeFinal),
           entregador: nombreEntregador,
           totalPedido,
-          direccion: p.observaciones ?? "",
+          direccion: p.direccion ?? "",
         };
       }),
-    [pedidos, mapaClientesPorId, mapaEntregadoresPorId, mapaProductosPorCodigo, nombreSede]
+    [
+      pedidos,
+      mapaClientesPorId,
+      mapaEntregadoresPorId,
+      mapaProductosPorCodigo,
+      nombreSede,
+    ],
   );
 
   const pedidosFiltrados = useMemo(() => {
@@ -216,14 +257,14 @@ useEffect(() => {
   }, [pedidosNormalizados, tabActiva, filtroSede, filtroTexto]);
 
   const columnas = [
-    { campo: "id",          label: "ID",         tipo: "texto"  },
-    { campo: "cliente",     label: "Cliente",    tipo: "texto"  },
-    { campo: "direccion",   label: "Dirección",  tipo: "texto"  },
-    { campo: "sedeNombre",  label: "Sede",       tipo: "texto"  },
-    { campo: "totalPedido", label: "Total ($)",  tipo: "moneda" },
-    { campo: "estado",      label: "Estado",     tipo: "estado" },
-    { campo: "creadoEn",    label: "Fecha",      tipo: "fecha"  },
-    { campo: "entregador",  label: "Asignado a", tipo: "texto"  },
+    { campo: "id", label: "ID", tipo: "texto" },
+    { campo: "cliente", label: "Cliente", tipo: "texto" },
+    { campo: "direccion", label: "Dirección", tipo: "texto" },
+    { campo: "sedeNombre", label: "Sede", tipo: "texto" },
+    { campo: "totalPedido", label: "Total ($)", tipo: "moneda" },
+    { campo: "estado", label: "Estado", tipo: "estado" },
+    { campo: "creadoEn", label: "Fecha", tipo: "fecha" },
+    { campo: "entregador", label: "Asignado a", tipo: "texto" },
   ];
 
   const handleCambioFormPedido = (e) => {
@@ -235,7 +276,7 @@ useEffect(() => {
     setFormPedido((prev) => ({
       ...prev,
       items: prev.items.map((item, i) =>
-        i === index ? { ...item, [campo]: valor } : item
+        i === index ? { ...item, [campo]: valor } : item,
       ),
     }));
   };
@@ -246,8 +287,14 @@ useEffect(() => {
       ...prev,
       items: prev.items.map((item, i) =>
         i === index
-          ? { ...item, productoId, precioUnitario: prod ? String(prod.precioVenta ?? prod.precioDetal ?? "") : "" }
-          : item
+          ? {
+              ...item,
+              productoId,
+              precioUnitario: prod
+                ? String(prod.precioVenta ?? prod.precioDetal ?? "")
+                : "",
+            }
+          : item,
       ),
     }));
   };
@@ -278,18 +325,26 @@ useEffect(() => {
   const handleGuardarPedido = async () => {
     setGuardando(true);
     try {
-      const itemsValidos = formPedido.items.filter((item) => item.productoId && parseInt(item.cantidad) >= 1);
+      const itemsValidos = formPedido.items.filter(
+        (item) => item.productoId && parseInt(item.cantidad) >= 1,
+      );
       await pedidosService.crearPedido({
-        clienteId:    formPedido.clienteId,
-        sedeId:       esAdmin ? (formPedido.sedeId ? parseInt(formPedido.sedeId, 10) : undefined) : sedeIdUsuario ?? undefined,
+        clienteId: formPedido.clienteId,
+        sedeId: esAdmin
+          ? formPedido.sedeId
+            ? parseInt(formPedido.sedeId, 10)
+            : undefined
+          : (sedeIdUsuario ?? undefined),
+        direccion: formPedido.direccion,
         observaciones: formPedido.observaciones,
-        items:        itemsValidos,
+        items: itemsValidos,
       });
       toast.success("Pedido creado correctamente.");
       setModalPedidoAbierto(false);
       await cargarDatos();
     } catch (err) {
-      const serverMsg = err?.response?.data?.error || err?.message || "Error desconocido";
+      const serverMsg =
+        err?.response?.data?.error || err?.message || "Error desconocido";
       console.error("pedidosService.crearPedido:", err?.response?.data || err);
 
       // Manejo especial para falta de stock: mostrar una alerta amigable
@@ -319,7 +374,10 @@ useEffect(() => {
     }
     setGuardando(true);
     try {
-      await pedidosService.asignarEntregador(pedidoSeleccionado.id, entregadorId);
+      await pedidosService.asignarEntregador(
+        pedidoSeleccionado.id,
+        entregadorId,
+      );
       toast.success("Entregador asignado correctamente.");
       setModalAsignarAbierto(false);
       await cargarDatos();
@@ -341,10 +399,132 @@ useEffect(() => {
     }
   };
 
+  const obtenerAsignacionId = (pedido) => {
+    const asig = pedido.asignaciones?.[0];
+    return asig?.id ?? null;
+  };
+
+  const handleMarcarEnRutaPedido = async (pedido) => {
+    const asigId = obtenerAsignacionId(pedido);
+    if (!asigId) {
+      toast.error("Esta entrega no tiene asignación.");
+      return;
+    }
+    try {
+      await entregaService.marcarSalida(asigId);
+      toast.success("¡Listo! Estás en ruta.");
+      await cargarDatos();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const abrirConfirmarEntregaPedido = (pedido) => {
+    const asigId = obtenerAsignacionId(pedido);
+    if (!asigId) {
+      toast.error("Esta entrega no tiene asignación.");
+      return;
+    }
+    setAsignacionAccion(asigId);
+    setFormConfirmarPedido({
+      montoCobrado: "",
+      metodoPago: "Efectivo",
+      observaciones: "",
+      fechaConfirmada: new Date().toISOString().slice(0, 16),
+    });
+    setModalConfirmarPedidoAbierto(true);
+  };
+
+  const handleConfirmarEntregaPedido = async () => {
+    setGuardando(true);
+    try {
+      await entregaService.confirmarEntrega(asignacionAccion, {
+        montoCobrado: formConfirmarPedido.montoCobrado,
+        metodoPago: formConfirmarPedido.metodoPago,
+        observaciones: formConfirmarPedido.observaciones,
+        fechaConfirmada: formConfirmarPedido.fechaConfirmada,
+      });
+      toast.success("Entrega confirmada correctamente.");
+      setModalConfirmarPedidoAbierto(false);
+      await cargarDatos();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const abrirFalloPedido = (pedido) => {
+    const asigId = obtenerAsignacionId(pedido);
+    if (!asigId) {
+      toast.error("Esta entrega no tiene asignación.");
+      return;
+    }
+    setAsignacionAccion(asigId);
+    setMotivoFalloPedido("");
+    setModalFalloPedidoAbierto(true);
+  };
+
+  const handleFalloPedido = async () => {
+    setGuardando(true);
+    try {
+      await entregaService.registrarFallo(asignacionAccion, motivoFalloPedido);
+      toast.success("Fallo registrado. El pedido vuelve a Pendiente.");
+      setModalFalloPedidoAbierto(false);
+      await cargarDatos();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   const acciones = (pedido) => {
     const accs = [];
 
-    if (puedeAsignar && (pedido.estado === "Pendiente" || pedido.estado === "Asignado")) {
+    if (esEntregador) {
+      const asigId = obtenerAsignacionId(pedido);
+      if (pedido.estado === "Pendiente" || pedido.estado === "Asignado") {
+        if (asigId) {
+          accs.push({
+            label: "En Ruta",
+            icon: "directions_bike",
+            onClick: () => handleMarcarEnRutaPedido(pedido),
+            variante: "success",
+          });
+        }
+        if (asigId) {
+          accs.push({
+            label: "Fallido",
+            icon: "cancel",
+            onClick: () => abrirFalloPedido(pedido),
+            variante: "danger",
+          });
+        }
+      } else if (pedido.estado === "EnRuta") {
+        if (asigId) {
+          accs.push({
+            label: "Entregado",
+            icon: "check_circle",
+            onClick: () => abrirConfirmarEntregaPedido(pedido),
+            variante: "success",
+          });
+        }
+        if (asigId) {
+          accs.push({
+            label: "Fallido",
+            icon: "cancel",
+            onClick: () => abrirFalloPedido(pedido),
+            variante: "danger",
+          });
+        }
+      }
+    }
+
+    if (
+      puedeAsignar &&
+      (pedido.estado === "Pendiente" || pedido.estado === "Asignado")
+    ) {
       accs.push({
         label: "Asignar",
         icon: "delivery_dining",
@@ -366,18 +546,20 @@ useEffect(() => {
       <div className="page-header">
         <div>
           <h1>Gestión de Pedidos</h1>
-          <p className="ped-subtitulo">Administra pedidos, asignaciones y entregas</p>
+          <p className="ped-subtitulo">
+            Administra pedidos, asignaciones y entregas
+          </p>
         </div>
 
         <div className="ped-header-acciones">
           <div className="ped-tabs">
             {[
-              { key: "",         label: "Todos" },
+              { key: "", label: "Todos" },
               { key: "Pendiente", label: "Pendientes" },
-              { key: "Asignado",  label: "Asignados" },
-              { key: "En ruta",   label: "En Ruta" },
+              { key: "Asignado", label: "Asignados" },
+              { key: "En ruta", label: "En Ruta" },
               { key: "Entregado", label: "Entregados" },
-              { key: "Fallido",   label: "Fallidos" },
+              { key: "Fallido", label: "Fallidos" },
             ].map((t) => (
               <button
                 key={t.key}
@@ -401,15 +583,23 @@ useEffect(() => {
               >
                 <option value="">Todas</option>
                 {sedesDisponibles.map((sid) => (
-                  <option key={sid} value={String(sid)}>{nombreSede(sid)}</option>
+                  <option key={sid} value={String(sid)}>
+                    {nombreSede(sid)}
+                  </option>
                 ))}
               </select>
             </div>
           )}
 
           {puedeCrear && (
-            <button className="btn-primary" onClick={abrirModalNuevo} type="button">
-              <span className="material-symbols-outlined">add_shopping_cart</span>
+            <button
+              className="btn-primary"
+              onClick={abrirModalNuevo}
+              type="button"
+            >
+              <span className="material-symbols-outlined">
+                add_shopping_cart
+              </span>
               Nuevo Pedido
             </button>
           )}
@@ -419,22 +609,26 @@ useEffect(() => {
       <div className="tab-content">
         {cargando ? (
           <Spinner />
-) : errorDatos ? (
-           <EmptyState
-             icon="cloud_off"
-             title="Error de conexión"
-             description={errorDatos}
-             actionLabel="Reintentar"
-             onAction={cargarDatos}
-           />
-         ) : pedidosFiltrados.length === 0 ? (
-           <EmptyState
-             icon="shopping_bag"
-             title="Sin pedidos"
-             description={tabActiva ? `No hay pedidos ${tabActiva.toLowerCase()}s` : "No hay pedidos registrados"}
-             subDescription="Los pedidos aparecerán aquí cuando se creen."
-           />
-         ) : (
+        ) : errorDatos ? (
+          <EmptyState
+            icon="cloud_off"
+            title="Error de conexión"
+            description={errorDatos}
+            actionLabel="Reintentar"
+            onAction={cargarDatos}
+          />
+        ) : pedidosFiltrados.length === 0 ? (
+          <EmptyState
+            icon="shopping_bag"
+            title="Sin pedidos"
+            description={
+              tabActiva
+                ? `No hay pedidos ${tabActiva.toLowerCase()}s`
+                : "No hay pedidos registrados"
+            }
+            subDescription="Los pedidos aparecerán aquí cuando se creen."
+          />
+        ) : (
           <div className="ped-tabla-wrap">
             <div className="ped-search">
               <span className="material-symbols-outlined">search</span>
@@ -488,12 +682,12 @@ useEffect(() => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="ped-obs">Dirección de entrega</label>
+            <label htmlFor="ped-direccion">Dirección de entrega</label>
             <input
-              id="ped-obs"
+              id="ped-direccion"
               type="text"
-              name="observaciones"
-              value={formPedido.observaciones}
+              name="direccion"
+              value={formPedido.direccion}
               onChange={handleCambioFormPedido}
               className="form-control"
               placeholder="Calle, número, barrio, referencia..."
@@ -513,7 +707,9 @@ useEffect(() => {
               >
                 <option value="">— Selecciona una sede —</option>
                 {sedesDisponibles.map((sid) => (
-                  <option key={sid} value={String(sid)}>{nombreSede(sid)}</option>
+                  <option key={sid} value={String(sid)}>
+                    {nombreSede(sid)}
+                  </option>
                 ))}
               </select>
             </div>
@@ -523,8 +719,12 @@ useEffect(() => {
             <label>Productos *</label>
             <div className="ped-items">
               {formPedido.items.map((item, index) => {
-                const prodSel = productos.find((p) => String(p.codigo) === String(item.productoId));
-                const precioBase = prodSel ? (prodSel.precioVenta ?? prodSel.precioDetal ?? 0) : 0;
+                const prodSel = productos.find(
+                  (p) => String(p.codigo) === String(item.productoId),
+                );
+                const precioBase = prodSel
+                  ? (prodSel.precioVenta ?? prodSel.precioDetal ?? 0)
+                  : 0;
                 const cantidad = parseInt(item.cantidad, 10);
                 const subtotal =
                   (Number.isNaN(cantidad) ? 0 : cantidad) *
@@ -540,7 +740,9 @@ useEffect(() => {
                           className="btn-remove-item"
                           onClick={() => handleEliminarItem(index)}
                         >
-                          <span className="material-symbols-outlined">close</span>
+                          <span className="material-symbols-outlined">
+                            close
+                          </span>
                         </button>
                       )}
                     </div>
@@ -558,31 +760,37 @@ useEffect(() => {
                               ? `[${prodSel.codigo}] ${prodSel.nombre ?? prodSel.descripcion}`
                               : ""
                           }
-onChange={(e) => {
-                             const raw = e.target.value;
-                             const match = raw.match(/\[(\d+)\]/);
-                             if (match) {
-                               handleSeleccionProducto(index, match[1]);
-                             } else {
-                               const prodPorNombre = productos.find((p) =>
-                                 String(p.nombre ?? p.descripcion ?? "")
-                                   .toLowerCase()
-                                   .includes(raw.toLowerCase())
-                               );
-                               if (prodPorNombre && !item.productoId) {
-                                 handleSeleccionProducto(index, prodPorNombre.codigo);
-                               }
-                             }
-                           }}
-                         />
-                         <datalist id={`ped-buscar-dl-${index}`}>
-                           {productos.map((p) => (
-                             <option key={p.codigo} value={`[${p.codigo}] ${p.nombre ?? p.descripcion ?? ""}`}>
-                               {p.sede?.nombre ?? nombreSede(p.sedeId)}
-                             </option>
-                           ))}
-                         </datalist>
-                       </div>
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            const match = raw.match(/\[(\d+)\]/);
+                            if (match) {
+                              handleSeleccionProducto(index, match[1]);
+                            } else {
+                              const prodPorNombre = productos.find((p) =>
+                                String(p.nombre ?? p.descripcion ?? "")
+                                  .toLowerCase()
+                                  .includes(raw.toLowerCase()),
+                              );
+                              if (prodPorNombre && !item.productoId) {
+                                handleSeleccionProducto(
+                                  index,
+                                  prodPorNombre.codigo,
+                                );
+                              }
+                            }
+                          }}
+                        />
+                        <datalist id={`ped-buscar-dl-${index}`}>
+                          {productos.map((p) => (
+                            <option
+                              key={p.codigo}
+                              value={`[${p.codigo}] ${p.nombre ?? p.descripcion ?? ""}`}
+                            >
+                              {p.sede?.nombre ?? nombreSede(p.sedeId)}
+                            </option>
+                          ))}
+                        </datalist>
+                      </div>
 
                       <div className="item-field--cantidad">
                         <label htmlFor={`ped-cant-${index}`}>Cant.</label>
@@ -590,7 +798,9 @@ onChange={(e) => {
                           id={`ped-cant-${index}`}
                           type="number"
                           value={item.cantidad}
-                          onChange={(e) => handleCambioItem(index, "cantidad", e.target.value)}
+                          onChange={(e) =>
+                            handleCambioItem(index, "cantidad", e.target.value)
+                          }
                           className="form-control"
                           min="1"
                           step="1"
@@ -602,14 +812,22 @@ onChange={(e) => {
                         <label htmlFor={`ped-precio-${index}`}>
                           Precio unit.{" "}
                           <span className="item-precio-hint">
-                            {prodSel ? `(sugerido $${precioBase.toLocaleString("es-CO")})` : "(opcional)"}
+                            {prodSel
+                              ? `(sugerido $${precioBase.toLocaleString("es-CO")})`
+                              : "(opcional)"}
                           </span>
                         </label>
                         <input
                           id={`ped-precio-${index}`}
                           type="number"
                           value={item.precioUnitario}
-                          onChange={(e) => handleCambioItem(index, "precioUnitario", e.target.value)}
+                          onChange={(e) =>
+                            handleCambioItem(
+                              index,
+                              "precioUnitario",
+                              e.target.value,
+                            )
+                          }
                           className="form-control"
                           min="0"
                           step="100"
@@ -620,7 +838,10 @@ onChange={(e) => {
                       <div className="item-field--subtotal">
                         <label>Subtotal</label>
                         <span className="item-subtotal">
-                          ${subtotal.toLocaleString("es-CO", { minimumFractionDigits: 0 })}
+                          $
+                          {subtotal.toLocaleString("es-CO", {
+                            minimumFractionDigits: 0,
+                          })}
                         </span>
                       </div>
                     </div>
@@ -628,7 +849,11 @@ onChange={(e) => {
                 );
               })}
             </div>
-            <button type="button" className="btn-add-item" onClick={handleAgregarItem}>
+            <button
+              type="button"
+              className="btn-add-item"
+              onClick={handleAgregarItem}
+            >
               <span className="material-symbols-outlined">add</span>
               Agregar producto
             </button>
@@ -638,12 +863,23 @@ onChange={(e) => {
             <div className="ped-resumen">
               <span>Total estimado:</span>
               <strong>
-                ${formPedido.items.reduce((acc, it) => {
-                  const prod = productos.find((p) => String(p.codigo) === String(it.productoId));
-                  const precio = prod ? (prod.precioVenta ?? prod.precioDetal ?? 0) : 0;
-                  const cant = parseInt(it.cantidad, 10);
-                  return acc + (Number.isNaN(cant) ? 0 : cant) * (parseFloat(it.precioUnitario || String(precio)) || 0);
-                }, 0).toLocaleString("es-CO", { minimumFractionDigits: 0 })}
+                $
+                {formPedido.items
+                  .reduce((acc, it) => {
+                    const prod = productos.find(
+                      (p) => String(p.codigo) === String(it.productoId),
+                    );
+                    const precio = prod
+                      ? (prod.precioVenta ?? prod.precioDetal ?? 0)
+                      : 0;
+                    const cant = parseInt(it.cantidad, 10);
+                    return (
+                      acc +
+                      (Number.isNaN(cant) ? 0 : cant) *
+                        (parseFloat(it.precioUnitario || String(precio)) || 0)
+                    );
+                  }, 0)
+                  .toLocaleString("es-CO", { minimumFractionDigits: 0 })}
               </strong>
             </div>
           )}
@@ -666,7 +902,10 @@ onChange={(e) => {
               <p className="pedido-info">
                 {pedidoSeleccionado.cliente}
                 {pedidoSeleccionado.direccion && (
-                  <span className="pedido-info__dir"> — {pedidoSeleccionado.direccion}</span>
+                  <span className="pedido-info__dir">
+                    {" "}
+                    — {pedidoSeleccionado.direccion}
+                  </span>
                 )}
               </p>
             </div>
@@ -685,51 +924,169 @@ onChange={(e) => {
                   {e.nombreCompleto}
                 </option>
               ))}
-</select>
-           </div>
-         </div>
-       </Modal>
+            </select>
+          </div>
+        </div>
+      </Modal>
 
-       {/* Modal — Historial de estados */}
-       <Modal
-         isOpen={modalHistorialAbierto}
-         onClose={() => setModalHistorialAbierto(false)}
-         titulo="Historial de Estados"
-         mostrarCancelar={false}
-       >
-         <div className="historial-modal">
-           {pedidoSeleccionado && (
-             <div className="historial-pedido-info">
-               <strong>Pedido #{pedidoSeleccionado.id}</strong>
-               <span className="historial-cliente">{pedidoSeleccionado.cliente}</span>
-             </div>
-           )}
-           {historialPedido.length === 0 ? (
-             <p style={{ padding: "1rem", color: "#666" }}>Sin registros de cambios.</p>
-           ) : (
-             <table className="historial-table">
-               <thead>
-                 <tr>
-                   <th>Fecha</th>
-                   <th>Estado</th>
-                   <th>Usuario</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {historialPedido.map((h) => (
-                   <tr key={h.id}>
-                     <td>{formatFecha(h.cambiadoEn)}</td>
-                     <td><EstadoBadge estado={h.estado?.toLowerCase()} /></td>
-                     <td>{h.usuario?.nombreCompleto ?? "Sistema"}</td>
-                   </tr>
-                 ))}
-               </tbody>
-             </table>
-           )}
-         </div>
-       </Modal>
-     </div>
-   );
- };
+      {/* Modal — Historial de estados */}
+      <Modal
+        isOpen={modalHistorialAbierto}
+        onClose={() => setModalHistorialAbierto(false)}
+        titulo="Historial de Estados"
+        mostrarCancelar={false}
+      >
+        <div className="historial-modal">
+          {pedidoSeleccionado && (
+            <div className="historial-pedido-info">
+              <strong>Pedido #{pedidoSeleccionado.id}</strong>
+              <span className="historial-cliente">
+                {pedidoSeleccionado.cliente}
+              </span>
+            </div>
+          )}
+          {historialPedido.length === 0 ? (
+            <p style={{ padding: "1rem", color: "#666" }}>
+              Sin registros de cambios.
+            </p>
+          ) : (
+            <table className="historial-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Usuario</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historialPedido.map((h) => (
+                  <tr key={h.id}>
+                    <td>{formatFecha(h.cambiadoEn)}</td>
+                    <td>
+                      <EstadoBadge estado={h.estado?.toLowerCase()} />
+                    </td>
+                    <td>{h.usuario?.nombreCompleto ?? "Sistema"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </Modal>
 
- export default PedidosPage;
+      {/* Modal — Confirmar entrega (Entregador) */}
+      <Modal
+        isOpen={modalConfirmarPedidoAbierto}
+        onClose={() => setModalConfirmarPedidoAbierto(false)}
+        titulo="Confirmar Entrega"
+        textoBotonConfirmar={guardando ? "Confirmando..." : "Confirmar"}
+        onConfirmar={handleConfirmarEntregaPedido}
+        mostrarCancelar
+        disabled={guardando}
+      >
+        <div className="modal-form">
+          <div className="form-group">
+            <label>Fecha y Hora Confirmada *</label>
+            <input
+              type="datetime-local"
+              value={formConfirmarPedido.fechaConfirmada}
+              onChange={(e) =>
+                setFormConfirmarPedido((p) => ({
+                  ...p,
+                  fechaConfirmada: e.target.value,
+                }))
+              }
+              className="form-control"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="ped-monto-confirmar">Monto Cobrado ($) *</label>
+            <input
+              id="ped-monto-confirmar"
+              type="number"
+              value={formConfirmarPedido.montoCobrado}
+              onChange={(e) =>
+                setFormConfirmarPedido((p) => ({
+                  ...p,
+                  montoCobrado: e.target.value,
+                }))
+              }
+              className="form-control"
+              min="0"
+              step="100"
+              placeholder="0"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="ped-metodo-confirmar">Forma de Pago *</label>
+            <select
+              id="ped-metodo-confirmar"
+              value={formConfirmarPedido.metodoPago}
+              onChange={(e) =>
+                setFormConfirmarPedido((p) => ({
+                  ...p,
+                  metodoPago: e.target.value,
+                }))
+              }
+              className="form-control"
+            >
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia">Transferencia</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="ped-obs-confirmar">Nota (opcional)</label>
+            <textarea
+              id="ped-obs-confirmar"
+              value={formConfirmarPedido.observaciones}
+              onChange={(e) =>
+                setFormConfirmarPedido((p) => ({
+                  ...p,
+                  observaciones: e.target.value,
+                }))
+              }
+              className="form-control"
+              rows={2}
+              placeholder="Observaciones de la entrega..."
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal — Registrar fallo (Entregador) */}
+      <Modal
+        isOpen={modalFalloPedidoAbierto}
+        onClose={() => setModalFalloPedidoAbierto(false)}
+        titulo="Registrar Fallo"
+        textoBotonConfirmar={guardando ? "Registrando..." : "Registrar"}
+        onConfirmar={handleFalloPedido}
+        mostrarCancelar
+        disabled={guardando}
+      >
+        <div className="modal-form">
+          <div className="entr-fallo-aviso">
+            <span className="material-symbols-outlined">info</span>
+            El pedido volverá a <strong>Pendiente</strong> para reasignación.
+          </div>
+          <div className="form-group">
+            <label htmlFor="ped-motivo-fallo">Nota del fallo *</label>
+            <textarea
+              id="ped-motivo-fallo"
+              value={motivoFalloPedido}
+              onChange={(e) => setMotivoFalloPedido(e.target.value)}
+              className="form-control"
+              rows={3}
+              placeholder="Ej: Cliente ausente, dirección incorrecta, no contesta..."
+              required
+            />
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+export default PedidosPage;

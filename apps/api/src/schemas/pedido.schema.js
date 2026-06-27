@@ -6,16 +6,16 @@
 const detalleItem = {
   type: "object",
   properties: {
-    id:             { type: "integer" },
-    productoId:     { type: "string" },
+    id: { type: "integer" },
+    productoId: { type: "string" },
     productoNombre: { type: "string" },
-    cantidad:       { type: "integer" },
+    cantidad: { type: "integer" },
     precioUnitario: { type: "number" },
-    subtotal:       { type: "number" },
+    subtotal: { type: "number" },
     producto: {
       type: "object",
       properties: {
-        codigo:      { type: "string" },
+        codigo: { type: "string" },
         descripcion: { type: "string" },
       },
     },
@@ -25,24 +25,25 @@ const detalleItem = {
 const pedidoBase = {
   type: "object",
   properties: {
-    id:            { type: "integer" },
-    estado:        { type: "string" },
+    id: { type: "integer" },
+    estado: { type: "string" },
+    direccion: { type: ["string", "null"] },
     observaciones: { type: ["string", "null"] },
     totalRecibido: { type: "number" },
-    creadoEn:      { type: "string", format: "date-time" },
+    creadoEn: { type: "string", format: "date-time" },
     actualizadoEn: { type: "string", format: "date-time" },
     cliente: {
       type: "object",
       properties: {
-        id:       { type: "integer" },
-        nombre:   { type: "string" },
+        id: { type: "integer" },
+        nombre: { type: "string" },
         telefono: { type: ["string", "null"] },
       },
     },
     creador: {
       type: "object",
       properties: {
-        id:             { type: "integer" },
+        id: { type: "integer" },
         nombreCompleto: { type: "string" },
       },
     },
@@ -50,12 +51,12 @@ const pedidoBase = {
     sede: {
       type: "object",
       properties: {
-        id:     { type: "integer" },
+        id: { type: "integer" },
         nombre: { type: "string" },
       },
       additionalProperties: false,
     },
-    detalles:     { type: "array", items: detalleItem },
+    detalles: { type: "array", items: detalleItem },
     asignaciones: { type: "array" },
   },
 };
@@ -69,8 +70,13 @@ const crearPedido = {
     type: "object",
     required: ["clienteId", "items"],
     properties: {
-      clienteId:    { type: "integer" },
-      sedeId:       { type: "integer", description: "Requerido para Admin (sin sede fija). Ignorado para Bodega/AdminBogota." },
+      clienteId: { type: "integer" },
+      sedeId: {
+        type: "integer",
+        description:
+          "Requerido para Admin (sin sede fija). Ignorado para Bodega/AdminBogota.",
+      },
+      direccion: { type: "string" },
       observaciones: { type: "string" },
       items: {
         type: "array",
@@ -79,9 +85,13 @@ const crearPedido = {
           type: "object",
           required: ["productoId", "cantidad"],
           properties: {
-            productoId:     { type: "string" },
-            cantidad:       { type: "integer", minimum: 1 },
-            precioUnitario: { type: "number", minimum: 0, description: "Opcional; usa precioVenta del producto si se omite" },
+            productoId: { type: "string" },
+            cantidad: { type: "integer", minimum: 1 },
+            precioUnitario: {
+              type: "number",
+              minimum: 0,
+              description: "Opcional; usa precioVenta del producto si se omite",
+            },
           },
           additionalProperties: false,
         },
@@ -104,11 +114,14 @@ const listarPedidos = {
   querystring: {
     type: "object",
     properties: {
-      clienteId:   { type: "integer" },
-      estado:      { type: "string", enum: ["Pendiente", "Asignado", "Entregado", "Cancelado"] },
+      clienteId: { type: "integer" },
+      estado: {
+        type: "string",
+        enum: ["Pendiente", "Asignado", "Entregado", "Cancelado"],
+      },
       creadoPorId: { type: "integer" },
-      skip:        { type: "integer", minimum: 0, default: 0 },
-      take:        { type: "integer", minimum: 1, maximum: 100, default: 50 },
+      skip: { type: "integer", minimum: 0, default: 0 },
+      take: { type: "integer", minimum: 1, maximum: 100, default: 50 },
     },
     additionalProperties: false,
   },
@@ -136,7 +149,8 @@ const obtenerPedido = {
 // PATCH /api/pedidos/:id/estado
 const cambiarEstadoPedido = {
   summary: "Cambiar el estado de un pedido",
-  description: "Transiciones válidas: Pendiente→Asignado|Cancelado, Asignado→Entregado|Cancelado",
+  description:
+    "Transiciones válidas: Pendiente→Asignado|Cancelado, Asignado→Entregado|Cancelado",
   tags: ["Pedidos"],
   security: [{ bearerAuth: [] }],
   params: {
@@ -159,4 +173,9 @@ const cambiarEstadoPedido = {
   },
 };
 
-module.exports = { crearPedido, listarPedidos, obtenerPedido, cambiarEstadoPedido };
+module.exports = {
+  crearPedido,
+  listarPedidos,
+  obtenerPedido,
+  cambiarEstadoPedido,
+};

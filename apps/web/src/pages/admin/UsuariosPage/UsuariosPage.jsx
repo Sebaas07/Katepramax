@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import usuarioService from "@/services/usuario.service";
+import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
@@ -13,12 +14,6 @@ const ROLES = [
   { value: "AdminBogota", label: "AdminBogota" },
   { value: "Bodega", label: "Bodega" },
   { value: "Entregador", label: "Entregador" },
-];
-
-const SEDES = [
-  { id: 1, nombre: "Bogotá" },
-  { id: 2, nombre: "Cartagena" },
-  { id: 3, nombre: "Villavicencio" },
 ];
 
 const FORM_INICIAL = {
@@ -119,9 +114,29 @@ const UsuariosPage = () => {
     return () => window.clearTimeout(id);
   }, [cargarUsuarios, isSessionChecked, isAuthenticated]);
 
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+
+    const cargarSedes = async () => {
+      setCargandoSedes(true);
+      try {
+        const data = await inventarioService.obtenerSedes();
+        setSedes(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setSedes([]);
+      } finally {
+        setCargandoSedes(false);
+      }
+    };
+
+    void cargarSedes();
+  }, [isSessionChecked, isAuthenticated]);
+
   const [filtroRol, setFiltroRol] = useState("");
   const [filtroSedeId, setFiltroSedeId] = useState("");
   const [busqueda, setBusqueda] = useState("");
+  const [sedes, setSedes] = useState([]);
+  const [cargandoSedes, setCargandoSedes] = useState(false);
 
   const usuariosFiltrados = useMemo(() => {
     const termino = busqueda.trim().toLowerCase();
@@ -379,7 +394,7 @@ const UsuariosPage = () => {
               className="filter-select"
             >
               <option value="">Todas las sedes</option>
-              {SEDES.map((sede) => (
+              {sedes.map((sede) => (
                 <option key={sede.id} value={sede.id}>
                   {sede.nombre}
                 </option>
@@ -556,7 +571,7 @@ const UsuariosPage = () => {
                 className="form-control"
               >
                 <option value="">Selecciona una sede</option>
-                {SEDES.map((sede) => (
+                {sedes.map((sede) => (
                   <option key={sede.id} value={sede.id}>
                     {sede.nombre}
                   </option>

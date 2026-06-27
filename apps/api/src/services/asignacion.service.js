@@ -126,6 +126,7 @@ const asignacionService = (app) => ({
           select: {
             id: true,
             estado: true,
+            direccion: true,
             observaciones: true,
             sedeId: true,
             creador: { select: { sedeId: true } },
@@ -206,7 +207,7 @@ const asignacionService = (app) => ({
       Fallido:    [],
     };
 
-    const { nuevoEstado, montoCobrado, metodoPago, observacionesEntrega } = body;
+    const { nuevoEstado, montoCobrado, metodoPago, observacionesEntrega, fechaConfirmada } = body;
 
     if (!transiciones[asignacion.estado]?.includes(nuevoEstado)) {
       throw new AppError(
@@ -230,7 +231,7 @@ const asignacionService = (app) => ({
             estado:              "Entregado",
             montoCobrado,
             metodoPago,
-            fechaConfirmada:     new Date(),
+            fechaConfirmada:     fechaConfirmada ? new Date(fechaConfirmada) : new Date(),
             observacionesEntrega: observacionesEntrega ?? asignacion.observacionesEntrega,
           },
         });

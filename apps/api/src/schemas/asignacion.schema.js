@@ -1,24 +1,46 @@
 const asignacionBase = {
   type: "object",
   properties: {
-    id:          { type: "integer" },
-    pedidoId:    { type: "integer" },
-    estado:      { type: "string" },
-    asignadoEn:  { type: "string", format: "date-time" },
-    fechaConfirmada:      { type: ["string", "null"], format: "date-time" },
-    montoCobrado:         { type: ["number",  "null"] },
-    metodoPago:           { type: ["string",  "null"] },
-    observacionesEntrega: { type: ["string",  "null"] },
+    id: { type: "integer" },
+    pedidoId: { type: "integer" },
+    estado: { type: "string" },
+    asignadoEn: { type: "string", format: "date-time" },
+    fechaConfirmada: { type: ["string", "null"], format: "date-time" },
+    montoCobrado: { type: ["number", "null"] },
+    metodoPago: { type: ["string", "null"] },
+    observacionesEntrega: { type: ["string", "null"] },
     pedido: {
       type: "object",
       properties: {
-        id:     { type: "integer" },
+        id: { type: "integer" },
         estado: { type: "string" },
+        direccion: { type: ["string", "null"] },
+        sedeId: { type: "integer" },
+        creadoEn: { type: "string", format: "date-time" },
+        detalles: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "integer" },
+              productoId: { type: "integer" },
+              cantidad: { type: "integer" },
+              precioUnitario: { type: "number" },
+              subtotal: { type: "number" },
+              producto: {
+                type: "object",
+                properties: {
+                  descripcion: { type: "string" },
+                },
+              },
+            },
+          },
+        },
         cliente: {
           type: "object",
           properties: {
-            id:       { type: "integer" },
-            nombre:   { type: "string" },
+            id: { type: "integer" },
+            nombre: { type: "string" },
             telefono: { type: ["string", "null"] },
           },
         },
@@ -27,15 +49,15 @@ const asignacionBase = {
     entregador: {
       type: "object",
       properties: {
-        id:             { type: "integer" },
+        id: { type: "integer" },
         nombreCompleto: { type: "string" },
-        telefono:       { type: ["string", "null"] },
+        telefono: { type: ["string", "null"] },
       },
     },
     asignador: {
       type: "object",
       properties: {
-        id:             { type: "integer" },
+        id: { type: "integer" },
         nombreCompleto: { type: "string" },
       },
     },
@@ -51,8 +73,8 @@ const crearAsignacion = {
     type: "object",
     required: ["pedidoId", "entregadorId"],
     properties: {
-      pedidoId:             { type: "integer" },
-      entregadorId:         { type: "integer" },
+      pedidoId: { type: "integer" },
+      entregadorId: { type: "integer" },
       observacionesEntrega: { type: "string" },
     },
     additionalProperties: false,
@@ -73,10 +95,13 @@ const listarAsignaciones = {
     type: "object",
     properties: {
       entregadorId: { type: "integer" },
-      pedidoId:     { type: "integer" },
-      estado:       { type: "string", enum: ["Pendiente", "EnRuta", "Entregado", "Fallido"] },
-      skip:         { type: "integer", minimum: 0, default: 0 },
-      take:         { type: "integer", minimum: 1, maximum: 100, default: 50 },
+      pedidoId: { type: "integer" },
+      estado: {
+        type: "string",
+        enum: ["Pendiente", "EnRuta", "Entregado", "Fallido"],
+      },
+      skip: { type: "integer", minimum: 0, default: 0 },
+      take: { type: "integer", minimum: 1, maximum: 100, default: 50 },
     },
     additionalProperties: false,
   },
@@ -93,9 +118,12 @@ const misEntregas = {
   querystring: {
     type: "object",
     properties: {
-      estado: { type: "string", enum: ["Pendiente", "EnRuta", "Entregado", "Fallido"] },
-      skip:   { type: "integer", minimum: 0, default: 0 },
-      take:   { type: "integer", minimum: 1, maximum: 100, default: 50 },
+      estado: {
+        type: "string",
+        enum: ["Pendiente", "EnRuta", "Entregado", "Fallido"],
+      },
+      skip: { type: "integer", minimum: 0, default: 0 },
+      take: { type: "integer", minimum: 1, maximum: 100, default: 50 },
     },
     additionalProperties: false,
   },
@@ -123,7 +151,8 @@ const obtenerAsignacion = {
 // PATCH /api/asignaciones/:id/estado
 const actualizarEstado = {
   summary: "Actualizar estado de una asignación",
-  description: "Transiciones válidas: Pendiente→EnRuta|Fallido, EnRuta→Entregado|Fallido. Al marcar Entregado se requiere montoCobrado y metodoPago.",
+  description:
+    "Transiciones válidas: Pendiente→EnRuta|Fallido, EnRuta→Entregado|Fallido. Al marcar Entregado se requiere montoCobrado y metodoPago.",
   tags: ["Asignaciones"],
   security: [{ bearerAuth: [] }],
   params: {
@@ -135,9 +164,10 @@ const actualizarEstado = {
     type: "object",
     required: ["nuevoEstado"],
     properties: {
-      nuevoEstado:          { type: "string", enum: ["EnRuta", "Entregado", "Fallido"] },
-      montoCobrado:         { type: "number", minimum: 0 },
-      metodoPago:           { type: "string", enum: ["Efectivo", "Transferencia"] },
+      nuevoEstado: { type: "string", enum: ["EnRuta", "Entregado", "Fallido"] },
+      montoCobrado: { type: "number", minimum: 0 },
+      metodoPago: { type: "string", enum: ["Efectivo", "Transferencia"] },
+      fechaConfirmada: { type: ["string", "null"], format: "date-time" },
       observacionesEntrega: { type: "string" },
     },
     additionalProperties: false,

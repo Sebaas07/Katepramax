@@ -210,6 +210,7 @@ model Pedido {
   clienteId     Int          @map("cliente_id")
   sedeId        Int          @map("sede_id")
   estado        EstadoPedido @default(Pendiente)
+  direccion     String?      @db.VarChar(255)
   observaciones String?      @db.Text
   totalRecibido Decimal      @default(0.00) @map("total_recibido") @db.Decimal(12, 2)
   creadoEn      DateTime     @default(now()) @map("creado_en")
