@@ -293,7 +293,7 @@
   padding: 0.5rem 0;
 }
 
-.usr-confirm-icon { font-size: 48px; }
+.usr-confirm-icon { font-size: 48px; color: var(--error); }
 
 .usr-confirm-body p {
   font-family: var(--font-label);
@@ -304,6 +304,14 @@
 }
 
 .usr-confirm-body strong { color: var(--aged-gold); }
+
+.usr-confirm-sub {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  margin: 0;
+  line-height: 1.5;
+}
 
 /* ─── Spinner ────────────────────────────────────────────────*/
 .usr-spinner-wrap {

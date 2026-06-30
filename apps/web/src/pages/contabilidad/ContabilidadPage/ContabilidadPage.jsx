@@ -75,8 +75,14 @@ const ContabilidadPage = () => {
   const [egresos,     setEgresos]     = useState([]);
   const [cartera,     setCartera]     = useState([]);
   const [proveedores, setProveedores] = useState([]);
-  const [resumenProv, setResumenProv] = useState([]);
-  const [arqueo,      setArqueo]      = useState(null);
+  const [resumenProv,       setResumenProv]       = useState([]);
+  const [resumenIngSemanal, setResumenIngSemanal] = useState(null);
+  const [totalesDiaIng,     setTotalesDiaIng]     = useState([]);
+  const [resumenEgrSemanal, setResumenEgrSemanal] = useState(null);
+  const [resumenEgrConcepto,setResumenEgrConcepto]= useState([]);
+  const [totalesDiaEgr,     setTotalesDiaEgr]     = useState([]);
+  const [resumenSedeAbonos, setResumenSedeAbonos] = useState([]);
+  const [arqueo,            setArqueo]            = useState(null);
   const [arqueoError, setArqueoError] = useState("");
   const [panelGeneral,setPanelGeneral]= useState(null);
 
@@ -124,18 +130,36 @@ const ContabilidadPage = () => {
       const fSem  = { semana: filtroSemana || undefined };
 
       if (tab === "ingresos") {
-        setIngresos(await contabilidadService.obtenerIngresos(fBase));
+        const [lista, resSemanal, totDia] = await Promise.all([
+          contabilidadService.obtenerIngresos(fBase),
+          contabilidadService.obtenerResumenSemanalIngresos(semanaNum),
+          contabilidadService.obtenerTotalesDiaIngresos(semanaNum),
+        ]);
+        setIngresos(lista);
+        setResumenIngSemanal(resSemanal);
+        setTotalesDiaIng(totDia);
       } else if (tab === "egresos") {
-        setEgresos(await contabilidadService.obtenerEgresos(fBase));
+        const [lista, resSemanal, resConcepto, totDia] = await Promise.all([
+          contabilidadService.obtenerEgresos(fBase),
+          contabilidadService.obtenerResumenSemanalEgresos(semanaNum),
+          contabilidadService.obtenerResumenConceptoEgresos(semanaNum),
+          contabilidadService.obtenerTotalesDiaEgresos(semanaNum),
+        ]);
+        setEgresos(lista);
+        setResumenEgrSemanal(resSemanal);
+        setResumenEgrConcepto(resConcepto);
+        setTotalesDiaEgr(totDia);
       } else if (tab === "cartera") {
         setCartera(await contabilidadService.obtenerCartera(fBase));
       } else if (tab === "proveedores") {
-        const [lista, resumen] = await Promise.all([
+        const [lista, resumen, resSede] = await Promise.all([
           contabilidadService.obtenerProveedores(fBase),
           contabilidadService.obtenerResumenProveedores(semanaNum),
+          contabilidadService.obtenerResumenSedeAbonos(semanaNum),
         ]);
         setProveedores(lista);
         setResumenProv(resumen);
+        setResumenSedeAbonos(resSede);
       } else if (tab === "arqueo") {
         const [reporte, carteraSem, invSem] = await Promise.all([
           contabilidadService.obtenerArqueo(semanaNum),
@@ -149,7 +173,14 @@ const ContabilidadPage = () => {
           setArqueoError("No se pudo cargar el arqueo. Verifica que existan registros para esta semana.");
         }
       } else if (tab === "panel") {
-        setPanelGeneral(await contabilidadService.obtenerPanelGeneral(filtroPanelF));
+        const [panel, totIngDia, totEgrDia] = await Promise.all([
+          contabilidadService.obtenerPanelGeneral(filtroPanelF),
+          contabilidadService.obtenerTotalesDiaIngresos(semanaNum),
+          contabilidadService.obtenerTotalesDiaEgresos(semanaNum),
+        ]);
+        setPanelGeneral(panel);
+        setTotalesDiaIng(totIngDia);
+        setTotalesDiaEgr(totEgrDia);
       }
     } catch (err) {
       toast.error("Error al cargar datos: " + (err?.message || "desconocido"));
@@ -448,6 +479,8 @@ const ContabilidadPage = () => {
               esAdmin={esAdmin}
               onEditar={abrirEditar}
               onEliminar={abrirEliminar}
+              resumenSemanal={resumenIngSemanal}
+              totalesDia={totalesDiaIng}
             />
           )}
 
@@ -458,6 +491,9 @@ const ContabilidadPage = () => {
               esAdmin={esAdmin}
               onEditar={abrirEditar}
               onEliminar={abrirEliminar}
+              resumenSemanal={resumenEgrSemanal}
+              resumenConcepto={resumenEgrConcepto}
+              totalesDia={totalesDiaEgr}
             />
           )}
 
@@ -475,6 +511,7 @@ const ContabilidadPage = () => {
             <ProveedoresTab
               proveedores={proveedoresMap}
               resumenProv={resumenProv}
+              resumenSede={resumenSedeAbonos}
               esAdmin={esAdmin}
               onAbonar={abrirAbono}
               onEditar={abrirEditarProv}
@@ -495,6 +532,8 @@ const ContabilidadPage = () => {
               panelGeneral={{ ...panelGeneral, _sedes: SEDES }}
               fecha={filtroPanelF}
               semanaNumero={semanaNumero}
+              totalesDiaIngresos={totalesDiaIng}
+              totalesDiaEgresos={totalesDiaEgr}
             />
           )}
 

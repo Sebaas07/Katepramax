@@ -87,7 +87,9 @@ const UsuariosPage = () => {
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [modalConfirmAbierto, setModalConfirmAbierto] = useState(false);
   const [usuarioSel, setUsuarioSel] = useState(null);
+  const [usuarioAEliminar, setUsuarioAEliminar] = useState(null);
   const [form, setForm] = useState(FORM_INICIAL);
   const [errores, setErrores] = useState({});
 
@@ -180,6 +182,45 @@ const UsuariosPage = () => {
     setErrores({});
     setModalAbierto(true);
   }, []);
+
+  const abrirModalConfirmDesactivar = useCallback((usuario) => {
+    setUsuarioAEliminar(normalizeUsuario(usuario));
+    setModalConfirmAbierto(true);
+  }, []);
+
+  const cerrarModalConfirm = useCallback(() => {
+    setModalConfirmAbierto(false);
+    setUsuarioAEliminar(null);
+  }, []);
+
+  const handleDesactivarUsuario = useCallback(async () => {
+    if (!usuarioAEliminar) return;
+    setGuardando(true);
+    try {
+      await usuarioService.desactivarUsuario(usuarioAEliminar.id);
+      toast.success(`${usuarioAEliminar.nombreCompleto} desactivado correctamente.`);
+      cerrarModalConfirm();
+      await cargarUsuarios();
+    } catch (error) {
+      toast.error(`Error al desactivar: ${error.message}`);
+    } finally {
+      setGuardando(false);
+    }
+  }, [usuarioAEliminar, cargarUsuarios, cerrarModalConfirm]);
+
+  const handleActivarUsuario = useCallback(async (usuario) => {
+    const seleccionado = normalizeUsuario(usuario);
+    setGuardando(true);
+    try {
+      await usuarioService.activarUsuario(seleccionado.id);
+      toast.success(`${seleccionado.nombreCompleto} activado correctamente.`);
+      await cargarUsuarios();
+    } catch (error) {
+      toast.error(`Error al activar: ${error.message}`);
+    } finally {
+      setGuardando(false);
+    }
+  }, [cargarUsuarios]);
 
   const cerrarModal = useCallback(() => {
     setModalAbierto(false);
@@ -281,34 +322,6 @@ const UsuariosPage = () => {
     }
   }, [validarFormulario, usuarioSel, form, cerrarModal, cargarUsuarios]);
 
-  const cambiarEstado = useCallback(async (usuario) => {
-    const seleccionado = normalizeUsuario(usuario);
-
-    if (seleccionado.activo) {
-      const confirmado = window.confirm(
-        `¿Desactivar a "${seleccionado.nombreCompleto}"? No podrá iniciar sesión hasta que sea activado nuevamente.`
-      );
-      if (!confirmado) return;
-    }
-
-    setGuardando(true);
-    try {
-      if (seleccionado.activo) {
-        await usuarioService.desactivarUsuario(seleccionado.id);
-        toast.success(`${seleccionado.nombreCompleto} desactivado correctamente.`);
-      } else {
-        await usuarioService.activarUsuario(seleccionado.id);
-        toast.success(`${seleccionado.nombreCompleto} activado correctamente.`);
-      }
-
-      await cargarUsuarios();
-    } catch (error) {
-      toast.error(`Error al cambiar estado: ${error.message}`);
-    } finally {
-      setGuardando(false);
-    }
-  }, [cargarUsuarios]);
-
   const columnas = useMemo(
     () => [
       { campo: "nombreCompleto", label: "Nombre Completo", tipo: "texto" },
@@ -337,14 +350,16 @@ const UsuariosPage = () => {
               {
                 label: seleccionado.activo ? "Desactivar" : "Activar",
                 icon: seleccionado.activo ? "person_off" : "person",
-                onClick: () => cambiarEstado(seleccionado),
+                onClick: seleccionado.activo
+                  ? () => abrirModalConfirmDesactivar(seleccionado)
+                  : () => handleActivarUsuario(seleccionado),
                 variante: seleccionado.activo ? "danger" : "success",
               },
             ]
           : []),
       ];
     },
-    [abrirEditar, cambiarEstado]
+    [abrirEditar, abrirModalConfirmDesactivar, handleActivarUsuario]
   );
 
   const renderCeldaCustom = useCallback((fila, columna) => {
@@ -631,6 +646,29 @@ const UsuariosPage = () => {
               <span className="checkbox-text">Usuario activo</span>
             </label>
           </div>
+        </div>
+      </Modal>
+
+      {/* Modal — Confirmar desactivar */}
+      <Modal
+        isOpen={modalConfirmAbierto}
+        onClose={cerrarModalConfirm}
+        titulo="Desactivar Usuario"
+        textoBotonConfirmar={guardando ? "Desactivando..." : "Sí, desactivar"}
+        onConfirmar={handleDesactivarUsuario}
+        mostrarCancelar
+      >
+        <div className="usr-confirm-body">
+          <span className="material-symbols-outlined usr-confirm-icon">
+            warning
+          </span>
+          <p>
+            ¿Está seguro de que desea desactivar a{" "}
+            <strong>{usuarioAEliminar?.nombreCompleto}</strong>?
+          </p>
+          <p className="usr-confirm-sub">
+            El usuario no podrá iniciar sesión hasta que sea activado nuevamente.
+          </p>
         </div>
       </Modal>
     </div>

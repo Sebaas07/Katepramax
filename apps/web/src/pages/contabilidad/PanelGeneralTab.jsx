@@ -1,35 +1,103 @@
 import { useMemo } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
 } from "recharts";
 import TarjetaKpi from "./TarjetaKpi";
 import { formatCOP, formatFecha, getRangoSemana } from "@/utils/formatters";
 
 const toNumber = (v) => Number(v ?? 0);
 
-const PanelGeneralTab = ({ panelGeneral, fecha, semanaNumero }) => {
-  const rangoSemana = useMemo(() => getRangoSemana(semanaNumero), [semanaNumero]);
+const labelDia = (fechaStr) => {
+  if (!fechaStr) return "—";
+  const d = new Date(fechaStr);
+  return d.toLocaleDateString("es-CO", { weekday: "short", day: "numeric" });
+};
+
+// Backend: GET /reportes/panel-general → { fecha, ingresos: { total, efectivo, cuentas, porSede }, egresos: { total, porSede }, cartera, totalStockUnidades }
+// Backend: GET /ingresos/totales-dia   → [{ fecha, efectivo, cuentas, total }]
+// Backend: GET /egresos/totales-dia    → [{ fecha, total }]
+const PanelGeneralTab = ({
+  panelGeneral,
+  fecha,
+  semanaNumero,
+  totalesDiaIngresos,
+  totalesDiaEgresos,
+}) => {
+  const rangoSemana = useMemo(
+    () => getRangoSemana(semanaNumero),
+    [semanaNumero],
+  );
 
   const panelSedes = useMemo(() => {
     if (!panelGeneral) return [];
     return (panelGeneral._sedes ?? []).map((s) => {
-      const ing    = (panelGeneral.ingresos?.porSede ?? []).find((r) => r.sedeId === s.id);
-      const egr    = (panelGeneral.egresos?.porSede  ?? []).find((r) => r.sedeId === s.id);
-      const ingV   = toNumber(ing?.total);
-      const egrV   = toNumber(egr?.total);
+      const ing = (panelGeneral.ingresos?.porSede ?? []).find(
+        (r) => r.sedeId === s.id,
+      );
+      const egr = (panelGeneral.egresos?.porSede ?? []).find(
+        (r) => r.sedeId === s.id,
+      );
+      const ingV = toNumber(ing?.total);
+      const egrV = toNumber(egr?.total);
       return {
-        sede: s.nombre, sedeId: s.id,
-        efectivo: toNumber(ing?.efectivo), cuentas: toNumber(ing?.cuentas),
-        ingresos: ingV, egresos: egrV, saldoNeto: ingV - egrV,
+        sede: s.nombre,
+        sedeId: s.id,
+        efectivo: toNumber(ing?.efectivo),
+        cuentas: toNumber(ing?.cuentas),
+        ingresos: ingV,
+        egresos: egrV,
+        saldoNeto: ingV - egrV,
       };
     });
   }, [panelGeneral]);
 
-  const chartSedes = useMemo(() =>
-    panelSedes.map((s) => ({ sede: s.sede, Ingresos: s.ingresos, Egresos: s.egresos, "Saldo Neto": s.saldoNeto })),
-  [panelSedes]);
+  const chartSedes = useMemo(
+    () =>
+      panelSedes.map((s) => ({
+        sede: s.sede,
+        Ingresos: s.ingresos,
+        Egresos: s.egresos,
+        "Saldo Neto": s.saldoNeto,
+      })),
+    [panelSedes],
+  );
 
-  const saldoNeto = toNumber(panelGeneral?.ingresos?.total) - toNumber(panelGeneral?.egresos?.total);
+  // Fusionar totales por día de ingresos y egresos en un solo array para el LineChart
+  const chartDiario = useMemo(() => {
+    if (!totalesDiaIngresos?.length && !totalesDiaEgresos?.length) return [];
+    const mapa = {};
+    (totalesDiaIngresos ?? []).forEach((d) => {
+      const key = d.fecha?.slice(0, 10) ?? d.fecha;
+      mapa[key] = {
+        dia: labelDia(d.fecha),
+        Ingresos: toNumber(d.total),
+        Egresos: 0,
+      };
+    });
+    (totalesDiaEgresos ?? []).forEach((d) => {
+      const key = d.fecha?.slice(0, 10) ?? d.fecha;
+      if (mapa[key]) mapa[key].Egresos = toNumber(d.total);
+      else
+        mapa[key] = {
+          dia: labelDia(d.fecha),
+          Ingresos: 0,
+          Egresos: toNumber(d.total),
+        };
+    });
+    return Object.values(mapa).sort((a, b) => a.dia.localeCompare(b.dia));
+  }, [totalesDiaIngresos, totalesDiaEgresos]);
+
+  const saldoNeto =
+    toNumber(panelGeneral?.ingresos?.total) -
+    toNumber(panelGeneral?.egresos?.total);
 
   return (
     <div className="panel-general">
@@ -66,7 +134,9 @@ const PanelGeneralTab = ({ panelGeneral, fecha, semanaNumero }) => {
           titulo="Stock unidades"
           icono="inventory_2"
           color="var(--aged-gold)"
-          valor={new Intl.NumberFormat("es-CO").format(panelGeneral.totalStockUnidades)}
+          valor={new Intl.NumberFormat("es-CO").format(
+            panelGeneral.totalStockUnidades,
+          )}
           subtitulo="Total acumulado por sedes"
         />
       </div>
@@ -79,14 +149,29 @@ const PanelGeneralTab = ({ panelGeneral, fecha, semanaNumero }) => {
           </h3>
           <div className="panel-chart-wrap" style={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartSedes} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
+              <BarChart
+                data={chartSedes}
+                margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
+              >
                 <XAxis dataKey="sede" />
                 <YAxis />
                 <Tooltip formatter={(value) => formatCOP(value)} />
                 <Legend />
-                <Bar dataKey="Ingresos"   fill="var(--secondary)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Egresos"    fill="var(--error)"     radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Saldo Neto" fill="#4ade80"          radius={[6, 6, 0, 0]} />
+                <Bar
+                  dataKey="Ingresos"
+                  fill="var(--secondary)"
+                  radius={[6, 6, 0, 0]}
+                />
+                <Bar
+                  dataKey="Egresos"
+                  fill="var(--error)"
+                  radius={[6, 6, 0, 0]}
+                />
+                <Bar
+                  dataKey="Saldo Neto"
+                  fill="#4ade80"
+                  radius={[6, 6, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -101,8 +186,14 @@ const PanelGeneralTab = ({ panelGeneral, fecha, semanaNumero }) => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={[
-                  { metodo: "Efectivo", valor: toNumber(panelGeneral.ingresos?.efectivo) },
-                  { metodo: "Cuentas",  valor: toNumber(panelGeneral.ingresos?.cuentas)  },
+                  {
+                    metodo: "Efectivo",
+                    valor: toNumber(panelGeneral.ingresos?.efectivo),
+                  },
+                  {
+                    metodo: "Cuentas",
+                    valor: toNumber(panelGeneral.ingresos?.cuentas),
+                  },
                 ]}
                 margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
               >
@@ -110,11 +201,52 @@ const PanelGeneralTab = ({ panelGeneral, fecha, semanaNumero }) => {
                 <YAxis />
                 <Tooltip formatter={(value) => formatCOP(value)} />
                 <Legend />
-                <Bar dataKey="valor" name="Valor" fill="var(--aged-gold)" radius={[6, 6, 0, 0]} />
+                <Bar
+                  dataKey="valor"
+                  name="Valor"
+                  fill="var(--aged-gold)"
+                  radius={[6, 6, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </section>
+
+        {chartDiario.length > 0 && (
+          <section className="panel-section">
+            <h3 className="panel-section__title">
+              <span className="material-symbols-outlined">show_chart</span>
+              Evolución diaria de la semana
+            </h3>
+            <div className="panel-chart-wrap" style={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={chartDiario}
+                  margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
+                >
+                  <XAxis dataKey="dia" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => formatCOP(value)} />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="Ingresos"
+                    stroke="#4ade80"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Egresos"
+                    stroke="var(--error)"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        )}
       </div>
 
       <section className="panel-section">
@@ -130,11 +262,30 @@ const PanelGeneralTab = ({ panelGeneral, fecha, semanaNumero }) => {
                 <h4>{s.sede}</h4>
               </div>
               <div className="panel-sede-card__rows">
-                <div className="panel-sede-card__row"><span>Efectivo</span>  <strong>{formatCOP(s.efectivo)}</strong></div>
-                <div className="panel-sede-card__row"><span>Cuentas</span>   <strong>{formatCOP(s.cuentas)}</strong></div>
-                <div className="panel-sede-card__row"><span>Ingresos</span>  <strong className="panel-green">{formatCOP(s.ingresos)}</strong></div>
-                <div className="panel-sede-card__row"><span>Egresos</span>   <strong className="panel-red">{formatCOP(s.egresos)}</strong></div>
-                <div className="panel-sede-card__row"><span>Saldo neto</span><strong className={s.saldoNeto >= 0 ? "panel-green" : "panel-red"}>{formatCOP(s.saldoNeto)}</strong></div>
+                <div className="panel-sede-card__row">
+                  <span>Efectivo</span> <strong>{formatCOP(s.efectivo)}</strong>
+                </div>
+                <div className="panel-sede-card__row">
+                  <span>Cuentas</span> <strong>{formatCOP(s.cuentas)}</strong>
+                </div>
+                <div className="panel-sede-card__row">
+                  <span>Ingresos</span>{" "}
+                  <strong className="panel-green">
+                    {formatCOP(s.ingresos)}
+                  </strong>
+                </div>
+                <div className="panel-sede-card__row">
+                  <span>Egresos</span>{" "}
+                  <strong className="panel-red">{formatCOP(s.egresos)}</strong>
+                </div>
+                <div className="panel-sede-card__row">
+                  <span>Saldo neto</span>
+                  <strong
+                    className={s.saldoNeto >= 0 ? "panel-green" : "panel-red"}
+                  >
+                    {formatCOP(s.saldoNeto)}
+                  </strong>
+                </div>
               </div>
             </div>
           ))}

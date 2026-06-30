@@ -76,14 +76,7 @@ const MENU = [
     icon:  "group",
     roles: ["Admin"],
     seccion: "admin",
-  },
-  {
-    path:  "/admin/audit-log",
-    label: "Audit Log",
-    icon:  "history_edu",
-    roles: ["Admin"],
-    seccion: "admin",
-  },
+  }
 ];
 
 export default function MenuItems({ cerrar }) {

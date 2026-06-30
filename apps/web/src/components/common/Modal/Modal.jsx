@@ -1,9 +1,12 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./Modal.css";
 
 /**
  * Modal — Katepramax
  * Usa <dialog> nativo: focus trap, Escape y backdrop incluidos.
+ * Renderizado con Portal en document.body para evitar problemas de
+ * stacking context con position:sticky / z-index en el layout.
  */
 const Modal = ({
   isOpen,
@@ -45,7 +48,7 @@ const Modal = ({
 
   // El evento "cancel" se dispara con Escape; lo redirigimos a onClose
   const handleCancel = (e) => {
-    e.preventDefault(); // evita que el browser cierre el dialog sin que React se entere
+    e.preventDefault();
     onCloseRef.current();
   };
 
@@ -60,7 +63,7 @@ const Modal = ({
     }
   };
 
-  return (
+  return createPortal(
     <dialog
       ref={dialogRef}
       className="modal-dialog"
@@ -109,7 +112,8 @@ const Modal = ({
           </button>
         </div>
       </div>
-    </dialog>
+    </dialog>,
+    document.body,
   );
 };
 

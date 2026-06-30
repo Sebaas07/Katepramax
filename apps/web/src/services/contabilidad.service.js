@@ -4,7 +4,9 @@ import { tieneAccesoTotal, obtenerSedeUsuario } from "@/utils/permisos";
 
 const normalizarSemana = (valor) => {
   const numero = Number.parseInt(valor, 10);
-  return Number.isNaN(numero) ? getSemanaISO(new Date()) : Math.min(53, Math.max(1, numero));
+  return Number.isNaN(numero)
+    ? getSemanaISO(new Date())
+    : Math.min(53, Math.max(1, numero));
 };
 
 const contabilidadService = {
@@ -35,7 +37,8 @@ const contabilidadService = {
 
     const ef = Number(datos.efectivo ?? 0);
     const cu = Number(datos.cuentas ?? 0);
-    if (ef <= 0 && cu <= 0) throw new Error("Ingresa al menos un valor en efectivo o cuentas.");
+    if (ef <= 0 && cu <= 0)
+      throw new Error("Ingresa al menos un valor en efectivo o cuentas.");
 
     return contabilidadApi.registrarIngreso({
       ...datos,
@@ -49,7 +52,8 @@ const contabilidadService = {
     if (!id) throw new Error("Se requiere el ID del ingreso.");
     const payload = { ...datos };
     if (payload.efectivo !== undefined || payload.cuentas !== undefined) {
-      payload.total = (Number(payload.efectivo ?? 0)) + (Number(payload.cuentas ?? 0));
+      payload.total =
+        Number(payload.efectivo ?? 0) + Number(payload.cuentas ?? 0);
     }
     return contabilidadApi.editarIngreso(id, payload);
   },
@@ -57,6 +61,29 @@ const contabilidadService = {
   eliminarIngreso: async (id) => {
     if (!id) throw new Error("Se requiere el ID del ingreso.");
     return contabilidadApi.eliminarIngreso(id);
+  },
+
+  obtenerResumenSemanalIngresos: async (semana) => {
+    try {
+      return await contabilidadApi.obtenerResumenSemanalIngresos(
+        normalizarSemana(semana),
+      );
+    } catch {
+      return {
+        porSede: [],
+        totalGeneral: { efectivo: 0, cuentas: 0, total: 0 },
+      };
+    }
+  },
+
+  obtenerTotalesDiaIngresos: async (semana) => {
+    try {
+      return await contabilidadApi.obtenerTotalesDiaIngresos(
+        normalizarSemana(semana),
+      );
+    } catch {
+      return [];
+    }
   },
 
   // ── EGRESOS ───────────────────────────────────────────────
@@ -83,7 +110,8 @@ const contabilidadService = {
       if (sedeIdUsuario) datos.sedeId = sedeIdUsuario;
       else throw new Error("Selecciona la sede.");
     }
-    if (!String(datos.concepto ?? "").trim()) throw new Error("El concepto es obligatorio.");
+    if (!String(datos.concepto ?? "").trim())
+      throw new Error("El concepto es obligatorio.");
 
     const total = Number(datos.total ?? 0);
     if (total <= 0) throw new Error("Ingresa un total mayor a cero.");
@@ -107,6 +135,36 @@ const contabilidadService = {
   eliminarEgreso: async (id) => {
     if (!id) throw new Error("Se requiere el ID del egreso.");
     return contabilidadApi.eliminarEgreso(id);
+  },
+
+  obtenerResumenSemanalEgresos: async (semana) => {
+    try {
+      return await contabilidadApi.obtenerResumenSemanalEgresos(
+        normalizarSemana(semana),
+      );
+    } catch {
+      return { porSede: [], totalGeneral: 0 };
+    }
+  },
+
+  obtenerResumenConceptoEgresos: async (semana) => {
+    try {
+      return await contabilidadApi.obtenerResumenConceptoEgresos(
+        normalizarSemana(semana),
+      );
+    } catch {
+      return [];
+    }
+  },
+
+  obtenerTotalesDiaEgresos: async (semana) => {
+    try {
+      return await contabilidadApi.obtenerTotalesDiaEgresos(
+        normalizarSemana(semana),
+      );
+    } catch {
+      return [];
+    }
   },
 
   // ── CARTERA ───────────────────────────────────────────────
@@ -192,7 +250,19 @@ const contabilidadService = {
 
   obtenerResumenProveedores: async (semana) => {
     try {
-      return await contabilidadApi.obtenerResumenProveedores(normalizarSemana(semana));
+      return await contabilidadApi.obtenerResumenProveedores(
+        normalizarSemana(semana),
+      );
+    } catch {
+      return [];
+    }
+  },
+
+  obtenerResumenSedeAbonos: async (semana) => {
+    try {
+      return await contabilidadApi.obtenerResumenSedeAbonos(
+        normalizarSemana(semana),
+      );
     } catch {
       return [];
     }
@@ -218,7 +288,9 @@ const contabilidadService = {
           f.sedeId = sedeIdUsuario;
         }
       }
-      return await contabilidadApi.obtenerPanelGeneral(fecha ? { ...f, fecha } : f);
+      return await contabilidadApi.obtenerPanelGeneral(
+        fecha ? { ...f, fecha } : f,
+      );
     } catch {
       return null;
     }
@@ -226,7 +298,9 @@ const contabilidadService = {
 
   obtenerInventarioSemanal: async (semana) => {
     try {
-      return await contabilidadApi.obtenerInventarioSemanal(normalizarSemana(semana));
+      return await contabilidadApi.obtenerInventarioSemanal(
+        normalizarSemana(semana),
+      );
     } catch {
       return [];
     }

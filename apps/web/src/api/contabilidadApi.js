@@ -31,6 +31,20 @@ const contabilidadApi = {
     return r.data;
   },
 
+  // Backend: GET /ingresos/resumen-semanal?semana=N → Admin, Bodega
+  obtenerResumenSemanalIngresos: async (semana) => {
+    const r = await clienteApi.get(
+      `/ingresos/resumen-semanal?semana=${semana}`,
+    );
+    return r.data;
+  },
+
+  // Backend: GET /ingresos/totales-dia?semana=N → Admin, Bodega
+  obtenerTotalesDiaIngresos: async (semana) => {
+    const r = await clienteApi.get(`/ingresos/totales-dia?semana=${semana}`);
+    return r.data;
+  },
+
   // ── EGRESOS ───────────────────────────────────────────────
   // Backend: GET /egresos → Admin, Bodega
   obtenerEgresos: async (filtros = {}) => {
@@ -58,6 +72,26 @@ const contabilidadApi = {
   // Backend: DELETE /egresos/:id → solo Admin
   eliminarEgreso: async (id) => {
     const r = await clienteApi.delete(`/egresos/${id}`);
+    return r.data;
+  },
+
+  // Backend: GET /egresos/resumen-semanal?semana=N → Admin, Bodega
+  obtenerResumenSemanalEgresos: async (semana) => {
+    const r = await clienteApi.get(`/egresos/resumen-semanal?semana=${semana}`);
+    return r.data;
+  },
+
+  // Backend: GET /egresos/resumen-concepto?semana=N → Admin, Bodega
+  obtenerResumenConceptoEgresos: async (semana) => {
+    const r = await clienteApi.get(
+      `/egresos/resumen-concepto?semana=${semana}`,
+    );
+    return r.data;
+  },
+
+  // Backend: GET /egresos/totales-dia?semana=N → Admin, Bodega
+  obtenerTotalesDiaEgresos: async (semana) => {
+    const r = await clienteApi.get(`/egresos/totales-dia?semana=${semana}`);
     return r.data;
   },
 
@@ -126,6 +160,12 @@ const contabilidadApi = {
     const r = await clienteApi.get(
       `/abonos/resumen-proveedor?semana=${semana}`,
     );
+    return r.data;
+  },
+
+  // Backend: GET /abonos/resumen-sede?semana=N → Admin, Bodega
+  obtenerResumenSedeAbonos: async (semana) => {
+    const r = await clienteApi.get(`/abonos/resumen-sede?semana=${semana}`);
     return r.data;
   },
 
