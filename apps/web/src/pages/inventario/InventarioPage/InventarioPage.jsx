@@ -17,11 +17,15 @@ const Spinner = () => (
 );
 
 // ─── Tabs del inventario ───────────────────────────────────────
+// Nota: el catálogo de productos vive en su propio módulo (/productos),
+// así que aquí solo mostramos movimientos de stock, separados por tipo.
 const TABS = [
-  { key: "productos", label: "Productos", icon: "category" },
   { key: "entradas", label: "Entradas", icon: "move_to_inbox" },
-  { key: "movimientos", label: "Movimientos", icon: "swap_horiz" },
+  { key: "salidas", label: "Salidas", icon: "outbox" },
+  { key: "ajustes", label: "Ajustes", icon: "tune" },
 ];
+
+const TAB_TIPO = { entradas: "entrada", salidas: "salida", ajustes: "ajuste" };
 
 const InventarioPage = () => {
   const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } =
@@ -29,9 +33,8 @@ const InventarioPage = () => {
   const puedeRegistrar = esAdmin || esBodega;
   const sedeIdUsuario = usuario?.sedeId ?? null;
 
-  const [activeTab, setActiveTab] = useState("productos");
+  const [activeTab, setActiveTab] = useState("entradas");
   const [productos, setProductos] = useState([]);
-  const [entradas, setEntradas] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [guardandoMov, setGuardandoMov] = useState(false);
@@ -47,11 +50,10 @@ const InventarioPage = () => {
     fecha: HOY,
   });
 
-  // Filtros movimientos
+  // Filtros de la tabla (el tipo ya lo determina la tab activa)
   const [filtrosMov, setFiltrosMov] = useState({
     sedeId: "",
     productoId: "",
-    tipo: "",
   });
 
   // ── Carga de datos ───────────────────────────────────────────
@@ -70,11 +72,10 @@ const InventarioPage = () => {
   const cargarMovimientos = useCallback(async () => {
     setCargando(true);
     try {
-      const params = {};
+      const params = { tipo: TAB_TIPO[activeTab] };
       if (esAdmin && filtrosMov.sedeId) params.sedeId = parseInt(filtrosMov.sedeId);
       if (!esAdmin && sedeIdUsuario) params.sedeId = sedeIdUsuario;
       if (filtrosMov.productoId) params.productoId = filtrosMov.productoId;
-      if (filtrosMov.tipo) params.tipo = filtrosMov.tipo;
       const data = await inventarioService.listarMovimientos(params);
       setMovimientos(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -82,40 +83,26 @@ const InventarioPage = () => {
     } finally {
       setCargando(false);
     }
-  }, [filtrosMov.sedeId, filtrosMov.productoId, filtrosMov.tipo, esAdmin, sedeIdUsuario]);
+  }, [activeTab, filtrosMov.sedeId, filtrosMov.productoId, esAdmin, sedeIdUsuario]);
 
-  const cargarEntradas = useCallback(async () => {
-    setCargando(true);
-    try {
-      const data = await inventarioService.listarEntradas({});
-      setEntradas(Array.isArray(data) ? data : []);
-    } catch (err) {
-      toast.error("Error al cargar entradas: " + err.message);
-    } finally {
-      setCargando(false);
-    }
-  }, []);
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    void cargarProductos();
+  }, [isSessionChecked, isAuthenticated, cargarProductos]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
 
     const id = window.setTimeout(() => {
-      if (activeTab === "productos") void cargarProductos();
-      if (activeTab === "entradas") void cargarEntradas();
-      if (activeTab === "movimientos") void cargarMovimientos();
+      void cargarMovimientos();
     }, 0);
 
     return () => window.clearTimeout(id);
   }, [
     activeTab,
-    cargarProductos,
     cargarMovimientos,
-    cargarEntradas,
     isSessionChecked,
     isAuthenticated,
-    filtrosMov.sedeId,
-    filtrosMov.productoId,
-    filtrosMov.tipo,
   ]);
 
   // ── Handlers formulario ──────────────────────────────────────
@@ -125,7 +112,7 @@ const InventarioPage = () => {
 
   const abrirModalMovimiento = () => {
     setForm({
-      tipo: "entrada",
+      tipo: TAB_TIPO[activeTab] ?? "entrada",
       productoId: "",
       cantidad: "",
       nota: "",
@@ -149,35 +136,22 @@ const InventarioPage = () => {
       toast.success("Movimiento registrado correctamente.");
       window.dispatchEvent(new Event("katepramax:inventario-actualizado"));
       setModalMovAbierto(false);
-      if (activeTab === "movimientos") await cargarMovimientos();
-      if (activeTab === "productos") await cargarProductos();
-      if (activeTab === "entradas") await cargarEntradas();
+      await cargarMovimientos();
+      await cargarProductos();
     } catch (err) {
       toast.error("Error al registrar: " + err.message);
     } finally {
       setGuardandoMov(false);
     }
-    console.log("form al guardar:", form);
   };
 
   // ── Columnas ───────────────────────────────────────────────────
-  const columnasProductos = [
-    { campo: "codigo", label: "Código", tipo: "texto" },
-    { campo: "nombre", label: "Nombre", tipo: "texto" },
-    { campo: "precioDetal", label: "Precio", tipo: "moneda" },
-    { campo: "existencia", label: "Existencia", tipo: "texto" },
-    { campo: "departamento", label: "Departamento", tipo: "texto" },
-    { campo: "sede", label: "Sede", tipo: "texto" },
-    { campo: "activo", label: "Estado", tipo: "booleano" },
-  ];
-
   const columnasMovimientos = [
     { campo: "id", label: "ID", tipo: "texto" },
     { campo: "fecha", label: "Fecha", tipo: "fecha" },
     { campo: "semana", label: "Semana", tipo: "texto" },
     { campo: "producto", label: "Producto", tipo: "texto" },
     { campo: "sede", label: "Sede", tipo: "texto" },
-    { campo: "tipo", label: "Tipo", tipo: "estado" },
     { campo: "cantidadIngresada", label: "Cantidad", tipo: "texto" },
     { campo: "costoUnitario", label: "Costo Unit.", tipo: "moneda" },
     { campo: "nota", label: "Nota", tipo: "texto" },
@@ -261,144 +235,50 @@ const InventarioPage = () => {
           <Spinner />
         ) : (
           <>
-            {activeTab === "productos" && (
-              <>
-                <div className="page-actions">
-                  <h2>
-                    <span className="material-symbols-outlined">category</span>
-                    Catálogo de Productos
-                  </h2>
-                  <span className="inv-contador">
-                    {productos.length} productos
-                  </span>
+            {/* Filtros */}
+            <div className="inv-filtros">
+              {esAdmin && (
+                <div className="filter-group">
+                  <label htmlFor="mov-filtro-sede">Sede</label>
+                  <select
+                    id="mov-filtro-sede"
+                    value={filtrosMov.sedeId}
+                    onChange={(e) =>
+                      setFiltrosMov((p) => ({
+                        ...p,
+                        sedeId: e.target.value,
+                      }))
+                    }
+                    className="filter-select"
+                  >
+                    <option value="">Todas</option>
+                    <option value="1">Bogotá</option>
+                    <option value="2">Cartagena</option>
+                    <option value="3">Villavicencio</option>
+                  </select>
                 </div>
-                <TablaGenerica
-                  columnas={columnasProductos}
-                  datos={productos.map((p) => ({
-                    ...p,
-                    nombre: p.nombre || p.descripcion,
-                    sede: p.sede?.nombre || `Sede ${p.sedeId}`,
-                  }))}
-                  filasPorPagina={15}
-                  mostrarBuscador
-                  buscarEnCampos={["codigo", "nombre"]}
-                  paginacion
-                />
-              </>
-            )}
+              )}
+            </div>
 
-            {activeTab === "movimientos" && (
-              <>
-                {/* Filtros de movimientos */}
-                <div className="inv-filtros">
-                  {esAdmin && (
-                    <div className="filter-group">
-                      <label htmlFor="mov-filtro-sede">Sede</label>
-                      <select
-                        id="mov-filtro-sede"
-                        value={filtrosMov.sedeId}
-                        onChange={(e) =>
-                          setFiltrosMov((p) => ({
-                            ...p,
-                            sedeId: e.target.value,
-                          }))
-                        }
-                        className="filter-select"
-                      >
-                        <option value="">Todas</option>
-                        <option value="1">Bogotá</option>
-                        <option value="2">Cartagena</option>
-                        <option value="3">Villavicencio</option>
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="filter-group">
-                    <label htmlFor="mov-filtro-tipo">Tipo</label>
-                    <select
-                      id="mov-filtro-tipo"
-                      value={filtrosMov.tipo}
-                      onChange={(e) =>
-                        setFiltrosMov((p) => ({ ...p, tipo: e.target.value }))
-                      }
-                      className="filter-select"
-                    >
-                      <option value="">Todos</option>
-                      <option value="entrada">Entrada</option>
-                      <option value="salida">Salida</option>
-                      <option value="ajuste">Ajuste</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="page-actions">
-                  <h2>
-                    <span className="material-symbols-outlined">
-                      swap_horiz
-                    </span>
-                    Movimientos de Inventario
-                  </h2>
-                  <span className="inv-contador">
-                    {movimientos.length} registros
-                  </span>
-                </div>
-                <TablaGenerica
-                  columnas={columnasMovimientos}
-                  datos={movimientosMapeados}
-                  filasPorPagina={15}
-                  mostrarBuscador
-                  buscarEnCampos={["producto", "nota"]}
-                  paginacion
-                />
-              </>
-            )}
-
-            {activeTab === "entradas" && (
-              <>
-                <div className="page-actions">
-                  <h2>
-                    <span className="material-symbols-outlined">
-                      move_to_inbox
-                    </span>
-                    Entradas de Inventario
-                  </h2>
-                </div>
-                <TablaGenerica
-                  columnas={[
-                    { campo: "id", label: "ID", tipo: "texto" },
-                    { campo: "fecha", label: "Fecha", tipo: "fecha" },
-                    { campo: "semana", label: "Semana", tipo: "texto" },
-                    { campo: "producto", label: "Producto", tipo: "texto" },
-                    { campo: "sede", label: "Sede", tipo: "texto" },
-                    { campo: "tipo", label: "Tipo", tipo: "estado" },
-                    {
-                      campo: "cantidadIngresada",
-                      label: "Cantidad",
-                      tipo: "texto",
-                    },
-                    {
-                      campo: "costoUnitario",
-                      label: "Costo Unit.",
-                      tipo: "moneda",
-                    },
-                    { campo: "nota", label: "Nota", tipo: "texto" },
-                    { campo: "creadoEn", label: "Registrado", tipo: "fecha" },
-                  ]}
-                  datos={entradas.map((e) => ({
-                    ...e,
-                    producto:
-                      e.producto?.descripcion ?? String(e.productoId ?? "—"),
-                    sede: e.sede?.nombre ?? `Sede ${e.sedeId}`,
-                    costoUnitario: Number(e.costoUnitario ?? 0),
-                    nota: e.nota ?? "—",
-                  }))}
-                  filasPorPagina={15}
-                  mostrarBuscador
-                  buscarEnCampos={["producto"]}
-                  paginacion
-                />
-              </>
-            )}
+            <div className="page-actions">
+              <h2>
+                <span className="material-symbols-outlined">
+                  {TABS.find((t) => t.key === activeTab)?.icon}
+                </span>
+                {TABS.find((t) => t.key === activeTab)?.label} de Inventario
+              </h2>
+              <span className="inv-contador">
+                {movimientos.length} registros
+              </span>
+            </div>
+            <TablaGenerica
+              columnas={columnasMovimientos}
+              datos={movimientosMapeados}
+              filasPorPagina={15}
+              mostrarBuscador
+              buscarEnCampos={["producto", "nota"]}
+              paginacion
+            />
           </>
         )}
       </div>

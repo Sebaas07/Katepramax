@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import contabilidadService from "@/services/contabilidad.service";
+import reporteService from "@/services/reporte.service";
 import { getSemanaISO, formatFecha } from "@/utils/formatters";
 import {
   construirPayloadContabilidad,
@@ -20,6 +21,7 @@ import CarteraTab       from "../CarteraTab";
 import ProveedoresTab   from "../ProveedoresTab";
 import PanelGeneralTab  from "../PanelGeneralTab";
 import ArqueoSemanalTab from "../ArqueoSemanalTab";
+import HistorialSemanalTab from "../HistorialSemanalTab";
 
 // ── Shared UI
 import { Spinner, EmptyState } from "../ContabilidadUI";
@@ -42,9 +44,10 @@ const TABS = [
   { key: "ingresos",    label: "Ingresos Diarios", icon: "trending_up"    },
   { key: "egresos",     label: "Egresos Diarios",  icon: "trending_down"  },
   { key: "cartera",     label: "Cartera",           icon: "account_balance"},
-  { key: "proveedores", label: "Proveedores",       icon: "conveyor_belt"  },
+  { key: "proveedores", label: "Abonos a Proveedores", icon: "payments"  },
   { key: "panel",       label: "Panel General",     icon: "dashboard"      },
   { key: "arqueo",      label: "Arqueo Semanal",    icon: "summarize"      },
+  { key: "historial",   label: "Historial Semanal", icon: "timeline"       },
 ];
 
 const FORM_VACIO = {
@@ -75,6 +78,7 @@ const ContabilidadPage = () => {
   const [egresos,     setEgresos]     = useState([]);
   const [cartera,     setCartera]     = useState([]);
   const [proveedores, setProveedores] = useState([]);
+  const [catalogoProveedores, setCatalogoProveedores] = useState([]);
   const [resumenProv,       setResumenProv]       = useState([]);
   const [resumenIngSemanal, setResumenIngSemanal] = useState(null);
   const [totalesDiaIng,     setTotalesDiaIng]     = useState([]);
@@ -85,6 +89,7 @@ const ContabilidadPage = () => {
   const [arqueo,            setArqueo]            = useState(null);
   const [arqueoError, setArqueoError] = useState("");
   const [panelGeneral,setPanelGeneral]= useState(null);
+  const [historialSemanal, setHistorialSemanal] = useState([]);
 
   // ── Filtros ───────────────────────────────────────────────
   const [filtroSemana,  setFiltroSemana]   = useState(String(SEM_ACTUAL));
@@ -153,7 +158,7 @@ const ContabilidadPage = () => {
         setCartera(await contabilidadService.obtenerCartera(fBase));
       } else if (tab === "proveedores") {
         const [lista, resumen, resSede] = await Promise.all([
-          contabilidadService.obtenerProveedores(fBase),
+          contabilidadService.listarAbonos(fBase),
           contabilidadService.obtenerResumenProveedores(semanaNum),
           contabilidadService.obtenerResumenSedeAbonos(semanaNum),
         ]);
@@ -181,6 +186,8 @@ const ContabilidadPage = () => {
         setPanelGeneral(panel);
         setTotalesDiaIng(totIngDia);
         setTotalesDiaEgr(totEgrDia);
+      } else if (tab === "historial") {
+        setHistorialSemanal(await reporteService.obtenerHistorialSemanal());
       }
     } catch (err) {
       toast.error("Error al cargar datos: " + (err?.message || "desconocido"));
@@ -188,6 +195,16 @@ const ContabilidadPage = () => {
       setCargando(false);
     }
   }, [tab, filtroSemana, filtroSedeId, filtroPanelF]);
+
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    // Catálogo de proveedores para el selector del modal de abonos
+    // (independiente de la tab activa y de los datos de la tabla de abonos).
+    contabilidadService
+      .obtenerProveedores()
+      .then(setCatalogoProveedores)
+      .catch(() => setCatalogoProveedores([]));
+  }, [isSessionChecked, isAuthenticated]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -547,6 +564,10 @@ const ContabilidadPage = () => {
             />
           )}
 
+          {tab === "historial" && (
+            <HistorialSemanalTab historial={historialSemanal} />
+          )}
+
         </div>
       )}
 
@@ -562,7 +583,7 @@ const ContabilidadPage = () => {
         totalIngresoForm={totalIngresoForm}
         esAdmin={esAdmin}
         sedes={SEDES}
-        proveedores={proveedoresMap}
+        proveedores={catalogoProveedores}
         errores={erroresForm}
         cargando={cargando}
       />

@@ -25,6 +25,11 @@ async function reporteRoutes(app) {
     { schema: schemas.historialSemanalSchema, ...soloAdmin },
     ctrl.historialSemanal,
   );
+
+  app.get("/reportes/cobros-entregador",
+    { schema: schemas.cobrosPorEntregadorSchema, ...adminOBodega },
+    ctrl.cobrosPorEntregador,
+  );
 }
 
 module.exports = reporteRoutes;

@@ -1,10 +1,10 @@
 import { useReducer } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import MenuLateral from "@/components/layout/MenuLateral/MenuLateral";
 import "./MenuSuperior.css";
 
-const SEDES = ["Bogotá", "Cartagena", "Villavicencio"];
+//const SEDES = ["Bogotá", "Cartagena", "Villavicencio"];
 
 function menuReducer(state, action) {
   switch (action.type) {
@@ -22,10 +22,10 @@ export default function MenuSuperior() {
     mostrarSidebar: false,
   });
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { usuario, logout, esAdmin, esBodega } = useAuth();
+  //const [searchParams] = useSearchParams();
+  const { usuario, logout, /*esAdmin, esBodega*/ } = useAuth();
 
-  const sedeDesdeURL = searchParams.get("sede") || "";
+  //const sedeDesdeURL = searchParams.get("sede") || "";
   const abrirSidebar = () => dispatch({ type: "ABRIR_SIDEBAR" });
   const cerrarSidebar = () => dispatch({ type: "CERRAR_SIDEBAR" });
 
@@ -36,13 +36,13 @@ export default function MenuSuperior() {
   };
 
   const inicial = usuario?.nombreCompleto?.charAt(0)?.toUpperCase() || "U";
-  const sedeNombre =
+  /*const sedeNombre =
     typeof usuario?.sede === "object"
       ? usuario.sede.nombre
-      : (usuario?.sede ?? "");
+      : (usuario?.sede ?? "");*/
 
   // Bodega ve su sede como chip (no como selector)
-  const sedeChip = esBodega && !esAdmin && sedeNombre;
+  //const sedeChip = esBodega && !esAdmin && sedeNombre;
 
   return (
     <>
@@ -75,7 +75,7 @@ export default function MenuSuperior() {
           </div>
         </div>
 
-        {/* ── Centro: selector de sede (Admin) o chip de sede (Bodega) ── */}
+        {/* ── Centro: selector de sede (Admin) o chip de sede (Bodega) ── 
         {esAdmin && (
           <nav
             className="menu-superior__sedes d-none d-md-flex"
@@ -107,7 +107,7 @@ export default function MenuSuperior() {
             </span>
             <span>{sedeNombre}</span>
           </div>
-        )}
+        )} */}
 
         {/* ── Derecha: notificaciones + usuario ── */}
         <div className="menu-superior__acciones">

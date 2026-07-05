@@ -45,7 +45,24 @@ const clientesService = {
       if (!clienteData.nombre || !clienteData.nombre.trim()) {
         throw new Error("El nombre del cliente es obligatorio.");
       }
-      const nuevoCliente = await clientesApi.crearCliente(clienteData);
+      // El backend solo acepta estos campos en la creación
+      // ("activo" no aplica: todo cliente nuevo nace activo).
+      const payload = {
+        nombre: clienteData.nombre,
+        telefono: clienteData.telefono || undefined,
+        limiteCredito:
+          clienteData.limiteCredito !== undefined
+            ? clienteData.limiteCredito
+            : undefined,
+        saldoDeuda:
+          clienteData.saldoDeuda !== undefined
+            ? clienteData.saldoDeuda
+            : undefined,
+      };
+      Object.keys(payload).forEach(
+        (k) => payload[k] === undefined && delete payload[k],
+      );
+      const nuevoCliente = await clientesApi.crearCliente(payload);
       return nuevoCliente;
     } catch (error) {
       console.error("Error en clientesService.crearCliente:", error);

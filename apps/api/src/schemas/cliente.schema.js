@@ -26,6 +26,8 @@ const crearCliente = {
     properties: {
       nombre: { type: "string", minLength: 1, maxLength: 150 },
       telefono: { type: "string", maxLength: 20 },
+      limiteCredito: { type: "number", minimum: 0 },
+      saldoDeuda: { type: "number", minimum: 0 },
     },
     additionalProperties: false,
   },

@@ -324,14 +324,14 @@ const ProductosPage = () => {
     [sedeIdUsuario, sedes],
   );
 
-  const abrirHistorial = useCallback(
+ /* const abrirHistorial = useCallback(
     async (prod) => {
       setProductoSel(normalizarProducto(prod, sedeActivaId, sedes));
       await cargarMovimientos();
       setModalHistorial(true);
     },
     [cargarMovimientos, sedeActivaId, sedes],
-  );
+  );*/
 
   const handleGuardar = useCallback(async () => {
     setGuardando(true);
@@ -500,11 +500,11 @@ const ProductosPage = () => {
   const acciones = useCallback(
     (prod) => [
       { label: "Editar", icon: "edit", onClick: () => abrirModalEditar(prod) },
-      {
+      /*{
         label: "Historial",
         icon: "history",
         onClick: () => abrirHistorial(prod),
-      },
+      },*/
       ...(puedeEditar
         ? [
             {
@@ -516,7 +516,7 @@ const ProductosPage = () => {
           ]
         : []),
     ],
-    [puedeEditar, abrirModalEditar, abrirHistorial, handleDesactivar],
+    [puedeEditar, abrirModalEditar, /*abrirHistorial*/ handleDesactivar],
   );
 
   const movimientosProducto = useMemo(

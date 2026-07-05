@@ -345,14 +345,14 @@ const LoginPage = () => {
 
           <div className="login__legal">
             <span>© 2026 Katepramax</span>
-            <div className="login__legal-links">
+            {/*<div className="login__legal-links">
               <button type="button" className="login__legal-btn">
                 Privacidad
               </button>
               <button type="button" className="login__legal-btn">
                 Términos
               </button>
-            </div>
+            </div>*/}
           </div>
         </div>
       </section>

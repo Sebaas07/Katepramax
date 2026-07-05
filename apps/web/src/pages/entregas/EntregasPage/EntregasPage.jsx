@@ -100,22 +100,31 @@ const TarjetaEntrega = ({
           </div>
         )}
 
-        <div className="entr-info-row">
-          <span className="material-symbols-outlined entr-icon">
-            attach_money
-          </span>
-          <strong className="entr-total">{formatCOP(totalPedido)}</strong>
-        </div>
+<div className="entr-info-row">
+           <span className="material-symbols-outlined entr-icon">
+             attach_money
+           </span>
+           <strong className="entr-total">{formatCOP(totalPedido)}</strong>
+         </div>
 
-        {pedido?.creadoEn && (
-          <div className="entr-info-row">
-            <span className="material-symbols-outlined entr-icon">
-              schedule
-            </span>
-            <span>{formatFecha(pedido.creadoEn)}</span>
-          </div>
-        )}
-      </div>
+         {pedido?.creadoEn && (
+           <div className="entr-info-row">
+             <span className="material-symbols-outlined entr-icon">
+               schedule
+             </span>
+             <span>{formatFecha(pedido.creadoEn)}</span>
+           </div>
+         )}
+
+         {asignacion.observacionesEntrega && (
+           <div className="entr-info-row">
+             <span className="material-symbols-outlined entr-icon">
+               comment
+             </span>
+             <span className="entr-observaciones">{asignacion.observacionesEntrega}</span>
+           </div>
+         )}
+       </div>
 
       <div className="entr-card-footer">
         {estado === "Pendiente" && (
@@ -314,16 +323,18 @@ const EntregasPage = () => {
     }
   };
 
-  // ── Columnas para tabla ──────────────────────────────────────────
-  const columnas = [
-    { campo: "id", label: "ID", tipo: "texto" },
-    { campo: "cliente", label: "Cliente", tipo: "texto" },
-    { campo: "direccion", label: "Dirección", tipo: "texto" },
-    { campo: "sede", label: "Sede", tipo: "texto" },
-    { campo: "total", label: "Total Pedido ($)", tipo: "moneda" },
-    { campo: "costoRecibido", label: "Costo Recibido ($)", tipo: "moneda" },
-    { campo: "estado", label: "Estado", tipo: "estado" },
-  ];
+// ── Columnas para tabla ──────────────────────────────────────────
+   const columnas = [
+     { campo: "id", label: "ID", tipo: "texto" },
+     { campo: "cliente", label: "Cliente", tipo: "texto" },
+     { campo: "direccion", label: "Dirección", tipo: "texto" },
+     { campo: "sede", label: "Sede", tipo: "texto" },
+     { campo: "total", label: "Total Pedido ($)", tipo: "moneda" },
+     { campo: "costoRecibido", label: "Costo Recibido ($)", tipo: "moneda" },
+     { campo: "metodoPago", label: "Método de Pago", tipo: "texto" },
+     { campo: "estado", label: "Estado", tipo: "estado" },
+     { campo: "observaciones", label: "Observaciones", tipo: "texto" },
+   ];
 
   // Mapear datos para tabla
   const entregasMapeadas = useMemo(() => {
@@ -343,20 +354,24 @@ const EntregasPage = () => {
 
       const sedeObj = sedes.find((s) => s.id === pedido.sedeId);
 
-      return {
-        id: `#${pedido.id ?? asig.pedidoId ?? ""}`,
-        cliente:
-          pedido.cliente?.nombre ?? `Cliente #${pedido.clienteId ?? "—"}`,
-        direccion: pedido.direccion ?? "—",
-        sede: sedeObj?.nombre ?? `Sede ${pedido.sedeId ?? "—"}`,
-        total,
-        costoRecibido:
-          asig.estado === "Entregado" ? Number(asig.montoCobrado ?? 0) : 0,
-        estado:
-          asig.estado === "EnRuta" ? "en_ruta" : asig.estado?.toLowerCase(),
-        asignacionId: asig.id,
-        pedidoId: pedido.id ?? asig.pedidoId,
-      };
+return {
+         id: `#${pedido.id ?? asig.pedidoId ?? ""}`,
+         cliente:
+           pedido.cliente?.nombre ?? `Cliente #${pedido.clienteId ?? "—"}`,
+         direccion: pedido.direccion ?? "—",
+         sede: sedeObj?.nombre ?? `Sede ${pedido.sedeId ?? "—"}`,
+         total,
+         costoRecibido:
+           asig.estado === "Entregado" ? Number(asig.montoCobrado ?? 0) : 0,
+         metodoPago:
+           asig.estado === "Entregado" ? (asig.metodoPago ?? "—") : "—",
+         estado:
+           asig.estado === "EnRuta" ? "en_ruta" : asig.estado?.toLowerCase(),
+         observaciones:
+           asig.observacionesEntrega ?? asig.observaciones ?? "—",
+         asignacionId: asig.id,
+         pedidoId: pedido.id ?? asig.pedidoId,
+       };
     });
   }, [entregas, sedes]);
 
@@ -572,7 +587,6 @@ const EntregasPage = () => {
             >
               <option value="Efectivo">Efectivo</option>
               <option value="Transferencia">Transferencia</option>
-              <option value="Otro">Otro</option>
             </select>
           </div>
 

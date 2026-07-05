@@ -182,6 +182,68 @@ async function panelGeneral(app, fecha, usuario) {
   };
 }
 
+// Cobros realizados por cada entregador en un rango de fechas.
+// Se basa en AsignacionEntrega (montoCobrado) con estado "Entregado".
+async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, usuario) {
+  const prisma = app.prisma;
+  if (!fechaInicio || !fechaFin) {
+    throw new AppError("fechaInicio y fechaFin son obligatorios.", 400);
+  }
+
+  const desde = new Date(fechaInicio);
+  desde.setUTCHours(0, 0, 0, 0);
+  const hasta = new Date(fechaFin);
+  hasta.setUTCHours(23, 59, 59, 999);
+
+  const whereSede = sedeWhere(usuario);
+  const sedeFiltro = sedeId ? Number(sedeId) : whereSede.sedeId;
+
+  const asignaciones = await prisma.asignacionEntrega.findMany({
+    where: {
+      estado: "Entregado",
+      fechaConfirmada: { gte: desde, lte: hasta },
+      pedido: sedeFiltro ? { sedeId: sedeFiltro } : undefined,
+    },
+    select: {
+      montoCobrado: true,
+      metodoPago: true,
+      entregadorId: true,
+      entregador: { select: { id: true, nombreCompleto: true } },
+    },
+  });
+
+  const porEntregador = new Map();
+  for (const a of asignaciones) {
+    const key = a.entregadorId;
+    if (!porEntregador.has(key)) {
+      porEntregador.set(key, {
+        entregadorId: key,
+        entregador: a.entregador?.nombreCompleto ?? `Usuario ${key}`,
+        pedidos: 0,
+        total: 0,
+        efectivo: 0,
+        cuentas: 0,
+      });
+    }
+    const fila = porEntregador.get(key);
+    const monto = toNum(a.montoCobrado);
+    fila.pedidos += 1;
+    fila.total += monto;
+    if (a.metodoPago === "Efectivo") fila.efectivo += monto;
+    if (a.metodoPago === "Transferencia") fila.cuentas += monto;
+  }
+
+  const detalle = Array.from(porEntregador.values()).sort((a, b) => b.total - a.total);
+
+  return {
+    fechaInicio,
+    fechaFin,
+    detalle,
+    total: detalle.reduce((acc, f) => acc + f.total, 0),
+    pedidos: detalle.reduce((acc, f) => acc + f.pedidos, 0),
+  };
+}
+
 async function historialSemanal(app, { skip = 0, take = 20 } = {}, usuario) {
   const prisma    = app.prisma;
   const whereSede = sedeWhere(usuario);
@@ -256,4 +318,5 @@ module.exports = {
   arqueoSemanal,
   panelGeneral,
   historialSemanal,
+  cobrosPorEntregador,
 };

@@ -5,6 +5,11 @@
 
 /* ─── <dialog> base ──────────────────────────────────────────*/
 .modal-dialog {
+  /* Forzar top-layer positioning: no depender del default del UA,
+     que puede ser pisado por un reset global (Bootstrap/Tailwind/etc.) */
+  position: fixed;
+  inset: 0;
+  margin: auto;
   /* Resetear estilos por defecto del browser */
   border: none;
   padding: 0;
@@ -17,6 +22,12 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
+}
+
+/* Restaurar el comportamiento nativo: un <dialog> sin el atributo
+   "open" debe permanecer oculto. display:flex de arriba pisaba esto. */
+.modal-dialog:not([open]) {
+  display: none;
 }
 
 /* Backdrop nativo — reemplaza .modal-backdrop */

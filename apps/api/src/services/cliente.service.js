@@ -60,8 +60,11 @@ const clienteService = (prisma) => {
     },
 
     crear: (data) => {
-      const { nombre, telefono } = data;
-      return repo.create({ nombre, telefono });
+      const { nombre, telefono, limiteCredito, saldoDeuda } = data;
+      const campos = { nombre, telefono };
+      if (limiteCredito !== undefined) campos.limiteCredito = limiteCredito;
+      if (saldoDeuda !== undefined) campos.saldoDeuda = saldoDeuda;
+      return repo.create(campos);
     },
 
     actualizar: async (id, data, usuario) => {

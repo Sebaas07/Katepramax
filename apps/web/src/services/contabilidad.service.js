@@ -212,9 +212,19 @@ const contabilidadService = {
   },
 
   // ── PROVEEDORES ────────────────────────────────────────────
+  // Catálogo de proveedores (para selectores) — NO usar para la tabla de abonos.
   obtenerProveedores: async (filtros = {}) => {
     try {
       return await contabilidadApi.obtenerProveedores(filtros);
+    } catch {
+      return [];
+    }
+  },
+
+  // Abonos/pagos a proveedores (lo que se muestra en la tabla de la tab "Abonos")
+  listarAbonos: async (filtros = {}) => {
+    try {
+      return await contabilidadApi.listarAbonos(filtros);
     } catch {
       return [];
     }

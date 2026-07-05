@@ -39,6 +39,13 @@ const reportesApi = {
     const { data } = await clienteApi.get("/reportes/historial-semanal");
     return data;
   },
+
+  // Backend: GET /reportes/cobros-entregador?fechaInicio&fechaFin&sedeId → Admin, Bodega
+  obtenerCobrosEntregador: async (filtros = {}) => {
+    const qs = buildParams(filtros);
+    const { data } = await clienteApi.get(`/reportes/cobros-entregador${qs}`);
+    return data;
+  },
 };
 
 export default reportesApi;

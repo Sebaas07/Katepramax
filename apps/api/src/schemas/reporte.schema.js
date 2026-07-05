@@ -76,4 +76,44 @@ const historialSemanalSchema = {
   },
 };
 
-module.exports = { arqueoSemanalSchema, panelGeneralSchema, historialSemanalSchema };
+const cobrosPorEntregadorSchema = {
+  summary: "Cobros realizados por cada entregador en un rango de fechas",
+  tags: ["Reportes"], security: [{ bearerAuth: [] }],
+  querystring: {
+    type: "object",
+    required: ["fechaInicio", "fechaFin"],
+    properties: {
+      fechaInicio: { type: "string", format: "date" },
+      fechaFin:    { type: "string", format: "date" },
+      sedeId:      { type: "integer" },
+    },
+    additionalProperties: false,
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        fechaInicio: { type: "string" },
+        fechaFin:    { type: "string" },
+        total:       { type: "number" },
+        pedidos:     { type: "integer" },
+        detalle: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              entregadorId: { type: "integer" },
+              entregador:   { type: "string" },
+              pedidos:      { type: "integer" },
+              total:        { type: "number" },
+              efectivo:     { type: "number" },
+              cuentas:      { type: "number" },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+module.exports = { arqueoSemanalSchema, panelGeneralSchema, historialSemanalSchema, cobrosPorEntregadorSchema };

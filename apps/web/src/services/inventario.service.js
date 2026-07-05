@@ -213,6 +213,69 @@ const inventarioService = {
     }
   },
 
+  // ─── Movimientos de Inventario (entrada/salida/ajuste) ─────────────────────
+  // Reutiliza el mismo endpoint /inventario del backend (el campo "tipo"
+  // distingue entrada/salida/ajuste). No existe un endpoint separado.
+  // Backend: POST /inventario → Admin, Bodega
+  registrarMovimiento: async ({
+    tipo,
+    productoId,
+    cantidad,
+    nota,
+    sedeId,
+    fecha,
+  }) => {
+    try {
+      if (!fecha) throw new Error("La fecha es obligatoria.");
+      if (!productoId) throw new Error("Selecciona un producto.");
+
+      const tipoFinal = tipo || "entrada";
+      const cantidadNum = toNumber(cantidad, 0);
+      if (tipoFinal !== "ajuste" && cantidadNum <= 0) {
+        throw new Error("La cantidad debe ser mayor a 0.");
+      }
+      if (tipoFinal === "ajuste" && cantidadNum === 0) {
+        throw new Error("El ajuste no puede ser 0.");
+      }
+
+      // Si no es Admin, usar sede del usuario
+      const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
+      if (!sedeFinal) throw new Error("Selecciona la sede.");
+
+      return await inventarioApi.crearEntradaDiaria({
+        sedeId: parseInt(sedeFinal),
+        productoId,
+        cantidadIngresada: cantidadNum,
+        fecha,
+        semana: getSemanaISO(new Date(fecha)),
+        tipo: tipoFinal,
+        nota: nota || null,
+      });
+    } catch (e) {
+      console.error("inventarioService.registrarMovimiento:", e);
+      throw e;
+    }
+  },
+
+  // Backend: GET /inventario?tipo=&productoId=&sedeId= → Admin, Bodega
+  listarMovimientos: async (filtros = {}) => {
+    try {
+      const f = { ...filtros };
+      // Si no es Admin, filtrar por sede automáticamente
+      if (!tieneAccesoTotal()) {
+        const sedeIdUsuario = obtenerSedeUsuario();
+        if (sedeIdUsuario) {
+          f.sedeId = sedeIdUsuario;
+        }
+      }
+      const data = await inventarioApi.listarInventario(f);
+      return normalizeArrayResponse(data);
+    } catch (error) {
+      console.error("inventarioService.listarMovimientos:", error);
+      throw new Error(getApiErrorMessage(error), { cause: error });
+    }
+  },
+
   // ─── Stock Bajo ───────────────────────────────────────────────────────────
   obtenerStockBajo: async () => {
     const response = await inventarioApi.obtenerStockBajo();

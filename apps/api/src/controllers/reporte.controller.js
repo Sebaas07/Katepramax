@@ -19,4 +19,10 @@ async function historialSemanal(req, reply) {
   );
 }
 
-module.exports = { arqueoSemanal, panelGeneral, historialSemanal };
+async function cobrosPorEntregador(req, reply) {
+  return reply.send(
+    await svc.cobrosPorEntregador(req.server, req.query, req.user),
+  );
+}
+
+module.exports = { arqueoSemanal, panelGeneral, historialSemanal, cobrosPorEntregador };
