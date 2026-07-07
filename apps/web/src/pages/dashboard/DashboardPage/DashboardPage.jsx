@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { filtrarPorSede } from "@/utils/permisos";
 import reportesApi from "@/api/reportesApi";
 import pedidosApi from "@/api/pedidosApi";
+import inventarioService from "@/services/inventario.service";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import { formatCOP, formatFechaHora } from "@/utils/formatters";
 import "./DashboardPage.css";
@@ -50,17 +52,40 @@ const obtenerFechaISOHoy = () => {
 
 // ── Componente ────────────────────────────────────────────────
 const DashboardPage = () => {
-  const { usuario, isAuthenticated, isSessionChecked } = useAuth();
+  const { usuario, esAdmin, isAuthenticated, isSessionChecked } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  // Solo Admin puede filtrar por una sede específica desde el menú superior;
+  // para el resto, el backend fuerza su propia sede sin importar este valor.
+  const sedeIdSeleccionada = esAdmin ? searchParams.get("sede") : null;
+
+  const [sedesCatalogo, setSedesCatalogo] = useState([]);
+  useEffect(() => {
+    if (!esAdmin) return;
+    inventarioService
+      .obtenerSedes()
+      .then((data) => setSedesCatalogo(Array.isArray(data) ? data : []))
+      .catch(() => setSedesCatalogo([]));
+  }, [esAdmin]);
+
+  const sedeNombreMostrado = (() => {
+    if (esAdmin && sedeIdSeleccionada) {
+      const encontrada = sedesCatalogo.find(
+        (s) => String(s.id) === String(sedeIdSeleccionada),
+      );
+      if (encontrada) return encontrada.nombre;
+    }
+    if (esAdmin && !sedeIdSeleccionada) return "Todas";
+    return typeof usuario?.sede === "object"
+      ? usuario.sede.nombre
+      : (usuario?.sede ?? "—");
+  })();
 
   const [kpis,          setKpis]          = useState(null);
   const [pedidos,       setPedidos]       = useState([]);
   const [cargandoKpis,  setCargandoKpis]  = useState(true);
   const [cargandoTabla, setCargandoTabla] = useState(true);
   const [errorKpis,     setErrorKpis]     = useState(false);
-
-  const sedeNombre = typeof usuario?.sede === "object"
-    ? usuario.sede.nombre
-    : (usuario?.sede ?? "—");
 
   const hora   = new Date().getHours();
   const saludo = hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
@@ -74,8 +99,12 @@ const DashboardPage = () => {
     setCargandoKpis(true);
     setErrorKpis(false);
     try {
-      // filtrarPorSede aplica sedeId automáticamente para Bodega/AdminBogota
-      const filtros = filtrarPorSede({ fecha: obtenerFechaISOHoy() });
+      // filtrarPorSede aplica sedeId automáticamente para Bodega/AdminBogota;
+      // para Admin, respeta el filtro elegido en el menú superior (si hay).
+      const filtros = filtrarPorSede({
+        fecha: obtenerFechaISOHoy(),
+        sedeId: sedeIdSeleccionada || undefined,
+      });
       const data    = await reportesApi.obtenerPanelGeneral(filtros);
       setKpis(data);
     } catch {
@@ -84,14 +113,17 @@ const DashboardPage = () => {
     } finally {
       setCargandoKpis(false);
     }
-  }, []);
+  }, [sedeIdSeleccionada]);
 
   // ── Últimos pedidos ───────────────────────────────────────
   const cargarPedidos = useCallback(async () => {
     setCargandoTabla(true);
     try {
       // filtrarPorSede garantiza que Bodega solo vea su sede
-      const filtros = filtrarPorSede({ take: 5 });
+      const filtros = filtrarPorSede({
+        take: 5,
+        sedeId: sedeIdSeleccionada || undefined,
+      });
       const data    = await pedidosApi.obtenerPedidos(filtros);
       const lista   = Array.isArray(data) ? data : (data?.data ?? []);
       setPedidos(lista.slice(0, 5));
@@ -100,7 +132,7 @@ const DashboardPage = () => {
     } finally {
       setCargandoTabla(false);
     }
-  }, []);
+  }, [sedeIdSeleccionada]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -119,7 +151,7 @@ const DashboardPage = () => {
           <h4 className="dashboard-header__saludo">{saludo}, {nombre}</h4>
           <div className="dashboard-header__sede">
             <span className="material-symbols-outlined">location_on</span>
-            <span>Sede {sedeNombre}</span>
+            <span>Sede {sedeNombreMostrado}</span>
             {errorKpis && (
               <span className="dashboard-badge-mock">Sin conexión</span>
             )}
@@ -204,7 +236,7 @@ const DashboardPage = () => {
                     <td className="d-none d-md-table-cell">
                       <span className="dashboard-tabla__sede">
                         <span className="material-symbols-outlined">location_on</span>
-                        {pedido.creador?.sede?.nombre ?? pedido.sede?.nombre ?? sedeNombre}
+                        {pedido.creador?.sede?.nombre ?? pedido.sede?.nombre ?? sedeNombreMostrado}
                       </span>
                     </td>
                     <td>

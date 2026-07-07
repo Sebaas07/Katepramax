@@ -1,0 +1,99 @@
+.logs-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.logs-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.logs-page__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.logs-subtitulo {
+  margin: 0.25rem 0 0;
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
+}
+
+.logs-contador {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--outline-variant);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.logs-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.logs-spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 0;
+  color: var(--on-surface-variant);
+}
+
+.logs-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--outline-variant);
+  border-top-color: var(--primary);
+  animation: logs-spin 0.8s linear infinite;
+}
+
+@keyframes logs-spin {
+  to { transform: rotate(360deg); }
+}
+
+.logs-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 0 1rem;
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
+}
+
+.logs-pag-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--outline-variant);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.logs-pag-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.logs-pag-btn .material-symbols-outlined {
+  font-size: 1.1rem;
+}

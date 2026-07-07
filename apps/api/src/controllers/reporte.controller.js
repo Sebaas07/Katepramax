@@ -7,7 +7,7 @@ async function arqueoSemanal(req, reply) {
 }
 
 async function panelGeneral(req, reply) {
-  return reply.send(await svc.panelGeneral(req.server, req.query.fecha, req.user));
+  return reply.send(await svc.panelGeneral(req.server, req.query, req.user));
 }
 
 async function historialSemanal(req, reply) {

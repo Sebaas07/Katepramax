@@ -1,10 +1,9 @@
-import { useReducer } from "react";
-import { useNavigate } from "react-router-dom";
+import { useReducer, useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import MenuLateral from "@/components/layout/MenuLateral/MenuLateral";
+import inventarioService from "@/services/inventario.service";
 import "./MenuSuperior.css";
-
-//const SEDES = ["Bogotá", "Cartagena", "Villavicencio"];
 
 function menuReducer(state, action) {
   switch (action.type) {
@@ -22,10 +21,21 @@ export default function MenuSuperior() {
     mostrarSidebar: false,
   });
   const navigate = useNavigate();
-  //const [searchParams] = useSearchParams();
-  const { usuario, logout, /*esAdmin, esBodega*/ } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { usuario, logout, esAdmin, esBodega } = useAuth();
 
-  //const sedeDesdeURL = searchParams.get("sede") || "";
+  const [sedes, setSedes] = useState([]);
+
+  // Solo el Admin necesita el catálogo completo de sedes para el selector.
+  useEffect(() => {
+    if (!esAdmin) return;
+    inventarioService
+      .obtenerSedes()
+      .then((data) => setSedes(Array.isArray(data) ? data : []))
+      .catch(() => setSedes([]));
+  }, [esAdmin]);
+
+  const sedeIdDesdeURL = searchParams.get("sede") || "";
   const abrirSidebar = () => dispatch({ type: "ABRIR_SIDEBAR" });
   const cerrarSidebar = () => dispatch({ type: "CERRAR_SIDEBAR" });
 
@@ -36,13 +46,14 @@ export default function MenuSuperior() {
   };
 
   const inicial = usuario?.nombreCompleto?.charAt(0)?.toUpperCase() || "U";
-  /*const sedeNombre =
+  const sedeNombre =
     typeof usuario?.sede === "object"
       ? usuario.sede.nombre
-      : (usuario?.sede ?? "");*/
+      : (usuario?.sede ?? "");
 
-  // Bodega ve su sede como chip (no como selector)
-  //const sedeChip = esBodega && !esAdmin && sedeNombre;
+  // Bodega/AdminBogota ven su sede como chip (no como selector) — solo
+  // el Admin general puede filtrar entre las 3 sedes.
+  const sedeChip = esBodega && !esAdmin && sedeNombre;
 
   return (
     <>
@@ -75,23 +86,31 @@ export default function MenuSuperior() {
           </div>
         </div>
 
-        {/* ── Centro: selector de sede (Admin) o chip de sede (Bodega) ── 
+        {/* ── Centro: selector de sede (Admin) o chip de sede (Bodega) ── */}
         {esAdmin && (
           <nav
             className="menu-superior__sedes d-none d-md-flex"
             aria-label="Selector de sede"
           >
-            {SEDES.map((sede) => (
+            <button
+              className={`menu-superior__sede-btn ${!sedeIdDesdeURL ? "menu-superior__sede-btn--activa" : ""}`}
+              type="button"
+              onClick={() => navigate("/dashboard", { replace: true })}
+              aria-pressed={!sedeIdDesdeURL}
+            >
+              Todas
+            </button>
+            {sedes.map((sede) => (
               <button
-                key={sede}
-                className={`menu-superior__sede-btn ${sedeDesdeURL === sede ? "menu-superior__sede-btn--activa" : ""}`}
+                key={sede.id}
+                className={`menu-superior__sede-btn ${String(sedeIdDesdeURL) === String(sede.id) ? "menu-superior__sede-btn--activa" : ""}`}
                 type="button"
                 onClick={() =>
-                  navigate(`/dashboard?sede=${sede}`, { replace: true })
+                  navigate(`/dashboard?sede=${sede.id}`, { replace: true })
                 }
-                aria-pressed={sedeDesdeURL === sede}
+                aria-pressed={String(sedeIdDesdeURL) === String(sede.id)}
               >
-                {sede}
+                {sede.nombre}
               </button>
             ))}
           </nav>
@@ -107,7 +126,7 @@ export default function MenuSuperior() {
             </span>
             <span>{sedeNombre}</span>
           </div>
-        )} */}
+        )}
 
         {/* ── Derecha: notificaciones + usuario ── */}
         <div className="menu-superior__acciones">

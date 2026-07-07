@@ -59,12 +59,16 @@ const clienteService = (prisma) => {
       return cliente;
     },
 
-    crear: (data) => {
+    crear: async (data, usuario) => {
       const { nombre, telefono, limiteCredito, saldoDeuda } = data;
       const campos = { nombre, telefono };
       if (limiteCredito !== undefined) campos.limiteCredito = limiteCredito;
       if (saldoDeuda !== undefined) campos.saldoDeuda = saldoDeuda;
-      return repo.create(campos);
+      const nuevo = await repo.create(campos);
+      if (usuario) {
+        await registrarAccion(app, usuario.id, "CREAR_CLIENTE", `Creó el cliente "${nombre}".`);
+      }
+      return nuevo;
     },
 
     actualizar: async (id, data, usuario) => {
@@ -95,7 +99,9 @@ const clienteService = (prisma) => {
         if (data[c] !== undefined) campos[c] = data[c];
       }
 
-      return repo.update(id, campos);
+      const actualizado = await repo.update(id, campos);
+      await registrarAccion(app, usuario.id, "EDITAR_CLIENTE", `Editó el cliente "${existe.nombre}" (#${id}).`);
+      return actualizado;
     },
 
     desactivar: async (id, usuario) => {
@@ -118,6 +124,7 @@ const clienteService = (prisma) => {
       }
 
       await repo.setActivo(id, false);
+      await registrarAccion(app, usuario.id, "DESACTIVAR_CLIENTE", `Desactivó el cliente "${existe.nombre}" (#${id}).`);
       return { mensaje: "Cliente desactivado correctamente" };
     },
 
@@ -153,6 +160,7 @@ const clienteService = (prisma) => {
       }
 
       const clienteActualizado = await repo.abonar(id, valorAbono);
+      await registrarAccion(app, usuario.id, "ABONAR_CLIENTE", `Registró un abono de ${valorAbono} al cliente "${existe.nombre}" (#${id}).`);
       return clienteActualizado;
     },
   };

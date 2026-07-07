@@ -1,5 +1,6 @@
 const repo = require("../repositories/pedido.repository");
 const AppError = require("../errors/AppError");
+const { registrarAccion } = require("../utils/logger");
 
 /**
  * pedido.service.js
@@ -154,6 +155,13 @@ async function crear(app, body, usuarioId) {
     return nuevoPedido;
   });
 
+  await registrarAccion(
+    app,
+    usuarioId,
+    "CREAR_PEDIDO",
+    `Creó el pedido #${pedido.id} para el cliente "${cliente.nombre}".`,
+  );
+
   return pedido;
 }
 
@@ -267,10 +275,17 @@ async function cambiarEstado(app, id, nuevoEstado, usuario) {
       });
     });
 
+    await registrarAccion(
+      app,
+      usuario.id,
+      "CANCELAR_PEDIDO",
+      `Canceló el pedido #${id}.`,
+    );
+
     return repo.buscarPorId(app.prisma, id);
   }
 
-  return app.prisma.$transaction(async (tx) => {
+  const resultado = await app.prisma.$transaction(async (tx) => {
     await tx.pedido.update({ where: { id }, data: { estado: nuevoEstado } });
     await tx.historialEstadoPedido.create({
       data: {
@@ -281,6 +296,15 @@ async function cambiarEstado(app, id, nuevoEstado, usuario) {
     });
     return repo.buscarPorId(app.prisma, id);
   });
+
+  await registrarAccion(
+    app,
+    usuario.id,
+    "CAMBIAR_ESTADO_PEDIDO",
+    `Cambió el pedido #${id} de "${estadoAnterior}" a "${nuevoEstado}".`,
+  );
+
+  return resultado;
 }
 
 async function obtenerHistorial(app, id, usuario) {

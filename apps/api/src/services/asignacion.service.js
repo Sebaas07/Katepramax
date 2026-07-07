@@ -95,7 +95,16 @@ const asignacionService = (app) => ({
       }
     });
 
-    return this.repo.findById(asignacionExistente ? asignacionExistente.id : resultado.id);
+    const final = await this.repo.findById(asignacionExistente ? asignacionExistente.id : resultado.id);
+
+    await registrarAccion(
+      app,
+      asignadoPorId,
+      "CREAR_ASIGNACION",
+      `Asignó el pedido #${pedidoId} al entregador #${entregadorId}.`,
+    );
+
+    return final;
   },
 
   /**
@@ -251,6 +260,13 @@ const asignacionService = (app) => ({
         });
       });
 
+      await registrarAccion(
+        app,
+        usuarioId,
+        "CONFIRMAR_ENTREGA",
+        `Confirmó la entrega #${id} del pedido #${asignacion.pedidoId} (cobró ${montoCobrado} vía ${metodoPago}).`,
+      );
+
       return this.repo.findById(id);
     }
 
@@ -262,10 +278,23 @@ const asignacionService = (app) => ({
         await tx.asignacionEntrega.update({ where: { id }, data: dataUpdate });
         await tx.pedido.update({ where: { id: asignacion.pedidoId }, data: { estado: "Pendiente" } });
       });
+      await registrarAccion(
+        app,
+        usuarioId,
+        "MARCAR_ENTREGA_FALLIDA",
+        `Marcó como fallida la entrega #${id} del pedido #${asignacion.pedidoId}.`,
+      );
       return this.repo.findById(id);
     }
 
-    return this.repo.update(id, dataUpdate);
+    const actualizado = await this.repo.update(id, dataUpdate);
+    await registrarAccion(
+      app,
+      usuarioId,
+      "ACTUALIZAR_ASIGNACION",
+      `Actualizó la asignación #${id} a estado "${nuevoEstado}".`,
+    );
+    return actualizado;
   },
 });
 

@@ -28,7 +28,7 @@ const panelGeneralSchema = {
   summary: "Panel general del día: ingresos, egresos, cartera y stock",
   description: "Equivale a la hoja 'Panel General' del Excel.",
   tags: ["Reportes"], security: [{ bearerAuth: [] }],
-  querystring: { type: "object", required: ["fecha"], properties: { fecha: { type: "string", format: "date" } }, additionalProperties: false },
+  querystring: { type: "object", required: ["fecha"], properties: { fecha: { type: "string", format: "date" }, sedeId: { type: "integer" } }, additionalProperties: false },
   response: {
     200: {
       type: "object",

@@ -3,7 +3,10 @@ const AppError = require("../errors/AppError");
 function toNum(v) { return Number(v ?? 0); }
 
 // FIX: siempre consulta el nombre real de la sede en BD
-async function getSedes(prisma, usuario) {
+// Reglas de acceso (coherentes con injectSedeFilter en auth.middleware.js):
+//   Admin               → ve todas las sedes, o puede filtrar por una en particular
+//   Bodega / AdminBogota → solo su propia sede, sin excepción
+async function getSedes(prisma, usuario, sedeIdFiltro) {
   if (usuario && usuario.rol !== "Admin") {
     const sede = await prisma.sede.findUnique({
       where:  { id: usuario.sedeId },
@@ -11,12 +14,25 @@ async function getSedes(prisma, usuario) {
     });
     return sede ? [sede] : [{ id: usuario.sedeId, nombre: `Sede ${usuario.sedeId}` }];
   }
+
+  if (sedeIdFiltro) {
+    const sede = await prisma.sede.findUnique({
+      where:  { id: Number(sedeIdFiltro) },
+      select: { id: true, nombre: true },
+    });
+    return sede ? [sede] : [];
+  }
+
   return prisma.sede.findMany({ where: { activo: true }, select: { id: true, nombre: true } });
 }
 
-function sedeWhere(usuario) {
+function sedeWhere(usuario, sedeIdFiltro) {
   if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
     return { sedeId: usuario.sedeId };
+  }
+  // Admin: acceso total, con filtro opcional de una sede específica.
+  if (sedeIdFiltro) {
+    return { sedeId: Number(sedeIdFiltro) };
   }
   return {};
 }
@@ -121,15 +137,15 @@ async function arqueoSemanal(app, semana, usuario) {
   };
 }
 
-async function panelGeneral(app, fecha, usuario) {
+async function panelGeneral(app, { fecha, sedeId } = {}, usuario) {
   const prisma  = app.prisma;
   const dia     = new Date(fecha);
   dia.setUTCHours(0, 0, 0, 0);
   const diaFin  = new Date(dia);
   diaFin.setUTCHours(23, 59, 59, 999);
 
-  const sedes     = await getSedes(prisma, usuario);
-  const whereSede = sedeWhere(usuario);
+  const sedes     = await getSedes(prisma, usuario, sedeId);
+  const whereSede = sedeWhere(usuario, sedeId);
 
   const ingRows = await prisma.ingreso.groupBy({
     by:    ["sedeId"],
@@ -159,8 +175,9 @@ async function panelGeneral(app, fecha, usuario) {
     return { sede: s.nombre, sedeId: s.id, total: toNum(f?._sum.total) };
   });
 
-  const carteraWhere = whereSede;
-  const cartera = await prisma.cliente.aggregate({ where: carteraWhere, _sum: { saldoDeuda: true } });
+  // Cliente no tiene sedeId (los clientes no están atados a una sede),
+  // así que la cartera siempre es un total global, sin importar el filtro.
+  const cartera = await prisma.cliente.aggregate({ _sum: { saldoDeuda: true } });
 
   const stockWhere = whereSede;
   const stock = await prisma.stockSede.aggregate({ where: stockWhere, _sum: { stockActual: true } });

@@ -1,6 +1,7 @@
 const repo     = require("../repositories/egreso.repository");
 const AppError = require("../errors/AppError");
 const { fechaValida, numeroPositivo, sanitizarTexto, semanaValida } = require("../utils/contabilidad");
+const { registrarAccion } = require("../utils/logger");
 
 function sedeEsPermitida(usuario) {
   return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";
@@ -29,7 +30,7 @@ async function registrar(app, body, usuario) {
   const sede = await app.prisma.sede.findUnique({ where: { id: sedeId } });
   if (!sede) throw new AppError(`Sede ${sedeId} no encontrada`, 404);
 
-  return repo.crear(app.prisma, {
+  const nuevo = await repo.crear(app.prisma, {
     fecha: fechaValida(body.fecha),
     semana: semanaValida(body.semana),
     sedeId,
@@ -37,6 +38,15 @@ async function registrar(app, body, usuario) {
     total: numeroPositivo(body.total, "total"),
     observacion: sanitizarTexto(body.observacion) || null,
   });
+
+  await registrarAccion(
+    app,
+    usuario.id,
+    "CREAR_EGRESO",
+    `Registró un egreso de ${nuevo.total} en concepto "${nuevo.concepto}" (sede ${sedeId}).`,
+  );
+
+  return nuevo;
 }
 
 async function obtenerLista(app, query, usuario) {
@@ -87,7 +97,14 @@ async function editar(app, id, body, usuario) {
   }
   if (body.total !== undefined) data.total = numeroPositivo(body.total, "total");
   if (body.observacion !== undefined) data.observacion = sanitizarTexto(body.observacion) || null;
-  return repo.actualizar(app.prisma, id, data);
+  const actualizado = await repo.actualizar(app.prisma, id, data);
+  await registrarAccion(
+    app,
+    usuario.id,
+    "EDITAR_EGRESO",
+    `Editó el egreso #${id}.`,
+  );
+  return actualizado;
 }
 
 async function borrar(app, id, usuario) {
@@ -96,7 +113,14 @@ async function borrar(app, id, usuario) {
   }
 
   await obtenerPorId(app, id, usuario);
-  return repo.eliminar(app.prisma, id);
+  const resultado = await repo.eliminar(app.prisma, id);
+  await registrarAccion(
+    app,
+    usuario.id,
+    "ELIMINAR_EGRESO",
+    `Eliminó el egreso #${id}.`,
+  );
+  return resultado;
 }
 
 async function resumenPorSede(app, semana, usuario) {

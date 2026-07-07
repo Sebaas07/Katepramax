@@ -30,7 +30,7 @@ async function registrar(app, body, usuario) {
   const sede = await app.prisma.sede.findUnique({ where: { id: sedeId } });
   if (!sede) throw new AppError(`Sede ${sedeId} no encontrada`, 404);
 
-  return repo.crear(app.prisma, {
+  const nuevo = await repo.crear(app.prisma, {
     fecha: fechaValida(body.fecha),
     semana: semanaValida(body.semana),
     proveedorId: body.proveedorId,
@@ -38,6 +38,15 @@ async function registrar(app, body, usuario) {
     valorPagado: numeroPositivo(body.valorPagado, "valor de abono"),
     observacion: body.observacion === undefined ? null : sanitizarTexto(body.observacion),
   });
+
+  await registrarAccion(
+    app,
+    usuario.id,
+    "CREAR_ABONO",
+    `Registró un abono de ${nuevo.valorPagado} a "${proveedor.nombre}" (sede ${sedeId}).`,
+  );
+
+  return nuevo;
 }
 
 async function obtenerLista(app, query, usuario) {
@@ -83,7 +92,14 @@ async function editar(app, id, body, usuario) {
   const data = {};
   if (body.valorPagado !== undefined) data.valorPagado = numeroPositivo(body.valorPagado, "valor de abono");
   if (body.observacion !== undefined) data.observacion = sanitizarTexto(body.observacion);
-  return repo.actualizar(app.prisma, id, data);
+  const actualizado = await repo.actualizar(app.prisma, id, data);
+  await registrarAccion(
+    app,
+    usuario.id,
+    "EDITAR_ABONO",
+    `Editó el abono #${id}.`,
+  );
+  return actualizado;
 }
 
 async function borrar(app, id, usuario) {
@@ -92,7 +108,14 @@ async function borrar(app, id, usuario) {
   }
 
   await obtenerPorId(app, id, usuario);
-  return repo.eliminar(app.prisma, id);
+  const resultado = await repo.eliminar(app.prisma, id);
+  await registrarAccion(
+    app,
+    usuario.id,
+    "ELIMINAR_ABONO",
+    `Eliminó el abono #${id}.`,
+  );
+  return resultado;
 }
 
 async function resumenPorProveedor(app, semana, usuario) {

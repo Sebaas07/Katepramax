@@ -1,5 +1,6 @@
 const repo = require("../repositories/producto.repository");
 const AppError = require("../errors/AppError");
+const { registrarAccion } = require("../utils/logger");
 
 const DECIMAL_FIELDS = [
   "precioCosto",
@@ -103,7 +104,9 @@ async function crear(app, body, usuario) {
     });
   }
 
-  return sanitizeProducto(await repo.buscarPorCodigo(app.prisma, nuevo.codigo));
+  const resultado = sanitizeProducto(await repo.buscarPorCodigo(app.prisma, nuevo.codigo));
+  await registrarAccion(app, usuario.id, "CREAR_PRODUCTO", `Creó el producto "${nuevo.descripcion ?? nuevo.codigo}" (código ${nuevo.codigo}).`);
+  return resultado;
 }
 
 async function obtenerLista(app, query, usuario) {
@@ -174,9 +177,11 @@ async function editar(app, codigo, body, usuario) {
       throw new AppError(`Proveedor ${body.proveedorId} no encontrado`, 404);
   }
 
-  return sanitizeProducto(
+  const actualizado = sanitizeProducto(
     await repo.actualizar(app.prisma, codigo, body),
   );
+  await registrarAccion(app, usuario.id, "EDITAR_PRODUCTO", `Editó el producto "${producto.descripcion ?? codigo}" (código ${codigo}).`);
+  return actualizado;
 }
 
 async function desactivar(app, codigo, usuario) {
@@ -200,9 +205,11 @@ async function desactivar(app, codigo, usuario) {
     }
   }
 
-  return sanitizeProducto(
+  const resultado = sanitizeProducto(
     await repo.actualizar(app.prisma, codigo, { activo: false }),
   );
+  await registrarAccion(app, usuario.id, "DESACTIVAR_PRODUCTO", `Desactivó el producto "${producto.descripcion ?? codigo}" (código ${codigo}).`);
+  return resultado;
 }
 
 module.exports = {

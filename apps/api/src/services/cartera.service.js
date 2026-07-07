@@ -40,14 +40,25 @@ async function registrar(app, body, usuario) {
     variacion,
   };
 
+  let resultado;
   try {
-    return await repo.crear(app.prisma, data);
+    resultado = await repo.crear(app.prisma, data);
   } catch (error) {
     if (error?.code === "P2002") {
-      return repo.actualizarPorSedeFecha(app.prisma, sedeId, fecha, data);
+      resultado = await repo.actualizarPorSedeFecha(app.prisma, sedeId, fecha, data);
+    } else {
+      throw error;
     }
-    throw error;
   }
+
+  await registrarAccion(
+    app,
+    usuario.id,
+    "REGISTRAR_CARTERA",
+    `Registró cartera de ${saldoDia} en sede ${sedeId} (${fecha.toISOString().slice(0, 10)}).`,
+  );
+
+  return resultado;
 }
 
 async function obtenerLista(app, query, usuario) {
@@ -113,12 +124,22 @@ async function editar(app, id, body, usuario) {
   data.saldoAnterior = saldoAnterior;
   data.variacion = saldoDia - saldoAnterior;
 
+  let actualizado;
   try {
-    return await repo.actualizar(app.prisma, id, data);
+    actualizado = await repo.actualizar(app.prisma, id, data);
   } catch (error) {
     if (error?.code === "P2002") throw new AppError("Ya existe un saldo de cartera para esta sede y fecha.", 409);
     throw error;
   }
+
+  await registrarAccion(
+    app,
+    usuario.id,
+    "EDITAR_CARTERA",
+    `Editó el registro de cartera #${id}.`,
+  );
+
+  return actualizado;
 }
 
 async function borrar(app, id, usuario) {
@@ -127,7 +148,14 @@ async function borrar(app, id, usuario) {
   }
 
   await obtenerPorId(app, id, usuario);
-  return repo.eliminar(app.prisma, id);
+  const resultado = await repo.eliminar(app.prisma, id);
+  await registrarAccion(
+    app,
+    usuario.id,
+    "ELIMINAR_CARTERA",
+    `Eliminó el registro de cartera #${id}.`,
+  );
+  return resultado;
 }
 
 module.exports = { registrar, obtenerLista, obtenerPorId, editar, borrar };

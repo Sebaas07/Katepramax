@@ -3,7 +3,6 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import reporteService from "@/services/reporte.service";
 import contabilidadService from "@/services/contabilidad.service";
-import inventarioService from "@/services/inventario.service";
 import {
   formatCOP,
   formatFecha,
@@ -11,20 +10,24 @@ import {
   getRangoSemana,
 } from "@/utils/formatters";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import "./ReportesPage.css";
 
+// ─── Sedes ──────────────────────────────────────────────────────
+const SEDES = [
+  { id: 1, nombre: "Bogota" },
+  { id: 2, nombre: "Cartagena" },
+  { id: 3, nombre: "Villavicencio" },
+];
+
+// ─── Tabs ───────────────────────────────────────────────────────
+// Solo dos reportes reales: cobros por entregador (AsignacionEntrega)
+// y gastos diarios (reutiliza los endpoints de Egresos ya existentes).
 const TABS = [
   { key: "cobros", label: "Cobros por Entregador", icon: "delivery_dining" },
-  { key: "gastos", label: "Gastos Diarios", icon: "point_of_sale" },
+  { key: "gastos", label: "Gastos Diarios",        icon: "point_of_sale"   },
 ];
 
 const HOY = new Date().toISOString().split("T")[0];
@@ -32,9 +35,7 @@ const SEM_ACTUAL = getSemanaISO(new Date());
 
 const EmptyState = ({ icono, titulo, detalle }) => (
   <div className="rep-empty">
-    <span className="material-symbols-outlined" aria-hidden="true">
-      {icono}
-    </span>
+    <span className="material-symbols-outlined" aria-hidden="true">{icono}</span>
     <p>{titulo}</p>
     {detalle && <span>{detalle}</span>}
   </div>
@@ -49,38 +50,14 @@ const ReportesPage = () => {
 
   const [tab, setTab] = useState("cobros");
   const [cargando, setCargando] = useState(false);
-  const [cargandoSedes, setCargandoSedes] = useState(false);
-  const [sedes, setSedes] = useState([]);
 
   const [filtroSedeId, setFiltroSedeId] = useState(
     sedeIdUsuario ? String(sedeIdUsuario) : "",
   );
 
-  useEffect(() => {
-    if (!isSessionChecked || !isAuthenticated) return;
-
-    const cargarSedes = async () => {
-      setCargandoSedes(true);
-      try {
-        const data = await inventarioService.obtenerSedes();
-        setSedes(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setSedes([]);
-      } finally {
-        setCargandoSedes(false);
-      }
-    };
-
-    void cargarSedes();
-  }, [isSessionChecked, isAuthenticated]);
-
   // Filtros de "Cobros por Entregador" (rango de fechas)
-  const [fechaInicio, setFechaInicio] = useState(
-    () => getRangoSemana(SEM_ACTUAL).inicio,
-  );
-  const [fechaFin, setFechaFin] = useState(
-    () => getRangoSemana(SEM_ACTUAL).fin,
-  );
+  const [fechaInicio, setFechaInicio] = useState(() => getRangoSemana(SEM_ACTUAL).inicio);
+  const [fechaFin, setFechaFin] = useState(() => getRangoSemana(SEM_ACTUAL).fin);
 
   // Filtro de "Gastos Diarios" (semana, igual que en Contabilidad)
   const [filtroSemana, setFiltroSemana] = useState(SEM_ACTUAL);
@@ -96,11 +73,7 @@ const ReportesPage = () => {
     setCargando(true);
     try {
       if (tab === "cobros") {
-        const sede = esAdmin
-          ? filtroSedeId
-            ? parseInt(filtroSedeId, 10)
-            : undefined
-          : undefined;
+        const sede = esAdmin ? (filtroSedeId ? parseInt(filtroSedeId, 10) : undefined) : undefined;
         const data = await reporteService.obtenerCobrosEntregador({
           fechaInicio,
           fechaFin,
@@ -118,15 +91,11 @@ const ReportesPage = () => {
           }),
         ]);
         setGastosDia(Array.isArray(totalesDia) ? totalesDia : []);
-        setGastosConcepto(
-          Array.isArray(resumenConcepto) ? resumenConcepto : [],
-        );
+        setGastosConcepto(Array.isArray(resumenConcepto) ? resumenConcepto : []);
         setGastosLista(Array.isArray(lista) ? lista : []);
       }
     } catch (err) {
-      toast.error(
-        "Error al cargar el reporte: " + (err?.message || "desconocido"),
-      );
+      toast.error("Error al cargar el reporte: " + (err?.message || "desconocido"));
     } finally {
       setCargando(false);
     }
@@ -134,9 +103,7 @@ const ReportesPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    const id = window.setTimeout(() => {
-      void cargarDatos();
-    }, 0);
+    const id = window.setTimeout(() => { void cargarDatos(); }, 0);
     return () => window.clearTimeout(id);
   }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
@@ -178,19 +145,17 @@ const ReportesPage = () => {
       {esAdmin && (
         <div className="filter-group">
           <label htmlFor="rep-sede">Sede</label>
-<select
-             id="rep-sede"
-             value={filtroSedeId}
-             onChange={(e) => setFiltroSedeId(e.target.value)}
-             className="filter-select"
-           >
-             <option value="">Todas</option>
-             {sedes.map((s) => (
-               <option key={s.id} value={s.id}>
-                 {s.nombre}
-               </option>
-             ))}
-           </select>
+          <select
+            id="rep-sede"
+            value={filtroSedeId}
+            onChange={(e) => setFiltroSedeId(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Todas</option>
+            {SEDES.map((s) => (
+              <option key={s.id} value={s.id}>{s.nombre}</option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -262,18 +227,13 @@ const ReportesPage = () => {
             </div>
             <div className="rep-kpi-card__body">
               <div className="rep-kpi-card__titulo">Total cobrado</div>
-              <div className="rep-kpi-card__valor">
-                {formatCOP(cobros?.total ?? 0)}
-              </div>
+              <div className="rep-kpi-card__valor">{formatCOP(cobros?.total ?? 0)}</div>
               <div className="rep-kpi-card__sub">
                 {formatFecha(fechaInicio)} — {formatFecha(fechaFin)}
               </div>
             </div>
           </div>
-          <div
-            className="rep-kpi-card"
-            style={{ "--kpi-color": "var(--primary)" }}
-          >
+          <div className="rep-kpi-card" style={{ "--kpi-color": "var(--primary)" }}>
             <div className="rep-kpi-card__icon">
               <span className="material-symbols-outlined">local_shipping</span>
             </div>
@@ -292,20 +252,12 @@ const ReportesPage = () => {
             </h3>
             <div className="rep-chart-wrap" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={cobrosChartData}
-                  margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
-                >
+                <BarChart data={cobrosChartData} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
                   <XAxis dataKey="entregador" />
                   <YAxis />
                   <Tooltip formatter={(value) => formatCOP(value)} />
                   <Legend />
-                  <Bar
-                    dataKey="total"
-                    name="Total cobrado"
-                    fill="var(--secondary)"
-                    radius={[6, 6, 0, 0]}
-                  />
+                  <Bar dataKey="total" name="Total cobrado" fill="var(--secondary)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -315,11 +267,11 @@ const ReportesPage = () => {
         <div className="rep-tabla-wrap">
           <TablaGenerica
             columnas={[
-              { campo: "entregador", label: "Entregador", tipo: "texto" },
-              { campo: "pedidos", label: "Entregas", tipo: "numero" },
-              { campo: "total", label: "Total cobrado", tipo: "moneda" },
-              { campo: "efectivo", label: "Efectivo", tipo: "moneda" },
-              { campo: "cuentas", label: "Transferencia", tipo: "moneda" },
+              { campo: "entregador", label: "Entregador",    tipo: "texto"  },
+              { campo: "pedidos",    label: "Entregas",      tipo: "numero" },
+              { campo: "total",      label: "Total cobrado", tipo: "moneda" },
+              { campo: "efectivo",   label: "Efectivo",      tipo: "moneda" },
+              { campo: "cuentas",    label: "Transferencia", tipo: "moneda" },
             ]}
             datos={detalle}
             mostrarBuscador
@@ -345,33 +297,23 @@ const ReportesPage = () => {
     return (
       <div className="rep-tab-body">
         <div className="rep-kpis">
-          <div
-            className="rep-kpi-card"
-            style={{ "--kpi-color": "var(--error)" }}
-          >
+          <div className="rep-kpi-card" style={{ "--kpi-color": "var(--error)" }}>
             <div className="rep-kpi-card__icon">
               <span className="material-symbols-outlined">trending_down</span>
             </div>
             <div className="rep-kpi-card__body">
               <div className="rep-kpi-card__titulo">Total de gastos</div>
-              <div className="rep-kpi-card__valor">
-                {formatCOP(totalGastosSemana)}
-              </div>
+              <div className="rep-kpi-card__valor">{formatCOP(totalGastosSemana)}</div>
               <div className="rep-kpi-card__sub">Semana {filtroSemana}</div>
             </div>
           </div>
-          <div
-            className="rep-kpi-card"
-            style={{ "--kpi-color": "var(--aged-gold)" }}
-          >
+          <div className="rep-kpi-card" style={{ "--kpi-color": "var(--aged-gold)" }}>
             <div className="rep-kpi-card__icon">
               <span className="material-symbols-outlined">receipt_long</span>
             </div>
             <div className="rep-kpi-card__body">
               <div className="rep-kpi-card__titulo">Registros</div>
-              <div className="rep-kpi-card__valor">
-                {gastosListaMapeada.length}
-              </div>
+              <div className="rep-kpi-card__valor">{gastosListaMapeada.length}</div>
             </div>
           </div>
         </div>
@@ -384,19 +326,12 @@ const ReportesPage = () => {
             </h3>
             <div className="rep-chart-wrap" style={{ height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={gastosDiaChartData}
-                  margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
-                >
+                <BarChart data={gastosDiaChartData} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
                   <XAxis dataKey="fecha" />
                   <YAxis />
                   <Tooltip formatter={(value) => formatCOP(value)} />
                   <Legend />
-                  <Bar
-                    dataKey="Gastos"
-                    fill="var(--error)"
-                    radius={[6, 6, 0, 0]}
-                  />
+                  <Bar dataKey="Gastos" fill="var(--error)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -412,8 +347,8 @@ const ReportesPage = () => {
             <div className="rep-tabla-wrap">
               <TablaGenerica
                 columnas={[
-                  { campo: "concepto", label: "Concepto", tipo: "texto" },
-                  { campo: "total", label: "Total", tipo: "moneda" },
+                  { campo: "concepto", label: "Concepto", tipo: "texto"  },
+                  { campo: "total",    label: "Total",     tipo: "moneda" },
                 ]}
                 datos={gastosConcepto.map((c) => ({
                   concepto: c.concepto,
@@ -427,11 +362,11 @@ const ReportesPage = () => {
         <div className="rep-tabla-wrap">
           <TablaGenerica
             columnas={[
-              { campo: "fecha", label: "Fecha", tipo: "fecha" },
-              { campo: "concepto", label: "Concepto", tipo: "texto" },
-              { campo: "sede", label: "Sede", tipo: "texto" },
-              { campo: "total", label: "Total", tipo: "moneda" },
-              { campo: "observacion", label: "Obs.", tipo: "texto" },
+              { campo: "fecha",       label: "Fecha",    tipo: "fecha"  },
+              { campo: "concepto",    label: "Concepto", tipo: "texto"  },
+              { campo: "sede",        label: "Sede",     tipo: "texto"  },
+              { campo: "total",       label: "Total",    tipo: "moneda" },
+              { campo: "observacion", label: "Obs.",     tipo: "texto"  },
             ]}
             datos={gastosListaMapeada}
             mostrarBuscador

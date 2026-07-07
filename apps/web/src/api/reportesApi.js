@@ -16,7 +16,9 @@ const buildParams = (filtros = {}) => {
 
 const normalizarPanelGeneral = (filtros = {}) => {
   const fecha = filtros.fecha ?? filtros.fechaInicio ?? filtros.fechaFin;
-  return fecha ? { fecha } : {};
+  const resultado = fecha ? { fecha } : {};
+  if (filtros.sedeId) resultado.sedeId = filtros.sedeId;
+  return resultado;
 };
 
 const reportesApi = {

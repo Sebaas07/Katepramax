@@ -76,6 +76,13 @@ const MENU = [
     icon:  "group",
     roles: ["Admin"],
     seccion: "admin",
+  },
+  {
+    path:  "/admin/logs",
+    label: "Historial de Acciones",
+    icon:  "history",
+    roles: ["Admin"],
+    seccion: "admin",
   }
 ];
 

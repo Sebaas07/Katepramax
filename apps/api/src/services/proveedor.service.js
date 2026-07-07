@@ -48,7 +48,9 @@ const proveedorService = (app) => {
       // Nombre único
       const existe = await repo.findByNombre(nombre);
       if (existe) throw new AppError(`Ya existe un proveedor con el nombre "${nombre}"`, 409);
-      return repo.create({ nombre });
+      const nuevo = await repo.create({ nombre });
+      await registrarAccion(app, usuario.id, "CREAR_PROVEEDOR", `Creó el proveedor "${nombre}".`);
+      return nuevo;
     },
 
     actualizar: async (id, data, usuario) => {
@@ -68,7 +70,9 @@ const proveedorService = (app) => {
       if (data.nombre !== undefined) campos.nombre = data.nombre;
       if (data.activo !== undefined) campos.activo = data.activo;
 
-      return repo.update(id, campos);
+      const actualizado = await repo.update(id, campos);
+      await registrarAccion(app, usuario.id, "EDITAR_PROVEEDOR", `Editó el proveedor "${proveedor.nombre}" (#${id}).`);
+      return actualizado;
     },
 
     desactivar: async (id, usuario) => {
@@ -78,6 +82,7 @@ const proveedorService = (app) => {
       const proveedor = await repo.findById(id);
       if (!proveedor) throw new AppError(`Proveedor ${id} no encontrado`, 404);
       await repo.update(id, { activo: false });
+      await registrarAccion(app, usuario.id, "DESACTIVAR_PROVEEDOR", `Desactivó el proveedor "${proveedor.nombre}" (#${id}).`);
       return { mensaje: "Proveedor desactivado correctamente" };
     },
   };

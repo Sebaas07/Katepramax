@@ -34,6 +34,9 @@ const ReportesPage = lazy(
 const UsuariosPage = lazy(
   () => import("@/pages/admin/UsuariosPage/UsuariosPage"),
 );
+const LogsPage = lazy(
+  () => import("@/pages/admin/LogsPage/LogsPage"),
+);
 const EntregasPage = lazy(
   () => import("@/pages/entregas/EntregasPage/EntregasPage"),
 );
@@ -110,6 +113,14 @@ const AppRouter = () => (
             element={
               <Suspense fallback={<AuthLoading />}>
                 <UsuariosPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/admin/logs"
+            element={
+              <Suspense fallback={<AuthLoading />}>
+                <LogsPage />
               </Suspense>
             }
           />

@@ -85,6 +85,7 @@ async function buildApp() {
   app.register(require("./routes/cartera.routes"), routePrefix);
   app.register(require("./routes/abono.routes"), routePrefix);
   app.register(require("./routes/reporte.routes"), routePrefix);
+  app.register(require("./routes/log.routes"), routePrefix);
 
   return app;
 }

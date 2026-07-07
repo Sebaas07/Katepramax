@@ -32,7 +32,7 @@ async function registrar(app, body, usuario) {
   const sede = await app.prisma.sede.findUnique({ where: { id: sedeId } });
   if (!sede) throw new AppError(`Sede ${sedeId} no encontrada`, 404);
 
-  return repo.crear(app.prisma, {
+  const nuevo = await repo.crear(app.prisma, {
     fecha,
     semana,
     sedeId,
@@ -41,6 +41,15 @@ async function registrar(app, body, usuario) {
     total: efectivo + cuentas,
     observacion: sanitizarTexto(body.observacion) || null,
   });
+
+  await registrarAccion(
+    app,
+    usuario.id,
+    "CREAR_INGRESO",
+    `Registró un ingreso de ${nuevo.total} (efectivo ${efectivo}, cuentas ${cuentas}) en sede ${sedeId}.`,
+  );
+
+  return nuevo;
 }
 
 async function obtenerLista(app, query, usuario) {
@@ -94,7 +103,14 @@ async function editar(app, id, body, usuario) {
     if (data.efectivo <= 0 && data.cuentas <= 0) throw new AppError("Ingresa al menos un valor en efectivo o cuentas.", 422);
   }
 
-  return repo.actualizar(app.prisma, id, data);
+  const actualizado = await repo.actualizar(app.prisma, id, data);
+  await registrarAccion(
+    app,
+    usuario.id,
+    "EDITAR_INGRESO",
+    `Editó el ingreso #${id}.`,
+  );
+  return actualizado;
 }
 
 async function borrar(app, id, usuario) {
@@ -103,7 +119,14 @@ async function borrar(app, id, usuario) {
   }
 
   await obtenerPorId(app, id, usuario);
-  return repo.eliminar(app.prisma, id);
+  const resultado = await repo.eliminar(app.prisma, id);
+  await registrarAccion(
+    app,
+    usuario.id,
+    "ELIMINAR_INGRESO",
+    `Eliminó el ingreso #${id}.`,
+  );
+  return resultado;
 }
 
 async function resumenPorSede(app, semana, usuario) {

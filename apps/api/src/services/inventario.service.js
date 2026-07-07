@@ -1,5 +1,6 @@
 const repo = require("../repositories/inventario.repository");
 const AppError = require("../errors/AppError");
+const { registrarAccion } = require("../utils/logger");
 
 function sedeEsPermitida(usuario) {
   return (
@@ -86,6 +87,13 @@ async function registrar(app, body, usuario) {
       stockActual: Math.max(0, delta),
     },
   });
+
+  await registrarAccion(
+    app,
+    usuario.id,
+    "REGISTRAR_INVENTARIO",
+    `Registró un movimiento de tipo "${tipo}" (${delta}) para el producto "${body.productoId}" en sede ${sedeId}.`,
+  );
 
   return registro;
 }
@@ -176,6 +184,13 @@ async function editar(app, id, body, usuario) {
     });
   }
 
+  await registrarAccion(
+    app,
+    usuario.id,
+    "EDITAR_INVENTARIO",
+    `Editó el movimiento de inventario #${id}.`,
+  );
+
   return actualizado;
 }
 
@@ -229,6 +244,13 @@ async function borrar(app, id, usuario) {
       data: { stockActual: { decrement: registro.cantidadIngresada } },
     });
   });
+
+  await registrarAccion(
+    app,
+    usuario.id,
+    "ELIMINAR_INVENTARIO",
+    `Eliminó el movimiento de inventario #${id} (producto "${registro.productoId}", sede ${registro.sedeId}).`,
+  );
 }
 async function resumenSemanal(app, semana, usuario) {
   if (!sedeEsPermitida(usuario)) {
