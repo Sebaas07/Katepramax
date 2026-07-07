@@ -1,6 +1,7 @@
 const repo     = require("../repositories/cartera.repository");
 const AppError = require("../errors/AppError");
 const { calcularVariacion, fechaValida, numeroPositivo, semanaValida } = require("../utils/contabilidad");
+const { registrarAccion } = require("../utils/logger");
 
 function sedeEsPermitida(usuario) {
   return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";

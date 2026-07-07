@@ -16,6 +16,7 @@
 const asignacionRepo = require("../repositories/asignacion.repository");
 const repoPedido      = require("../repositories/pedido.repository");
 const AppError        = require("../errors/AppError");
+const { registrarAccion } = require("../utils/logger");
 
 function sedeEsPermitida(usuario) {
   if (!usuario) return false;

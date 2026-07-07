@@ -48,6 +48,7 @@ model Sede {
   abonos      Abono[]
   carteras    Cartera[]
   pedidos     Pedido[]
+  clientes    Cliente[]
 
   @@map("sedes")
 }
@@ -274,10 +275,18 @@ model Cliente {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
+  // Sede a la que pertenece el cliente. Opcional para no romper los
+  // clientes ya existentes (creados antes de este campo); un cliente
+  // sin sede asignada simplemente no aparece en los reportes filtrados
+  // por sede, pero sí en la vista "Todas".
+  sedeId Int?  @map("sede_id")
+  sede   Sede? @relation(fields: [sedeId], references: [id])
+
   pedidos Pedido[]
 
   @@index([nombre])
   @@index([telefono])
+  @@index([sedeId])
   @@map("clientes")
 }
 

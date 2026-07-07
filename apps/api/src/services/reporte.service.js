@@ -175,9 +175,9 @@ async function panelGeneral(app, { fecha, sedeId } = {}, usuario) {
     return { sede: s.nombre, sedeId: s.id, total: toNum(f?._sum.total) };
   });
 
-  // Cliente no tiene sedeId (los clientes no están atados a una sede),
-  // así que la cartera siempre es un total global, sin importar el filtro.
-  const cartera = await prisma.cliente.aggregate({ _sum: { saldoDeuda: true } });
+  // Los clientes sin sede asignada (creados antes de este campo) solo
+  // aparecen en la vista "Todas" (sin filtro), no en una sede específica.
+  const cartera = await prisma.cliente.aggregate({ where: whereSede, _sum: { saldoDeuda: true } });
 
   const stockWhere = whereSede;
   const stock = await prisma.stockSede.aggregate({ where: stockWhere, _sum: { stockActual: true } });

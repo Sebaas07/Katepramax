@@ -4,6 +4,7 @@
 
 const clienteRepository = require("../repositories/cliente.repository");
 const AppError = require("../errors/AppError");
+const { registrarAccion } = require("../utils/logger");
 
 function sedeEsPermitida(usuario) {
   return (
@@ -13,11 +14,11 @@ function sedeEsPermitida(usuario) {
   );
 }
 
-const clienteService = (prisma) => {
-  const repo = clienteRepository(prisma);
+const clienteService = (app) => {
+  const repo = clienteRepository(app.prisma);
 
   return {
-    listar: ({ nombre, activo, skip, take }, usuario) => {
+    listar: ({ nombre, activo, sedeId, skip, take }, usuario) => {
       if (!sedeEsPermitida(usuario)) {
         throw new AppError("No tienes permiso para listar clientes.", 403);
       }
@@ -35,6 +36,8 @@ const clienteService = (prisma) => {
 
       if (usuario.rol !== "Admin" && usuario.sedeId != null) {
         filtros.sedeId = usuario.sedeId;
+      } else if (usuario.rol === "Admin" && sedeId) {
+        filtros.sedeId = Number(sedeId);
       }
 
       return repo.findAll(filtros);
@@ -60,10 +63,13 @@ const clienteService = (prisma) => {
     },
 
     crear: async (data, usuario) => {
-      const { nombre, telefono, limiteCredito, saldoDeuda } = data;
+      const { nombre, telefono, limiteCredito, saldoDeuda, sedeId } = data;
       const campos = { nombre, telefono };
       if (limiteCredito !== undefined) campos.limiteCredito = limiteCredito;
       if (saldoDeuda !== undefined) campos.saldoDeuda = saldoDeuda;
+      // Si no es Admin, el cliente queda asociado a la sede del usuario que lo crea.
+      if (sedeId !== undefined) campos.sedeId = sedeId;
+      else if (usuario && usuario.rol !== "Admin") campos.sedeId = usuario.sedeId;
       const nuevo = await repo.create(campos);
       if (usuario) {
         await registrarAccion(app, usuario.id, "CREAR_CLIENTE", `Creó el cliente "${nombre}".`);
@@ -94,6 +100,7 @@ const clienteService = (prisma) => {
         "activo",
         "limiteCredito",
         "saldoDeuda",
+        "sedeId",
       ];
       for (const c of permitidos) {
         if (data[c] !== undefined) campos[c] = data[c];

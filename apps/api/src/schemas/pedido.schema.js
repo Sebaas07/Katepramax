@@ -120,6 +120,7 @@ const listarPedidos = {
         enum: ["Pendiente", "Asignado", "Entregado", "Cancelado"],
       },
       creadoPorId: { type: "integer" },
+      sedeId: { type: "integer" },
       skip: { type: "integer", minimum: 0, default: 0 },
       take: { type: "integer", minimum: 1, maximum: 100, default: 50 },
     },

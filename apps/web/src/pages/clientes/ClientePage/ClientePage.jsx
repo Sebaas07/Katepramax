@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import clientesService from "@/services/clientes.service";
+import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import "./ClientePage.css";
@@ -19,6 +20,7 @@ const Spinner = () => (
 const FORM_INICIAL = {
   nombre: "",
   telefono: "",
+  sedeId: "",
   limiteCredito: "10000000",
   saldoDeuda: "0",
   activo: true,
@@ -43,6 +45,9 @@ const ClientePage = () => {
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
   const [formCliente, setFormCliente] = useState(FORM_INICIAL);
 
+  const [sedes, setSedes] = useState([]);
+  const [cargandoSedes, setCargandoSedes] = useState(false);
+
   // ── Carga de datos ────────────────────────────────────────
   const cargarClientes = useCallback(async () => {
     setCargando(true);
@@ -61,6 +66,23 @@ const ClientePage = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarClientes();
   }, [cargarClientes, isSessionChecked, isAuthenticated]);
+
+  // ── Carga de sedes desde la DB ──────────────────────────
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    const cargarSedes = async () => {
+      setCargandoSedes(true);
+      try {
+        const data = await inventarioService.obtenerSedes();
+        setSedes(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setSedes([]);
+      } finally {
+        setCargandoSedes(false);
+      }
+    };
+    void cargarSedes();
+  }, [isSessionChecked, isAuthenticated]);
 
   // ── Handlers ──────────────────────────────────────────────
   const handleCambioFiltro = (e) => {
@@ -87,6 +109,7 @@ const ClientePage = () => {
     setFormCliente({
       nombre: cliente.nombre ?? "",
       telefono: cliente.telefono ?? "",
+      sedeId: cliente.sedeId != null ? String(cliente.sedeId) : "",
       limiteCredito: String(cliente.limiteCredito ?? "10000000"),
       saldoDeuda: String(cliente.saldoDeuda ?? "0"),
       activo: cliente.activo ?? true,
@@ -113,6 +136,9 @@ const ClientePage = () => {
       saldoDeuda: parseFloat(formCliente.saldoDeuda) || 0,
       activo: formCliente.activo,
     };
+    if (esAdmin && formCliente.sedeId !== "") {
+      payload.sedeId = parseInt(formCliente.sedeId, 10);
+    }
 
     setGuardando(true);
     try {
@@ -166,6 +192,7 @@ const ClientePage = () => {
   const columnas = [
     { campo: "nombre", label: "Nombre", tipo: "texto" },
     { campo: "telefono", label: "Teléfono", tipo: "texto" },
+    { campo: "sedeNombre", label: "Sede", tipo: "texto" },
     { campo: "saldoDeuda", label: "Saldo deuda", tipo: "moneda" },
     { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda" },
     { campo: "activo", label: "Estado", tipo: "booleano" },
@@ -257,7 +284,10 @@ const ClientePage = () => {
         ) : (
           <TablaGenerica
             columnas={columnas}
-            datos={clientes}
+            datos={clientes.map((c) => ({
+              ...c,
+              sedeNombre: c.sede?.nombre ?? "Sin asignar",
+            }))}
             filasPorPagina={10}
             mostrarBuscador
             buscarEnCampos={["nombre", "telefono"]}
@@ -304,6 +334,28 @@ const ClientePage = () => {
               placeholder="3XX XXX XXXX"
             />
           </div>
+
+          {/* Sede (solo Admin; Bodega/AdminBogota se asigna automático) */}
+          {esAdmin && (
+            <div className="form-group">
+              <label htmlFor="cli-sede">Sede *</label>
+              <select
+                id="cli-sede"
+                name="sedeId"
+                value={formCliente.sedeId}
+                onChange={handleCambioForm}
+                className="form-control"
+                disabled={cargandoSedes}
+              >
+                <option value="">— Selecciona —</option>
+                {sedes.map((sede) => (
+                  <option key={sede.id} value={sede.id}>
+                    {sede.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Límite de crédito */}
           <div className="form-group">

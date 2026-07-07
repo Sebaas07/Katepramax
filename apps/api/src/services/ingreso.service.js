@@ -1,6 +1,7 @@
 const repo     = require("../repositories/ingreso.repository");
 const AppError = require("../errors/AppError");
 const { fechaValida, numero, sanitizarTexto, semanaValida } = require("../utils/contabilidad");
+const { registrarAccion } = require("../utils/logger");
 
 function sedeEsPermitida(usuario) {
   return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";

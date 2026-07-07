@@ -50,6 +50,7 @@ const clientesService = {
       const payload = {
         nombre: clienteData.nombre,
         telefono: clienteData.telefono || undefined,
+        sedeId: clienteData.sedeId !== undefined ? clienteData.sedeId : undefined,
         limiteCredito:
           clienteData.limiteCredito !== undefined
             ? clienteData.limiteCredito

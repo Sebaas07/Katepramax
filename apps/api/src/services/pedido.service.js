@@ -180,6 +180,8 @@ async function obtenerLista(app, query, usuario) {
 
   if (usuario.rol !== "Admin") {
     filtros.sedeId = usuario.sedeId;
+  } else if (query.sedeId) {
+    filtros.sedeId = Number(query.sedeId);
   }
 
   return repo.listar(app.prisma, filtros);

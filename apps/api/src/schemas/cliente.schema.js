@@ -9,9 +9,18 @@ const clienteBase = {
     limiteCredito: { type: "number" },
     saldoDeuda: { type: "number" },
     telefono: { type: ["string", "null"] },
+    sedeId: { type: ["integer", "null"] },
     activo: { type: "boolean" },
     creadoEn: { type: "string", format: "date-time" },
     actualizadoEn: { type: "string", format: "date-time" },
+    sede: {
+      type: ["object", "null"],
+      nullable: true,
+      properties: {
+        id: { type: "integer" },
+        nombre: { type: "string" },
+      },
+    },
   },
 };
 
@@ -28,6 +37,7 @@ const crearCliente = {
       telefono: { type: "string", maxLength: 20 },
       limiteCredito: { type: "number", minimum: 0 },
       saldoDeuda: { type: "number", minimum: 0 },
+      sedeId: { type: "integer" },
     },
     additionalProperties: false,
   },
@@ -47,6 +57,7 @@ const listarClientes = {
     properties: {
       nombre: { type: "string" },
       activo: { type: "string", enum: ["true", "false"] },
+      sedeId: { type: "integer" },
       skip: { type: "integer", minimum: 0, default: 0 },
       take: { type: "integer", minimum: 1, maximum: 200, default: 50 },
     },
@@ -91,7 +102,8 @@ const editarCliente = {
       telefono: { type: "string", maxLength: 20 },
       activo: { type: "boolean" },
       limiteCredito: { type: "number", minimum: 0 },
-      saldoDeuda: { type: "number", minimum: 0 }, 
+      saldoDeuda: { type: "number", minimum: 0 },
+      sedeId: { type: ["integer", "null"] },
     },
     additionalProperties: false,
   },
