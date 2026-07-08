@@ -15,91 +15,94 @@ import {
 } from "@/utils/contabilidadForm";
 
 // ── Tabs
-import IngresosTab      from "../IngresosTab";
-import EgresosTab       from "../EgresosTab";
-import CarteraTab       from "../CarteraTab";
-import ProveedoresTab   from "../ProveedoresTab";
-import PanelGeneralTab  from "../PanelGeneralTab";
+import IngresosTab from "../IngresosTab";
+import EgresosTab from "../EgresosTab";
+//import CarteraTab from "../CarteraTab";
+import ProveedoresTab from "../ProveedoresTab";
+import PanelGeneralTab from "../PanelGeneralTab";
 import ArqueoSemanalTab from "../ArqueoSemanalTab";
 import HistorialSemanalTab from "../HistorialSemanalTab";
 
 // ── Shared UI
 import { Spinner, EmptyState } from "../ContabilidadUI";
-import ContabilidadModal       from "../ContabilidadModal";
-import Modal                   from "@/components/common/Modal/Modal";
+import ContabilidadModal from "../ContabilidadModal";
+import Modal from "@/components/common/Modal/Modal";
 
 import "./ContabilidadPage.css";
 
 // ─────────────────────────────────────────────────────────────
-const HOY         = new Date().toISOString().split("T")[0];
-const SEM_ACTUAL  = getSemanaISO(new Date());
+const HOY = new Date().toISOString().split("T")[0];
+const SEM_ACTUAL = getSemanaISO(new Date());
 
 const SEDES = [
-  { id: 1, nombre: "Bogota"        },
-  { id: 2, nombre: "Cartagena"     },
+  { id: 1, nombre: "Bogota" },
+  { id: 2, nombre: "Cartagena" },
   { id: 3, nombre: "Villavicencio" },
 ];
 
 const TABS = [
-  { key: "ingresos",    label: "Ingresos Diarios", icon: "trending_up"    },
-  { key: "egresos",     label: "Egresos Diarios",  icon: "trending_down"  },
-  { key: "cartera",     label: "Cartera",           icon: "account_balance"},
-  { key: "proveedores", label: "Abonos a Proveedores", icon: "payments"  },
-  { key: "panel",       label: "Panel General",     icon: "dashboard"      },
-  { key: "arqueo",      label: "Arqueo Semanal",    icon: "summarize"      },
-  { key: "historial",   label: "Historial Semanal", icon: "timeline"       },
+  { key: "ingresos", label: "Ingresos Diarios", icon: "trending_up" },
+  { key: "egresos", label: "Egresos Diarios", icon: "trending_down" },
+  //{ key: "cartera", label: "Cartera", icon: "account_balance" },
+  { key: "proveedores", label: "Abonos a Proveedores", icon: "payments" },
+  { key: "panel", label: "Panel General", icon: "dashboard" },
+  { key: "arqueo", label: "Arqueo Semanal", icon: "summarize" },
+  { key: "historial", label: "Historial Semanal", icon: "timeline" },
 ];
 
 const FORM_VACIO = {
-  fecha:        HOY,
-  sedeId:       "",
-  efectivo:     "",
-  cuentas:      "",
-  observacion:  "",
-  concepto:     "",
-  total:        "",
-  observaciones:"",
-  saldoDia:     "",
-  proveedorId:  "",
-  valorAbono:   "",
-  tipoAbono:    "abono_proveedor",
+  fecha: HOY,
+  sedeId: "",
+  efectivo: "",
+  cuentas: "",
+  observacion: "",
+  concepto: "",
+  total: "",
+  observaciones: "",
+  saldoDia: "",
+  proveedorId: "",
+  valorAbono: "",
+  tipoAbono: "abono_proveedor",
 };
 
 // ─────────────────────────────────────────────────────────────
 const ContabilidadPage = () => {
-  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
-  const sedeIdUsuario  = usuario?.sedeId ?? null;
+  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } =
+    useAuth();
+  const sedeIdUsuario = usuario?.sedeId ?? null;
   const puedeRegistrar = esAdmin || esBodega;
 
   // ── Estado de datos ───────────────────────────────────────
-  const [tab,         setTab]         = useState("ingresos");
-  const [cargando,    setCargando]    = useState(false);
-  const [ingresos,    setIngresos]    = useState([]);
-  const [egresos,     setEgresos]     = useState([]);
-  const [cartera,     setCartera]     = useState([]);
+  const [tab, setTab] = useState("ingresos");
+  const [cargando, setCargando] = useState(false);
+  const [ingresos, setIngresos] = useState([]);
+  const [egresos, setEgresos] = useState([]);
+  //const [cartera, setCartera] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [catalogoProveedores, setCatalogoProveedores] = useState([]);
-  const [resumenProv,       setResumenProv]       = useState([]);
+  const [resumenProv, setResumenProv] = useState([]);
   const [resumenIngSemanal, setResumenIngSemanal] = useState(null);
-  const [totalesDiaIng,     setTotalesDiaIng]     = useState([]);
+  const [totalesDiaIng, setTotalesDiaIng] = useState([]);
   const [resumenEgrSemanal, setResumenEgrSemanal] = useState(null);
-  const [resumenEgrConcepto,setResumenEgrConcepto]= useState([]);
-  const [totalesDiaEgr,     setTotalesDiaEgr]     = useState([]);
+  const [resumenEgrConcepto, setResumenEgrConcepto] = useState([]);
+  const [totalesDiaEgr, setTotalesDiaEgr] = useState([]);
   const [resumenSedeAbonos, setResumenSedeAbonos] = useState([]);
-  const [arqueo,            setArqueo]            = useState(null);
+  const [arqueo, setArqueo] = useState(null);
   const [arqueoError, setArqueoError] = useState("");
-  const [panelGeneral,setPanelGeneral]= useState(null);
+  const [panelGeneral, setPanelGeneral] = useState(null);
   const [historialSemanal, setHistorialSemanal] = useState([]);
 
   // ── Filtros ───────────────────────────────────────────────
-  const [filtroSemana,  setFiltroSemana]   = useState(String(SEM_ACTUAL));
-  const [filtroSedeId,  setFiltroSedeId]   = useState(sedeIdUsuario ? String(sedeIdUsuario) : "");
-  const [filtroPanelF,  setFiltroPanelFecha] = useState(HOY);
+  const [filtroSemana, setFiltroSemana] = useState(String(SEM_ACTUAL));
+  const [filtroSedeId, setFiltroSedeId] = useState(
+    sedeIdUsuario ? String(sedeIdUsuario) : "",
+  );
+  const [filtroPanelF, setFiltroPanelFecha] = useState(HOY);
 
   // ── Estado del modal ──────────────────────────────────────
-  const [modalOpen,    setModalOpen]    = useState(false);
-  const [modalTipo,    setModalTipo]    = useState("");
-  const [itemEditar,   setItemEditar]   = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTipo, setModalTipo] = useState("");
+  const [itemEditar, setItemEditar] = useState(null);
   const [itemEliminar, setItemEliminar] = useState(null);
   const [eliminarTipo, setEliminarTipo] = useState("");
 
@@ -115,7 +118,10 @@ const ContabilidadPage = () => {
       return;
     }
     if (esCampoTexto(name)) {
-      setForm((prev) => ({ ...prev, [name]: sanitizarTexto(value, name === "concepto" ? 200 : 500) }));
+      setForm((prev) => ({
+        ...prev,
+        [name]: sanitizarTexto(value, name === "concepto" ? 200 : 500),
+      }));
       return;
     }
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -131,8 +137,11 @@ const ContabilidadPage = () => {
     setArqueoError("");
     try {
       const semanaNum = parseInt(filtroSemana, 10) || SEM_ACTUAL;
-      const fBase = { semana: filtroSemana || undefined, sedeId: filtroSedeId || undefined };
-      const fSem  = { semana: filtroSemana || undefined };
+      const fBase = {
+        semana: filtroSemana || undefined,
+        sedeId: filtroSedeId || undefined,
+      };
+      const fSem = { semana: filtroSemana || undefined };
 
       if (tab === "ingresos") {
         const [lista, resSemanal, totDia] = await Promise.all([
@@ -155,7 +164,7 @@ const ContabilidadPage = () => {
         setResumenEgrConcepto(resConcepto);
         setTotalesDiaEgr(totDia);
       } else if (tab === "cartera") {
-        setCartera(await contabilidadService.obtenerCartera(fBase));
+        //setCartera(await contabilidadService.obtenerCartera(fBase));
       } else if (tab === "proveedores") {
         const [lista, resumen, resSede] = await Promise.all([
           contabilidadService.listarAbonos(fBase),
@@ -172,10 +181,16 @@ const ContabilidadPage = () => {
           contabilidadService.obtenerInventarioSemanal(semanaNum),
         ]);
         if (reporte) {
-          setArqueo({ ...reporte, carteraSemana: carteraSem, inventarioSemana: invSem });
+          setArqueo({
+            ...reporte,
+            carteraSemana: carteraSem,
+            inventarioSemana: invSem,
+          });
         } else {
           setArqueo(null);
-          setArqueoError("No se pudo cargar el arqueo. Verifica que existan registros para esta semana.");
+          setArqueoError(
+            "No se pudo cargar el arqueo. Verifica que existan registros para esta semana.",
+          );
         }
       } else if (tab === "panel") {
         const [panel, totIngDia, totEgrDia] = await Promise.all([
@@ -208,85 +223,119 @@ const ContabilidadPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    const id = window.setTimeout(() => { void cargarDatos(); }, 0);
+    const id = window.setTimeout(() => {
+      void cargarDatos();
+    }, 0);
     return () => window.clearTimeout(id);
   }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
   // ── Datos mapeados (nombre de sede/proveedor inyectado) ───
-  const mapSede = useCallback((items) =>
-    items.map((i) => ({
-      ...i,
-      sede: i.sede?.nombre ?? SEDES.find((s) => s.id === i.sedeId)?.nombre ?? `Sede ${i.sedeId}`,
-      observaciones: i.observacion ?? i.observaciones ?? "",
-    })), []);
+  const mapSede = useCallback(
+    (items) =>
+      items.map((i) => ({
+        ...i,
+        sede:
+          i.sede?.nombre ??
+          SEDES.find((s) => s.id === i.sedeId)?.nombre ??
+          `Sede ${i.sedeId}`,
+        observaciones: i.observacion ?? i.observaciones ?? "",
+      })),
+    [],
+  );
 
-  const mapProveedor = useCallback((items) =>
-    items.map((i) => ({
-      ...i,
-      sede:      i.sede?.nombre ?? SEDES.find((s) => s.id === i.sedeId)?.nombre ?? `Sede ${i.sedeId}`,
-      proveedor: i.proveedor?.nombre ?? i.proveedorNombre ?? `Proveedor ${i.proveedorId ?? ""}`.trim(),
-      observacion: i.observacion ?? "",
-    })), []);
+  const mapProveedor = useCallback(
+    (items) =>
+      items.map((i) => ({
+        ...i,
+        sede:
+          i.sede?.nombre ??
+          SEDES.find((s) => s.id === i.sedeId)?.nombre ??
+          `Sede ${i.sedeId}`,
+        proveedor:
+          i.proveedor?.nombre ??
+          i.proveedorNombre ??
+          `Proveedor ${i.proveedorId ?? ""}`.trim(),
+        observacion: i.observacion ?? "",
+      })),
+    [],
+  );
 
-  const ingresosMapeados  = useMemo(() => mapSede(ingresos),        [ingresos,    mapSede]);
-  const egresosMapeados   = useMemo(() => mapSede(egresos),         [egresos,     mapSede]);
-  const carteraMapeada    = useMemo(() => mapSede(cartera),         [cartera,     mapSede]);
-  const proveedoresMap    = useMemo(() => mapProveedor(proveedores),[proveedores, mapProveedor]);
+  const ingresosMapeados = useMemo(
+    () => mapSede(ingresos),
+    [ingresos, mapSede],
+  );
+  const egresosMapeados = useMemo(() => mapSede(egresos), [egresos, mapSede]);
+  //const carteraMapeada = useMemo(() => mapSede(cartera), [cartera, mapSede]);
+  const proveedoresMap = useMemo(
+    () => mapProveedor(proveedores),
+    [proveedores, mapProveedor],
+  );
 
   // ── Cálculo total del form ingreso ────────────────────────
   const totalIngresoForm = useMemo(
     () => (parseFloat(form.efectivo) || 0) + (parseFloat(form.cuentas) || 0),
-    [form.efectivo, form.cuentas]
+    [form.efectivo, form.cuentas],
   );
 
-  const semanaNumero = useMemo(() => parseInt(filtroSemana, 10) || SEM_ACTUAL, [filtroSemana]);
+  const semanaNumero = useMemo(
+    () => parseInt(filtroSemana, 10) || SEM_ACTUAL,
+    [filtroSemana],
+  );
   const erroresForm = useMemo(
     () => validarFormularioContabilidad({ modalTipo, form }),
-    [modalTipo, form]
+    [modalTipo, form],
   );
 
   // ── Handlers de modales ───────────────────────────────────
-  const resetForm = useCallback(() => ({
-    ...FORM_VACIO,
-    sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "",
-  }), [sedeIdUsuario]);
+  const resetForm = useCallback(
+    () => ({
+      ...FORM_VACIO,
+      sedeId: sedeIdUsuario ? String(sedeIdUsuario) : "",
+    }),
+    [sedeIdUsuario],
+  );
 
   // abrirEditarProv declarado primero — es referenciado en accsProveedores de ProveedoresTab
-  const abrirEditarProv = useCallback((item) => {
-    setItemEditar(item);
-    setModalTipo("abono");
-    setForm((prev) => ({
-      ...prev,
-      fecha:       HOY,
-      sedeId:      String(item.sedeId ?? sedeIdUsuario ?? ""),
-      proveedorId: String(item.proveedorId ?? ""),
-      valorAbono:  String(item.valorPagado ?? ""),
-      observacion: item.observacion ?? "",
-      tipoAbono:   "abono_proveedor",
-    }));
-    setModalOpen(true);
-  }, [sedeIdUsuario]);
+  const abrirEditarProv = useCallback(
+    (item) => {
+      setItemEditar(item);
+      setModalTipo("abono");
+      setForm((prev) => ({
+        ...prev,
+        fecha: HOY,
+        sedeId: String(item.sedeId ?? sedeIdUsuario ?? ""),
+        proveedorId: String(item.proveedorId ?? ""),
+        valorAbono: String(item.valorPagado ?? ""),
+        observacion: item.observacion ?? "",
+        tipoAbono: "abono_proveedor",
+      }));
+      setModalOpen(true);
+    },
+    [sedeIdUsuario],
+  );
 
-  const abrirAbono = useCallback((item) => {
-    setItemEditar(null);
-    setModalTipo("abono");
-    setForm((prev) => ({
-      ...prev,
-      fecha:       HOY,
-      sedeId:      String(item.sedeId ?? sedeIdUsuario ?? ""),
-      proveedorId: String(item.proveedorId ?? ""),
-      valorAbono:  "",
-      observacion: "",
-      tipoAbono:   "abono_proveedor",
-    }));
-    setModalOpen(true);
-  }, [sedeIdUsuario]);
+  const abrirAbono = useCallback(
+    (item) => {
+      setItemEditar(null);
+      setModalTipo("abono");
+      setForm((prev) => ({
+        ...prev,
+        fecha: HOY,
+        sedeId: String(item.sedeId ?? sedeIdUsuario ?? ""),
+        proveedorId: String(item.proveedorId ?? ""),
+        valorAbono: "",
+        observacion: "",
+        tipoAbono: "abono_proveedor",
+      }));
+      setModalOpen(true);
+    },
+    [sedeIdUsuario],
+  );
 
   const abrirNuevo = useCallback(() => {
     setItemEditar(null);
     setModalTipo(
-      tab === "cartera"     ? "cartera" :
-      tab === "proveedores" ? "abono"   : tab
+      tab === "cartera" ? "cartera" : tab === "proveedores" ? "abono" : tab,
     );
     setForm(resetForm());
     setModalOpen(true);
@@ -297,17 +346,17 @@ const ContabilidadPage = () => {
     setModalTipo(tipo);
     setForm((prev) => ({
       ...prev,
-      fecha:         item.fecha?.split("T")[0] ?? HOY,
-      sedeId:        String(item.sedeId),
-      efectivo:      String(item.efectivo      ?? ""),
-      cuentas:       String(item.cuentas       ?? ""),
-      observacion:   item.observacion ?? "",
-      concepto:      item.concepto     ?? "",
-      total:         String(item.total ?? ""),
+      fecha: item.fecha?.split("T")[0] ?? HOY,
+      sedeId: String(item.sedeId),
+      efectivo: String(item.efectivo ?? ""),
+      cuentas: String(item.cuentas ?? ""),
+      observacion: item.observacion ?? "",
+      concepto: item.concepto ?? "",
+      total: String(item.total ?? ""),
       observaciones: item.observacion ?? item.observaciones ?? "",
-      saldoDia:      String(item.saldoDia ?? ""),
-      proveedorId:   String(item.proveedorId ?? ""),
-      valorAbono:    String(item.valorPagado ?? ""),
+      saldoDia: String(item.saldoDia ?? ""),
+      proveedorId: String(item.proveedorId ?? ""),
+      valorAbono: String(item.valorPagado ?? ""),
     }));
     setModalOpen(true);
   }, []);
@@ -397,10 +446,14 @@ const ContabilidadPage = () => {
     if (!itemEliminar) return;
     setCargando(true);
     try {
-      if (eliminarTipo === "ingreso") await contabilidadService.eliminarIngreso(itemEliminar.id);
-      else if (eliminarTipo === "egreso") await contabilidadService.eliminarEgreso(itemEliminar.id);
-      else if (eliminarTipo === "cartera") await contabilidadService.eliminarCartera(itemEliminar.id);
-      else if (eliminarTipo === "abono") await contabilidadService.eliminarPagoProveedor(itemEliminar.id);
+      if (eliminarTipo === "ingreso")
+        await contabilidadService.eliminarIngreso(itemEliminar.id);
+      else if (eliminarTipo === "egreso")
+        await contabilidadService.eliminarEgreso(itemEliminar.id);
+      else if (eliminarTipo === "cartera")
+        await contabilidadService.eliminarCartera(itemEliminar.id);
+      else if (eliminarTipo === "abono")
+        await contabilidadService.eliminarPagoProveedor(itemEliminar.id);
       else throw new Error("Tipo de registro no válido.");
       toast.success("Registro eliminado.");
     } catch (err) {
@@ -415,51 +468,75 @@ const ContabilidadPage = () => {
 
   // ── UI derivada ───────────────────────────────────────────
   const mostrarBotonRegistrar =
-    puedeRegistrar && ["ingresos", "egresos", "cartera", "proveedores"].includes(tab);
+    puedeRegistrar &&
+    ["ingresos", "egresos", "cartera", "proveedores"].includes(tab);
 
-  const textoBotonNuevo = {
-    ingresos:    "Nuevo ingreso",
-    egresos:     "Nuevo egreso",
-    cartera:     "Registrar cartera",
-    proveedores: "Registrar abono",
-  }[tab] ?? "Nuevo";
+  const textoBotonNuevo =
+    {
+      ingresos: "Nuevo ingreso",
+      egresos: "Nuevo egreso",
+      cartera: "Registrar cartera",
+      proveedores: "Registrar abono",
+    }[tab] ?? "Nuevo";
 
   // ── RENDER ────────────────────────────────────────────────
   return (
     <div className="cont-page">
-
       {/* Header */}
       <div className="cont-page__header">
         <div>
           <h1 className="cont-page__title">Contabilidad</h1>
           <p className="cont-subtitulo">
-            {tab === "panel" ? formatFecha(filtroPanelF) : `Semana ${filtroSemana || SEM_ACTUAL}`}
+            {tab === "panel"
+              ? formatFecha(filtroPanelF)
+              : `Semana ${filtroSemana || SEM_ACTUAL}`}
           </p>
         </div>
         <div className="cont-page__acciones">
           {esAdmin && !["arqueo", "panel"].includes(tab) && (
             <div className="filter-group">
               <label htmlFor="cont-sede">Sede</label>
-              <select id="cont-sede" value={filtroSedeId} onChange={(e) => setFiltroSedeId(e.target.value)} className="filter-select">
+              <select
+                id="cont-sede"
+                value={filtroSedeId}
+                onChange={(e) => setFiltroSedeId(e.target.value)}
+                className="filter-select"
+              >
                 <option value="">Todas</option>
-                {SEDES.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                {SEDES.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                  </option>
+                ))}
               </select>
             </div>
           )}
           {tab !== "panel" && (
             <div className="filter-group">
               <label htmlFor="cont-semana">Semana</label>
-              <input id="cont-semana" type="number" min="1" max="53"
-                value={filtroSemana} onChange={(e) => handleFiltroSemana(e.target.value)}
-                className="filter-select" style={{ minWidth: 72 }} />
+              <input
+                id="cont-semana"
+                type="number"
+                min="1"
+                max="53"
+                value={filtroSemana}
+                onChange={(e) => handleFiltroSemana(e.target.value)}
+                className="filter-select"
+                style={{ minWidth: 72 }}
+              />
             </div>
           )}
           {tab === "panel" && (
             <div className="filter-group">
               <label htmlFor="cont-panel-fecha">Fecha panel</label>
-              <input id="cont-panel-fecha" type="date" max={HOY}
-                value={filtroPanelF} onChange={(e) => setFiltroPanelFecha(e.target.value)}
-                className="filter-select" />
+              <input
+                id="cont-panel-fecha"
+                type="date"
+                max={HOY}
+                value={filtroPanelF}
+                onChange={(e) => setFiltroPanelFecha(e.target.value)}
+                className="filter-select"
+              />
             </div>
           )}
           {mostrarBotonRegistrar && (
@@ -475,7 +552,8 @@ const ContabilidadPage = () => {
       <div className="cont-tabs">
         {TABS.map((t) => (
           <button
-            key={t.key} type="button"
+            key={t.key}
+            type="button"
             className={`cont-tab-btn ${tab === t.key ? "cont-tab-btn--active" : ""}`}
             onClick={() => setTab(t.key)}
           >
@@ -486,9 +564,10 @@ const ContabilidadPage = () => {
       </div>
 
       {/* Contenido */}
-      {cargando ? <Spinner /> : (
+      {cargando ? (
+        <Spinner />
+      ) : (
         <div className="cont-tab-body">
-
           {tab === "ingresos" && (
             <IngresosTab
               ingresos={ingresosMapeados}
@@ -514,6 +593,7 @@ const ContabilidadPage = () => {
             />
           )}
 
+          {/* 
           {tab === "cartera" && (
             <CarteraTab
               cartera={carteraMapeada}
@@ -523,6 +603,7 @@ const ContabilidadPage = () => {
               onEliminar={abrirEliminar}
             />
           )}
+            */}
 
           {tab === "proveedores" && (
             <ProveedoresTab
@@ -567,7 +648,6 @@ const ContabilidadPage = () => {
           {tab === "historial" && (
             <HistorialSemanalTab historial={historialSemanal} />
           )}
-
         </div>
       )}
 
@@ -591,7 +671,10 @@ const ContabilidadPage = () => {
       {/* Modal confirmar eliminar */}
       <Modal
         isOpen={!!itemEliminar}
-        onClose={() => { setItemEliminar(null); setEliminarTipo(""); }}
+        onClose={() => {
+          setItemEliminar(null);
+          setEliminarTipo("");
+        }}
         titulo="Eliminar registro"
         textoBotonConfirmar="Si, eliminar"
         onConfirmar={handleEliminar}
@@ -602,7 +685,6 @@ const ContabilidadPage = () => {
           <p>¿Eliminar este registro? Esta acción no se puede deshacer.</p>
         </div>
       </Modal>
-
     </div>
   );
 };

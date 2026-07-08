@@ -172,6 +172,7 @@ const ProductosPage = () => {
         const data = await inventarioService.obtenerSedes();
         setSedes(Array.isArray(data) ? data : []);
       } catch (err) {
+        console.error("Error al cargar sedes:", err);
         setSedes([]);
       } finally {
         setCargandoSedes(false);
