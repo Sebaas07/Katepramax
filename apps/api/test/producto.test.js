@@ -219,13 +219,16 @@ describe("POST /api/v1/productos", () => {
   it("debería retornar 201 al crear un producto correctamente", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.skuContador.upsert.mockResolvedValue({ prefijo: "NUE", ultimoNumero: 2 });
     prisma.producto.create.mockResolvedValue({
       ...productoMock,
       codigo: 2,
+      sku: "NUE-002",
     });
     prisma.producto.findUnique.mockResolvedValue({
       ...productoMock,
       codigo: 2,
+      sku: "NUE-002",
     });
 
     const res = await app.inject({
@@ -242,6 +245,7 @@ describe("POST /api/v1/productos", () => {
 
     expect(res.statusCode).toBe(201);
     expect(res.json().codigo).toBe(2);
+    expect(res.json().sku).toBe("NUE-002");
   });
 });
 

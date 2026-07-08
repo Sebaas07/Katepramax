@@ -14,6 +14,7 @@ const usuarioAdmin = { id: 1, rol: "Admin", sedeId: 1 };
 const productoMock = {
   id: 1,
   codigo: "PROD-001",
+  sku: "GEN-001",
   descripcion: "Cemento Gris 50kg",
   precioCosto: 18000,
   precioVenta: 25000,
@@ -67,6 +68,7 @@ describe("productoService.crear", () => {
   it("debería crear el producto si el código es único y el proveedor existe", async () => {
     prisma.producto.findUnique.mockResolvedValueOnce(null);
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.skuContador.upsert.mockResolvedValue({ prefijo: "CEM", ultimoNumero: 1 });
     prisma.producto.create.mockResolvedValue(productoMock);
     prisma.producto.findUnique.mockResolvedValueOnce(productoMock);
 
@@ -88,6 +90,7 @@ describe("productoService.crear", () => {
 
   it("debería crear el producto sin proveedor si no se pasa proveedorId", async () => {
     prisma.producto.findUnique.mockResolvedValue(null);
+    prisma.skuContador.upsert.mockResolvedValue({ prefijo: "SIN", ultimoNumero: 3 });
     prisma.producto.create.mockResolvedValue({
       ...productoMock,
       proveedorId: null,

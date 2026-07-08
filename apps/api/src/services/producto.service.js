@@ -1,6 +1,7 @@
 const repo = require("../repositories/producto.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
+const { generarSku } = require("./sku.service");
 
 const DECIMAL_FIELDS = [
   "precioCosto",
@@ -81,7 +82,9 @@ async function crear(app, body, usuario) {
       throw new AppError(`Ya existe un producto con código ${datosProducto.codigo}`, 409);
   }
 
-  const nuevo = await repo.crear(app.prisma, datosProducto);
+  const sku = await generarSku(app.prisma, datosProducto.descripcion);
+
+  const nuevo = await repo.crear(app.prisma, { ...datosProducto, sku });
 
   const stockValue = stockInicial !== undefined && stockInicial !== null && stockInicial !== ""
     ? Number(stockInicial)

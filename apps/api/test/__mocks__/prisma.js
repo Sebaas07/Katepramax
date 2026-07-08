@@ -33,6 +33,9 @@ const prisma = {
     create:      vi.fn(),
     update:      vi.fn(),
   },
+  skuContador: {
+    upsert: vi.fn(),
+  },
   proveedor: {
     findUnique:  vi.fn(),
     findFirst:   vi.fn(),

@@ -142,6 +142,7 @@ model Inventario {
 
 model Producto {
   codigo             Int      @id @default(autoincrement())
+  sku                String   @unique @db.VarChar(30)
   descripcion        String   @db.VarChar(255)
   precioCosto        Decimal  @default(0.00) @map("precio_costo") @db.Decimal(12, 2)
   precioVenta        Decimal  @default(0.00) @map("precio_venta") @db.Decimal(12, 2)
@@ -162,6 +163,13 @@ model Producto {
   stockSedes     StockSede[]
 
   @@map("productos")
+}
+
+model SkuContador {
+  prefijo      String @id @db.VarChar(10)
+  ultimoNumero Int    @default(0) @map("ultimo_numero")
+
+  @@map("sku_contadores")
 }
 
 model StockSede {

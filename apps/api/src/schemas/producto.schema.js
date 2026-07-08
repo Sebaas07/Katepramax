@@ -19,6 +19,7 @@ const productoBase = {
   type: "object",
   properties: {
     codigo: { type: "integer" },
+    sku: { type: "string" },
     descripcion: { type: "string" },
     precioCosto: { type: "number" },
     precioVenta: { type: "number" },

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
+import { QRCodeCanvas } from "qrcode.react";
 import { useAuth } from "@/hooks/useAuth";
 import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
@@ -19,6 +20,19 @@ const DEPARTAMENTOS = [
 ];
 
 const INVENTARIO_ACTUALIZADO_EVENT = "katepramax:inventario-actualizado";
+
+// Espejo (solo para previsualización visual) de derivarPrefijo() en el
+// backend (src/services/sku.service.js). El código real siempre lo calcula
+// el backend al crear el producto; esto es únicamente para mostrarle al
+// usuario cómo va a quedar mientras escribe la descripción.
+const previsualizarPrefijo = (descripcion = "") => {
+  const letras = descripcion
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");
+  return letras.slice(0, 3);
+};
 
 const toNumber = (value, fallback = 0) => {
   const number = Number(value);
@@ -145,8 +159,11 @@ const ProductosPage = () => {
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
   const [modalHistorial, setModalHistorial] = useState(false);
+  const [modalQR, setModalQR] = useState(false);
+  const [productoQR, setProductoQR] = useState(null);
   const [productoSel, setProductoSel] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const qrCanvasRef = useRef(null);
   const [form, setForm] = useState({
     descripcion: "",
     departamento: "",
@@ -334,6 +351,34 @@ const ProductosPage = () => {
     [cargarMovimientos, sedeActivaId, sedes],
   );
 
+  const abrirModalQR = useCallback(
+    (prod) => {
+      const producto = normalizarProducto(prod, sedeActivaId, sedes);
+      setProductoQR(producto);
+      setModalQR(true);
+    },
+    [sedeActivaId, sedes],
+  );
+
+  const textoQR = useMemo(() => {
+    if (!productoQR) return "";
+    return [
+      productoQR.sku || productoQR.codigo,
+      productoQR.nombre,
+      formatCOP(productoQR.precioVenta),
+    ].join("\n");
+  }, [productoQR]);
+
+  const descargarQR = useCallback(() => {
+    const canvas = qrCanvasRef.current?.querySelector("canvas");
+    if (!canvas || !productoQR) return;
+
+    const enlace = document.createElement("a");
+    enlace.download = `qr-${productoQR.sku || productoQR.codigo}.png`;
+    enlace.href = canvas.toDataURL("image/png");
+    enlace.click();
+  }, [productoQR]);
+
   const handleGuardar = useCallback(async () => {
     setGuardando(true);
     try {
@@ -480,7 +525,7 @@ const ProductosPage = () => {
 
   const columnas = useMemo(
     () => [
-      { campo: "codigo", label: "Código", tipo: "texto" },
+      { campo: "sku", label: "Código", tipo: "texto" },
       { campo: "nombre", label: "Nombre", tipo: "texto" },
       { campo: "precioCosto", label: "Precio Costo", tipo: "moneda" },
       { campo: "precioVenta", label: "Precio Venta", tipo: "moneda" },
@@ -506,6 +551,11 @@ const ProductosPage = () => {
         icon: "history",
         onClick: () => abrirHistorial(prod),
       },
+      {
+        label: "Código QR",
+        icon: "qr_code_2",
+        onClick: () => abrirModalQR(prod),
+      },
       ...(puedeEditar
         ? [
             {
@@ -517,7 +567,7 @@ const ProductosPage = () => {
           ]
         : []),
     ],
-    [puedeEditar, abrirModalEditar, abrirHistorial, handleDesactivar],
+    [puedeEditar, abrirModalEditar, abrirHistorial, abrirModalQR, handleDesactivar],
   );
 
   const movimientosProducto = useMemo(
@@ -723,7 +773,7 @@ const ProductosPage = () => {
             filasPorPagina={15}
             mostrarBuscador
             buscarEnCampos={[
-              "codigo",
+              "sku",
               "nombre",
               "departamento",
               "proveedor",
@@ -779,6 +829,11 @@ const ProductosPage = () => {
               placeholder="Descripción del producto"
               autoComplete="off"
             />
+            <span className="form-hint">
+              {previsualizarPrefijo(form.descripcion)
+                ? `Código automático: ${previsualizarPrefijo(form.descripcion)}-XXX`
+                : "El código se genera solo con las 3 primeras letras de la descripción"}
+            </span>
           </div>
 
           <div className="form-row">
@@ -1124,7 +1179,9 @@ const ProductosPage = () => {
         {productoSel && (
           <div className="historial-producto">
             <div className="historial-header">
-              <span className="historial-codigo">{productoSel.codigo}</span>
+              <span className="historial-codigo">
+                {productoSel.sku || productoSel.codigo}
+              </span>
               <span className="historial-meta">
                 {productoSel.sede} · {productoSel.proveedor}
               </span>
@@ -1166,6 +1223,49 @@ const ProductosPage = () => {
                 <span>No hay movimientos registrados para este producto.</span>
               </div>
             )}
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={modalQR}
+        onClose={() => setModalQR(false)}
+        titulo={`Código QR: ${productoQR?.nombre || "Producto"}`}
+        mostrarCancelar={false}
+        textoBotonConfirmar="Cerrar"
+        onConfirmar={() => setModalQR(false)}
+        className="modal-content--producto"
+        maxWidth="420px"
+      >
+        {productoQR && (
+          <div className="qr-producto">
+            <div className="qr-producto__canvas" ref={qrCanvasRef}>
+              <QRCodeCanvas
+                value={textoQR}
+                size={220}
+                level="M"
+                includeMargin
+              />
+            </div>
+
+            <div className="qr-producto__info">
+              <span className="historial-codigo">
+                {productoQR.sku || productoQR.codigo}
+              </span>
+              <strong>{productoQR.nombre}</strong>
+              <span>{formatCOP(productoQR.precioVenta)}</span>
+            </div>
+
+            <button
+              type="button"
+              className="btn-primary qr-producto__descargar"
+              onClick={descargarQR}
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                download
+              </span>
+              Descargar para imprimir
+            </button>
           </div>
         )}
       </Modal>
