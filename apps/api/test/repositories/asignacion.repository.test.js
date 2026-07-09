@@ -2,29 +2,56 @@
  * Tests unitarios — asignacion.repository.js
  * El repositorio usa el patrón factory: asignacionRepo(prisma) → objeto con métodos.
  */
-const { prisma }      = require("../__mocks__/prisma");
-const asignacionRepo  = require("../../src/repositories/asignacion.repository");
+const { prisma } = require("../__mocks__/prisma");
+const asignacionRepo = require("../../src/repositories/asignacion.repository");
 
 const repo = asignacionRepo(prisma);
 
 const incluirDetalle = {
   pedido: {
     select: {
-      id: true, estado: true, observaciones: true,
+      id: true,
+      estado: true,
+      direccion: true,
+      observaciones: true,
+      sedeId: true,
+      creadoEn: true,
+      detalles: {
+        select: {
+          id: true,
+          productoId: true,
+          cantidad: true,
+          precioUnitario: true,
+          subtotal: true,
+          producto: { select: { descripcion: true } },
+        },
+      },
       cliente: { select: { id: true, nombre: true, telefono: true } },
     },
   },
   entregador: { select: { id: true, nombreCompleto: true, telefono: true } },
-  asignador:  { select: { id: true, nombreCompleto: true } },
+  asignador: { select: { id: true, nombreCompleto: true } },
 };
 
 const asignacionMock = {
-  id: 1, pedidoId: 1, entregadorId: 3, asignadoPorId: 2,
-  estado: "Pendiente", montoCobrado: null, metodoPago: null,
-  fechaConfirmada: null, observacionesEntrega: null, asignadoEn: new Date(),
-  pedido:     { id: 1, estado: "Asignado", observaciones: null, cliente: { id: 1, nombre: "Juan", telefono: null } },
+  id: 1,
+  pedidoId: 1,
+  entregadorId: 3,
+  asignadoPorId: 2,
+  estado: "Pendiente",
+  montoCobrado: null,
+  metodoPago: null,
+  fechaConfirmada: null,
+  observacionesEntrega: null,
+  asignadoEn: new Date(),
+  pedido: {
+    id: 1,
+    estado: "Asignado",
+    observaciones: null,
+    cliente: { id: 1, nombre: "Juan", telefono: null },
+  },
   entregador: { id: 3, nombreCompleto: "Carlos", telefono: null },
-  asignador:  { id: 2, nombreCompleto: "Bodega" },
+  asignador: { id: 2, nombreCompleto: "Bodega" },
 };
 
 // ── crear ─────────────────────────────────────────────────────────────────────
@@ -37,7 +64,8 @@ describe("asignacionRepository.crear", () => {
     await repo.crear(data);
 
     expect(prisma.asignacionEntrega.create).toHaveBeenCalledWith({
-      data, include: incluirDetalle,
+      data,
+      include: incluirDetalle,
     });
   });
 });
@@ -51,7 +79,8 @@ describe("asignacionRepository.findById", () => {
     const result = await repo.findById(1);
 
     expect(prisma.asignacionEntrega.findUnique).toHaveBeenCalledWith({
-      where: { id: 1 }, include: incluirDetalle,
+      where: { id: 1 },
+      include: incluirDetalle,
     });
     expect(result.id).toBe(1);
   });
@@ -137,8 +166,8 @@ describe("asignacionRepository.update", () => {
     await repo.update(1, { estado: "EnRuta" });
 
     expect(prisma.asignacionEntrega.update).toHaveBeenCalledWith({
-      where:   { id: 1 },
-      data:    { estado: "EnRuta" },
+      where: { id: 1 },
+      data: { estado: "EnRuta" },
       include: incluirDetalle,
     });
   });

@@ -5,7 +5,8 @@ const { prisma } = require("./__mocks__/prisma");
 const clienteService = require("../src/services/cliente.service");
 
 const adminMock = { rol: "Admin", sedeId: null };
-const svc = clienteService(prisma);
+const appMock = { prisma };
+const svc = clienteService(appMock);
 
 // ── Datar de prueba ───────────────────────────────────────────────────────────
 
@@ -97,14 +98,18 @@ describe("clienteService.crear", () => {
   it("debería crear el cliente solo con nombre y telefono", async () => {
     prisma.cliente.create.mockResolvedValue(clienteMock);
 
-    await svc.crear({
-      nombre: "Juan Pérez",
-      telefono: "3001234567",
-      campoExtra: "ignorado",
-    }, adminMock);
+    await svc.crear(
+      {
+        nombre: "Juan Pérez",
+        telefono: "3001234567",
+        campoExtra: "ignorado",
+      },
+      adminMock,
+    );
 
     expect(prisma.cliente.create).toHaveBeenCalledWith({
       data: { nombre: "Juan Pérez", telefono: "3001234567" },
+      include: { sede: { select: { id: true, nombre: true } } },
     });
   });
 });
@@ -127,10 +132,14 @@ describe("clienteService.actualizar", () => {
       nombre: "Editado",
     });
 
-    await svc.actualizar(1, {
-      nombre: "Editado",
-      campoNoPermitido: "ignorar",
-    }, adminMock);
+    await svc.actualizar(
+      1,
+      {
+        nombre: "Editado",
+        campoNoPermitido: "ignorar",
+      },
+      adminMock,
+    );
 
     const callData = prisma.cliente.update.mock.calls[0][0].data;
     expect(callData).toHaveProperty("nombre", "Editado");

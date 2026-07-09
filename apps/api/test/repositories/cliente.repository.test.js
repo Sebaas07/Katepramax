@@ -27,6 +27,7 @@ describe("clienteRepository.findById", () => {
 
     expect(prisma.cliente.findUnique).toHaveBeenCalledWith({
       where: { id: 1 },
+      include: { sede: { select: { id: true, nombre: true } } },
     });
     expect(result.id).toBe(1);
   });
@@ -100,7 +101,10 @@ describe("clienteRepository.create", () => {
     const data = { nombre: "Juan Pérez", telefono: "3001234567" };
     await repo.create(data);
 
-    expect(prisma.cliente.create).toHaveBeenCalledWith({ data });
+    expect(prisma.cliente.create).toHaveBeenCalledWith({
+      data,
+      include: { sede: { select: { id: true, nombre: true } } },
+    });
   });
 });
 
@@ -118,6 +122,7 @@ describe("clienteRepository.update", () => {
     expect(prisma.cliente.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: { nombre: "Editado" },
+      include: { sede: { select: { id: true, nombre: true } } },
     });
   });
 });

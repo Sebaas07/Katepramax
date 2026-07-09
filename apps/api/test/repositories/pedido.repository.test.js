@@ -2,26 +2,37 @@
  * Tests unitarios — pedido.repository.js
  */
 const { prisma } = require("../__mocks__/prisma");
-const repo       = require("../../src/repositories/pedido.repository");
+const repo = require("../../src/repositories/pedido.repository");
 
 const incluirDetalle = {
-  cliente:  { select: { id: true, nombre: true, telefono: true } },
-  creador:  { select: { id: true, nombreCompleto: true } },
-  detalles: { include: { producto: { select: { codigo: true, descripcion: true } } } },
+  cliente: { select: { id: true, nombre: true, telefono: true } },
+  creador: { select: { id: true, nombreCompleto: true } },
+  sede: { select: { id: true, nombre: true } },
+  detalles: {
+    include: { producto: { select: { codigo: true, descripcion: true } } },
+  },
   asignaciones: {
     select: {
-      id: true, estado: true, asignadoEn: true, fechaConfirmada: true,
+      id: true,
+      estado: true,
+      asignadoEn: true,
+      fechaConfirmada: true,
       entregador: { select: { id: true, nombreCompleto: true } },
     },
   },
 };
 
 const pedidoMock = {
-  id: 1, estado: "Pendiente", clienteId: 1, creadoPorId: 1,
-  observaciones: null, totalRecibido: null,
-  creadoEn: new Date(), actualizadoEn: new Date(),
-  cliente:  { id: 1, nombre: "Juan Pérez", telefono: null },
-  creador:  { id: 1, nombreCompleto: "Admin" },
+  id: 1,
+  estado: "Pendiente",
+  clienteId: 1,
+  creadoPorId: 1,
+  observaciones: null,
+  totalRecibido: null,
+  creadoEn: new Date(),
+  actualizadoEn: new Date(),
+  cliente: { id: 1, nombre: "Juan Pérez", telefono: null },
+  creador: { id: 1, nombreCompleto: "Admin" },
   detalles: [],
   asignaciones: [],
 };
@@ -35,7 +46,10 @@ describe("pedidoRepository.crear", () => {
 
     await repo.crear(prisma, data);
 
-    expect(prisma.pedido.create).toHaveBeenCalledWith({ data, include: incluirDetalle });
+    expect(prisma.pedido.create).toHaveBeenCalledWith({
+      data,
+      include: incluirDetalle,
+    });
   });
 });
 
@@ -108,7 +122,8 @@ describe("pedidoRepository.buscarPorId", () => {
     const result = await repo.buscarPorId(prisma, 1);
 
     expect(prisma.pedido.findUnique).toHaveBeenCalledWith({
-      where: { id: 1 }, include: incluirDetalle,
+      where: { id: 1 },
+      include: incluirDetalle,
     });
     expect(result.id).toBe(1);
   });
@@ -132,8 +147,8 @@ describe("pedidoRepository.actualizar", () => {
     await repo.actualizar(prisma, 1, { estado: "Cancelado" });
 
     expect(prisma.pedido.update).toHaveBeenCalledWith({
-      where:   { id: 1 },
-      data:    { estado: "Cancelado" },
+      where: { id: 1 },
+      data: { estado: "Cancelado" },
       include: incluirDetalle,
     });
   });
