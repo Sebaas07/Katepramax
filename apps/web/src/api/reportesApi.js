@@ -48,6 +48,13 @@ const reportesApi = {
     const { data } = await clienteApi.get(`/reportes/cobros-entregador${qs}`);
     return data;
   },
+
+  // Backend: GET /reportes/corte-caja?desde&hasta&sedeId → Admin, Bodega
+  obtenerCorteCaja: async (filtros = {}) => {
+    const qs = buildParams(filtros);
+    const { data } = await clienteApi.get(`/reportes/corte-caja${qs}`);
+    return data;
+  },
 };
 
 export default reportesApi;

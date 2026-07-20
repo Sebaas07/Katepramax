@@ -116,4 +116,80 @@ const cobrosPorEntregadorSchema = {
   },
 };
 
-module.exports = { arqueoSemanalSchema, panelGeneralSchema, historialSemanalSchema, cobrosPorEntregadorSchema };
+const corteCajaSchema = {
+  summary: "Corte de caja: ganancia vs. gasto en un rango de fechas",
+  description:
+    "Ganancia = lo recaudado por los entregadores (efectivo + transferencia + " +
+    "abonos a deuda anterior) menos los egresos del período. Sirve para el " +
+    "corte del día (desde == hasta), quincenal o mensual; el rango lo arma el " +
+    "frontend.",
+  tags: ["Reportes"],
+  security: [{ bearerAuth: [] }],
+  querystring: {
+    type: "object",
+    required: ["desde", "hasta"],
+    properties: {
+      desde: { type: "string", format: "date" },
+      hasta: { type: "string", format: "date" },
+      sedeId: { type: "integer" },
+    },
+    additionalProperties: false,
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        desde: { type: "string" },
+        hasta: { type: "string" },
+        recaudo: {
+          type: "object",
+          properties: {
+            total: { type: "number" },
+            efectivo: { type: "number" },
+            transferencia: { type: "number" },
+            abonosDeuda: { type: "number" },
+            sinClasificar: { type: "number" },
+            pedidosEntregados: { type: "integer" },
+          },
+        },
+        egresos: {
+          type: "object",
+          properties: {
+            total: { type: "number" },
+            porConcepto: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  concepto: { type: "string" },
+                  total: { type: "number" },
+                },
+              },
+            },
+          },
+        },
+        ganancia: { type: "number" },
+        porDia: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              fecha: { type: "string" },
+              recaudado: { type: "number" },
+              egresos: { type: "number" },
+              ganancia: { type: "number" },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+module.exports = {
+  arqueoSemanalSchema,
+  panelGeneralSchema,
+  historialSemanalSchema,
+  cobrosPorEntregadorSchema,
+  corteCajaSchema,
+};

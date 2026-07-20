@@ -35,6 +35,7 @@ const InventarioPage = () => {
 
   const [activeTab, setActiveTab] = useState("entradas");
   const [productos, setProductos] = useState([]);
+  const [sedes, setSedes] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [guardandoMov, setGuardandoMov] = useState(false);
@@ -57,6 +58,16 @@ const InventarioPage = () => {
   });
 
   // ── Carga de datos ───────────────────────────────────────────
+  const cargarSedes = useCallback(async () => {
+    try {
+      const data = await inventarioService.obtenerSedes();
+      setSedes(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error al cargar sedes:", err);
+      setSedes([]);
+    }
+  }, []);
+
   const cargarProductos = useCallback(async () => {
     setCargando(true);
     try {
@@ -87,8 +98,9 @@ const InventarioPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
+    void cargarSedes();
     void cargarProductos();
-  }, [isSessionChecked, isAuthenticated, cargarProductos]);
+  }, [isSessionChecked, isAuthenticated, cargarSedes, cargarProductos]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -252,9 +264,11 @@ const InventarioPage = () => {
                     className="filter-select"
                   >
                     <option value="">Todas</option>
-                    <option value="1">Bogotá</option>
-                    <option value="2">Cartagena</option>
-                    <option value="3">Villavicencio</option>
+                    {sedes.map((sede) => (
+                      <option key={sede.id} value={sede.id}>
+                        {sede.nombre}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -373,9 +387,11 @@ const InventarioPage = () => {
                 className="form-control"
               >
                 <option value="">— Selecciona —</option>
-                <option value="1">Bogotá</option>
-                <option value="2">Cartagena</option>
-                <option value="3">Villavicencio</option>
+                {sedes.map((sede) => (
+                  <option key={sede.id} value={sede.id}>
+                    {sede.nombre}
+                  </option>
+                ))}
               </select>
             </div>
           )}

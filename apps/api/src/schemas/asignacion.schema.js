@@ -7,6 +7,9 @@ const asignacionBase = {
     asignadoEn: { type: "string", format: "date-time" },
     fechaConfirmada: { type: ["string", "null"], format: "date-time" },
     montoCobrado: { type: ["number", "null"] },
+    montoEfectivo: { type: ["number", "null"] },
+    montoTransferencia: { type: ["number", "null"] },
+    abonoDeuda: { type: ["number", "null"] },
     metodoPago: { type: ["string", "null"] },
     observacionesEntrega: { type: ["string", "null"] },
     pedido: {
@@ -42,6 +45,7 @@ const asignacionBase = {
             id: { type: "integer" },
             nombre: { type: "string" },
             telefono: { type: ["string", "null"] },
+            saldoDeuda: { type: "number" },
           },
         },
       },
@@ -152,7 +156,11 @@ const obtenerAsignacion = {
 const actualizarEstado = {
   summary: "Actualizar estado de una asignación",
   description:
-    "Transiciones válidas: Pendiente→EnRuta|Fallido, EnRuta→Entregado|Fallido. Al marcar Entregado se requiere montoCobrado y metodoPago.",
+    "Transiciones válidas: Pendiente→EnRuta|Fallido, EnRuta→Entregado|Fallido. " +
+    "Al marcar Entregado se requiere montoCobrado y metodoPago. " +
+    "Si metodoPago es Mixto, se requieren montoEfectivo y montoTransferencia " +
+    "(deben sumar montoCobrado). Si el cliente tiene saldoDeuda de pedidos " +
+    "anteriores, se puede recibir un abonoDeuda adicional en el mismo momento.",
   tags: ["Asignaciones"],
   security: [{ bearerAuth: [] }],
   params: {
@@ -166,7 +174,13 @@ const actualizarEstado = {
     properties: {
       nuevoEstado: { type: "string", enum: ["EnRuta", "Entregado", "Fallido"] },
       montoCobrado: { type: "number", minimum: 0 },
-      metodoPago: { type: "string", enum: ["Efectivo", "Transferencia"] },
+      metodoPago: {
+        type: "string",
+        enum: ["Efectivo", "Transferencia", "Mixto", "Parcial", "Credito"],
+      },
+      montoEfectivo: { type: "number", minimum: 0 },
+      montoTransferencia: { type: "number", minimum: 0 },
+      abonoDeuda: { type: "number", minimum: 0 },
       fechaConfirmada: { type: ["string", "null"], format: "date-time" },
       observacionesEntrega: { type: "string" },
     },

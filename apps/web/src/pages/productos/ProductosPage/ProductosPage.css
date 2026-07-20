@@ -3,9 +3,7 @@
    Usa el sistema de diseño real: glassmorphism + aged-gold
    ============================================================ */
 
-.productos-page {
-  min-height: 100vh;
-}
+.productos-page { min-height: 100vh; }
 
 /* ─── Header ─────────────────────────────────────────────────*/
 .page-header {
@@ -118,9 +116,7 @@
   width: 100%;
   box-sizing: border-box;
   outline: none;
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .form-control:focus {
@@ -185,10 +181,7 @@ textarea.form-control {
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  transition:
-    border-color var(--transition-fast),
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
   position: relative;
   overflow: hidden;
 }
@@ -204,15 +197,9 @@ textarea.form-control {
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
-.prod-stat-card--total::before {
-  background: var(--primary);
-}
-.prod-stat-card--danger::before {
-  background: var(--error);
-}
-.prod-stat-card--gold::before {
-  background: var(--aged-gold);
-}
+.prod-stat-card--total::before { background: var(--primary); }
+.prod-stat-card--danger::before { background: var(--error); }
+.prod-stat-card--gold::before { background: var(--aged-gold); }
 
 .prod-stat-card:hover {
   transform: translateY(-3px);
@@ -227,7 +214,7 @@ textarea.form-control {
   width: 56px;
   height: 56px;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--outline-variant);
   flex-shrink: 0;
 }
@@ -238,24 +225,12 @@ textarea.form-control {
   flex-shrink: 0;
 }
 
-.prod-stat-card--gold .material-symbols-outlined {
-  color: var(--aged-gold);
-}
-.prod-stat-card--total .material-symbols-outlined {
-  color: var(--primary);
-}
-.prod-stat-card--danger .material-symbols-outlined {
-  color: var(--error);
-}
-.prod-stat-card--danger {
-  border-color: rgba(255, 180, 171, 0.25);
-}
-.prod-stat-card--gold {
-  border-color: var(--aged-gold-border);
-}
-.prod-stat-card--total {
-  border-color: rgba(255, 170, 243, 0.2);
-}
+.prod-stat-card--gold  .material-symbols-outlined { color: var(--aged-gold); }
+.prod-stat-card--total .material-symbols-outlined { color: var(--primary); }
+.prod-stat-card--danger .material-symbols-outlined { color: var(--error); }
+.prod-stat-card--danger { border-color: rgba(255, 180, 171, 0.25); }
+.prod-stat-card--gold   { border-color: var(--aged-gold-border); }
+.prod-stat-card--total  { border-color: rgba(255, 170, 243, 0.2); }
 
 .prod-stat-card > div {
   display: flex;
@@ -276,15 +251,9 @@ textarea.form-control {
   text-overflow: ellipsis;
 }
 
-.prod-stat-card--gold .prod-stat-valor {
-  color: var(--aged-gold);
-}
-.prod-stat-card--total .prod-stat-valor {
-  color: var(--primary);
-}
-.prod-stat-card--danger .prod-stat-valor {
-  color: var(--error);
-}
+.prod-stat-card--gold  .prod-stat-valor { color: var(--aged-gold); }
+.prod-stat-card--total .prod-stat-valor { color: var(--primary); }
+.prod-stat-card--danger .prod-stat-valor { color: var(--error); }
 
 .prod-stat-label {
   font-family: var(--font-label);
@@ -314,21 +283,9 @@ textarea.form-control {
   border: 1px solid;
 }
 
-.rent-badge--alta {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
-  border-color: rgba(74, 222, 128, 0.3);
-}
-.rent-badge--media {
-  color: var(--aged-gold);
-  background: var(--aged-gold-dim);
-  border-color: var(--aged-gold-border);
-}
-.rent-badge--baja {
-  color: var(--error);
-  background: rgba(255, 180, 171, 0.1);
-  border-color: rgba(255, 180, 171, 0.3);
-}
+.rent-badge--alta  { color: #4ade80; background: rgba(74,222,128,0.1);  border-color: rgba(74,222,128,0.3); }
+.rent-badge--media { color: var(--aged-gold); background: var(--aged-gold-dim); border-color: var(--aged-gold-border); }
+.rent-badge--baja  { color: var(--error); background: rgba(255,180,171,0.1); border-color: rgba(255,180,171,0.3); }
 
 /* ─── Modal detalle ──────────────────────────────────────────*/
 .prod-detalle {
@@ -366,16 +323,8 @@ textarea.form-control {
   border: 1px solid;
 }
 
-.prod-detalle__estado.activo {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
-  border-color: rgba(74, 222, 128, 0.3);
-}
-.prod-detalle__estado.inactivo {
-  color: var(--error);
-  background: rgba(255, 180, 171, 0.1);
-  border-color: rgba(255, 180, 171, 0.3);
-}
+.prod-detalle__estado.activo   { color: #4ade80; background: rgba(74,222,128,0.1);  border-color: rgba(74,222,128,0.3); }
+.prod-detalle__estado.inactivo { color: var(--error); background: rgba(255,180,171,0.1); border-color: rgba(255,180,171,0.3); }
 
 .prod-detalle__nombre {
   font-family: var(--font-headline);
@@ -403,18 +352,10 @@ textarea.form-control {
   transition: border-color var(--transition-fast);
 }
 
-.prod-precio-card--costo {
-  border-top: 2px solid var(--outline-variant);
-}
-.prod-precio-card--venta {
-  border-top: 2px solid var(--aged-gold);
-}
-.prod-precio-card--mayoreo {
-  border-top: 2px solid rgba(221, 183, 255, 0.5);
-}
-.prod-precio-card--ganancia {
-  border-top: 2px solid rgba(74, 222, 128, 0.5);
-}
+.prod-precio-card--costo    { border-top: 2px solid var(--outline-variant); }
+.prod-precio-card--venta    { border-top: 2px solid var(--aged-gold); }
+.prod-precio-card--mayoreo  { border-top: 2px solid rgba(221, 183, 255, 0.5); }
+.prod-precio-card--ganancia { border-top: 2px solid rgba(74, 222, 128, 0.5); }
 
 .prod-precio-card__label {
   font-family: var(--font-label);
@@ -432,9 +373,7 @@ textarea.form-control {
   color: var(--on-surface);
 }
 
-.prod-precio-card--venta .prod-precio-card__valor {
-  color: var(--aged-gold);
-}
+.prod-precio-card--venta .prod-precio-card__valor { color: var(--aged-gold); }
 
 .prod-detalle__extra {
   display: flex;
@@ -459,9 +398,7 @@ textarea.form-control {
   flex-shrink: 0;
 }
 
-.prod-detalle__campo strong {
-  color: var(--on-surface);
-}
+.prod-detalle__campo strong { color: var(--on-surface); }
 
 /* ─── Alerta Stock Bajo ───────────────────────────────────────*/
 .stock-alerta {
@@ -599,11 +536,7 @@ textarea.form-control {
   animation: prod-spin 0.8s linear infinite;
 }
 
-@keyframes prod-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+@keyframes prod-spin { to { transform: rotate(360deg); } }
 
 /* ─── Historial Producto ─────────────────────────────────────*/
 .historial-producto {
@@ -661,7 +594,6 @@ textarea.form-control {
   font-size: 16px;
   color: var(--on-surface);
 }
-
 
 .historial-empty {
   display: flex;
@@ -732,37 +664,15 @@ textarea.form-control {
 
 /* ─── Responsive ─────────────────────────────────────────────*/
 @media (max-width: 767.98px) {
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .filters {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .prod-stats {
-    grid-template-columns: 1fr;
-    gap: 0.875rem;
-  }
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-  .stock-alerta {
-    width: 100%;
-    justify-content: flex-start;
-  }
+  .page-header      { flex-direction: column; align-items: flex-start; }
+  .filters          { width: 100%; flex-direction: column; align-items: stretch; }
+  .prod-stats       { grid-template-columns: 1fr; gap: 0.875rem; }
+  .form-row         { grid-template-columns: 1fr; }
+  .stock-alerta     { width: 100%; justify-content: flex-start; }
 }
 
 @media (max-width: 480px) {
-  .prod-stats {
-    grid-template-columns: 1fr;
-  }
-  .historial-stats {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  .modal-content--producto {
-    max-width: 100%;
-  }
+  .prod-stats { grid-template-columns: 1fr; }
+  .historial-stats { flex-direction: column; gap: 0.75rem; }
+  .modal-content--producto { max-width: 100%; }
 }

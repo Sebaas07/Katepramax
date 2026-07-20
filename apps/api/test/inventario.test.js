@@ -248,6 +248,33 @@ describe("GET /api/v1/inventario", () => {
     const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
     expect(callWhere.sedeId).toBe(1);
   });
+
+  it("debería filtrar por tipo (entrada, salida o ajuste)", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.inventario.findMany.mockResolvedValue([inventarioMock]);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario?tipo=salida",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
+    expect(callWhere.tipo).toBe("salida");
+  });
+
+  it("debería retornar 400 si tipo no es entrada, salida o ajuste", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario?tipo=invalido",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
 });
 
 // ── GET /api/v1/inventario/resumen-semanal ────────────────────────────────────

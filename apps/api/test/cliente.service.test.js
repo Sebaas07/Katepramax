@@ -98,14 +98,11 @@ describe("clienteService.crear", () => {
   it("debería crear el cliente solo con nombre y telefono", async () => {
     prisma.cliente.create.mockResolvedValue(clienteMock);
 
-    await svc.crear(
-      {
-        nombre: "Juan Pérez",
-        telefono: "3001234567",
-        campoExtra: "ignorado",
-      },
-      adminMock,
-    );
+    await svc.crear({
+      nombre: "Juan Pérez",
+      telefono: "3001234567",
+      campoExtra: "ignorado",
+    }, adminMock);
 
     expect(prisma.cliente.create).toHaveBeenCalledWith({
       data: { nombre: "Juan Pérez", telefono: "3001234567" },
@@ -132,14 +129,10 @@ describe("clienteService.actualizar", () => {
       nombre: "Editado",
     });
 
-    await svc.actualizar(
-      1,
-      {
-        nombre: "Editado",
-        campoNoPermitido: "ignorar",
-      },
-      adminMock,
-    );
+    await svc.actualizar(1, {
+      nombre: "Editado",
+      campoNoPermitido: "ignorar",
+    }, adminMock);
 
     const callData = prisma.cliente.update.mock.calls[0][0].data;
     expect(callData).toHaveProperty("nombre", "Editado");

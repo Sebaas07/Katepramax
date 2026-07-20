@@ -331,9 +331,116 @@ async function historialSemanal(app, { skip = 0, take = 20 } = {}, usuario) {
   return { total, skip, take, data: historial };
 }
 
+// Corte de caja: cuánto se recaudó (entregadores) vs. cuánto se gastó
+// (egresos) en un rango de fechas. Sirve tanto para el corte del día
+// (desde == hasta) como para quincena o mes (el rango lo arma el frontend).
+async function corteCaja(app, { desde, hasta, sedeId } = {}, usuario) {
+  const prisma = app.prisma;
+  if (!desde || !hasta) {
+    throw new AppError("desde y hasta son obligatorios.", 400);
+  }
+
+  const inicio = new Date(desde);
+  inicio.setUTCHours(0, 0, 0, 0);
+  const fin = new Date(hasta);
+  fin.setUTCHours(23, 59, 59, 999);
+
+  const whereSede = sedeWhere(usuario, sedeId);
+  const wherePedidoSede = whereSede.sedeId ? { sedeId: whereSede.sedeId } : undefined;
+
+  const entregas = await prisma.asignacionEntrega.findMany({
+    where: {
+      estado: "Entregado",
+      fechaConfirmada: { gte: inicio, lte: fin },
+      ...(wherePedidoSede ? { pedido: wherePedidoSede } : {}),
+    },
+    select: {
+      montoCobrado: true,
+      montoEfectivo: true,
+      montoTransferencia: true,
+      abonoDeuda: true,
+      metodoPago: true,
+      fechaConfirmada: true,
+    },
+  });
+
+  let totalEfectivo = 0;
+  let totalTransferencia = 0;
+  let totalAbonos = 0;
+  let sinClasificar = 0;
+  const porDiaMap = new Map();
+
+  const marcarDia = (fecha) => {
+    const key = fecha.toISOString().slice(0, 10);
+    if (!porDiaMap.has(key)) {
+      porDiaMap.set(key, { fecha: key, recaudado: 0, egresos: 0 });
+    }
+    return porDiaMap.get(key);
+  };
+
+  for (const e of entregas) {
+    const cobrado = toNum(e.montoCobrado);
+    const abono = toNum(e.abonoDeuda);
+
+    if (e.metodoPago === "Efectivo") totalEfectivo += cobrado;
+    else if (e.metodoPago === "Transferencia") totalTransferencia += cobrado;
+    else if (e.metodoPago === "Mixto") {
+      totalEfectivo += toNum(e.montoEfectivo);
+      totalTransferencia += toNum(e.montoTransferencia);
+    } else {
+      // Parcial / Credito: se cobró algo pero no sabemos por qué canal.
+      sinClasificar += cobrado;
+    }
+    totalAbonos += abono;
+
+    marcarDia(e.fechaConfirmada).recaudado += cobrado + abono;
+  }
+
+  const totalRecaudado = totalEfectivo + totalTransferencia + totalAbonos + sinClasificar;
+
+  const egresos = await prisma.egreso.findMany({
+    where: { fecha: { gte: inicio, lte: fin }, ...whereSede },
+    select: { fecha: true, total: true, concepto: true },
+  });
+
+  let totalEgresos = 0;
+  const porConceptoMap = new Map();
+  for (const eg of egresos) {
+    const total = toNum(eg.total);
+    totalEgresos += total;
+    marcarDia(eg.fecha).egresos += total;
+    porConceptoMap.set(eg.concepto, (porConceptoMap.get(eg.concepto) ?? 0) + total);
+  }
+
+  const porDia = Array.from(porDiaMap.values())
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    .map((d) => ({ ...d, ganancia: d.recaudado - d.egresos }));
+
+  const porConcepto = Array.from(porConceptoMap.entries())
+    .map(([concepto, total]) => ({ concepto, total }))
+    .sort((a, b) => b.total - a.total);
+
+  return {
+    desde,
+    hasta,
+    recaudo: {
+      total: totalRecaudado,
+      efectivo: totalEfectivo,
+      transferencia: totalTransferencia,
+      abonosDeuda: totalAbonos,
+      sinClasificar,
+      pedidosEntregados: entregas.length,
+    },
+    egresos: { total: totalEgresos, porConcepto },
+    ganancia: totalRecaudado - totalEgresos,
+    porDia,
+  };
+}
+
 module.exports = {
   arqueoSemanal,
   panelGeneral,
   historialSemanal,
   cobrosPorEntregador,
+  corteCaja,
 };

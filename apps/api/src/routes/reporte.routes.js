@@ -30,6 +30,12 @@ async function reporteRoutes(app) {
     { schema: schemas.cobrosPorEntregadorSchema, ...adminOBodega },
     ctrl.cobrosPorEntregador,
   );
+
+  // corte-caja: ganancia (recaudo entregadores) vs gasto (egresos) en un rango
+  app.get("/reportes/corte-caja",
+    { schema: schemas.corteCajaSchema, ...adminOBodega },
+    ctrl.corteCaja,
+  );
 }
 
 module.exports = reporteRoutes;

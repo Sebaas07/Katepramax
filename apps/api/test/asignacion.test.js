@@ -430,4 +430,179 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
     });
     expect(res.statusCode).toBe(200);
   });
+
+  it("debería retornar 200 al confirmar Entregado con metodoPago Mixto", async () => {
+    mockSesion(sesionEntregadorMock);
+    prisma.asignacionEntrega.findUnique
+      .mockResolvedValueOnce({ ...asignacionMock, estado: "EnRuta" })
+      .mockResolvedValueOnce({
+        ...asignacionMock,
+        estado: "Entregado",
+        montoCobrado: 50000,
+        montoEfectivo: 30000,
+        montoTransferencia: 20000,
+        metodoPago: "Mixto",
+      });
+    const tx = {
+      asignacionEntrega: { update: vi.fn() },
+      pedido: { update: vi.fn() },
+      cliente: { update: vi.fn() },
+    };
+    prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: {
+        nuevoEstado: "Entregado",
+        montoCobrado: 50000,
+        metodoPago: "Mixto",
+        montoEfectivo: 30000,
+        montoTransferencia: 20000,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(tx.cliente.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { saldoDeuda: { decrement: 50000 } },
+    });
+  });
+
+  it("debería retornar 400 si Mixto no suma lo mismo que montoCobrado", async () => {
+    mockSesion(sesionEntregadorMock);
+    mockAsigFindUnique({ ...asignacionMock, estado: "EnRuta" });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: {
+        nuevoEstado: "Entregado",
+        montoCobrado: 50000,
+        metodoPago: "Mixto",
+        montoEfectivo: 10000,
+        montoTransferencia: 20000,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("debería retornar 400 si Mixto no incluye montoEfectivo/montoTransferencia", async () => {
+    mockSesion(sesionEntregadorMock);
+    mockAsigFindUnique({ ...asignacionMock, estado: "EnRuta" });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: { nuevoEstado: "Entregado", montoCobrado: 50000, metodoPago: "Mixto" },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("debería retornar 200 al confirmar con metodoPago Credito y montoCobrado 0", async () => {
+    mockSesion(sesionEntregadorMock);
+    prisma.asignacionEntrega.findUnique
+      .mockResolvedValueOnce({ ...asignacionMock, estado: "EnRuta" })
+      .mockResolvedValueOnce({ ...asignacionMock, estado: "Entregado", montoCobrado: 0, metodoPago: "Credito" });
+    prisma.$transaction.mockImplementation(async (fn) =>
+      fn({
+        asignacionEntrega: { update: vi.fn() },
+        pedido: { update: vi.fn() },
+        cliente: { update: vi.fn() },
+      }),
+    );
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: { nuevoEstado: "Entregado", montoCobrado: 0, metodoPago: "Credito" },
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("debería retornar 400 si Credito viene con montoCobrado mayor a 0", async () => {
+    mockSesion(sesionEntregadorMock);
+    mockAsigFindUnique({ ...asignacionMock, estado: "EnRuta" });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: { nuevoEstado: "Entregado", montoCobrado: 20000, metodoPago: "Credito" },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("debería aceptar un abonoDeuda adicional y descontarlo del saldoDeuda junto con montoCobrado", async () => {
+    mockSesion(sesionEntregadorMock);
+    prisma.asignacionEntrega.findUnique
+      .mockResolvedValueOnce({
+        ...asignacionMock,
+        estado: "EnRuta",
+        pedido: {
+          ...asignacionMock.pedido,
+          cliente: { id: 1, nombre: "Juan Pérez", telefono: null, saldoDeuda: 100000 },
+        },
+      })
+      .mockResolvedValueOnce({ ...asignacionMock, estado: "Entregado" });
+    const tx = {
+      asignacionEntrega: { update: vi.fn() },
+      pedido: { update: vi.fn() },
+      cliente: { update: vi.fn() },
+    };
+    prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: {
+        nuevoEstado: "Entregado",
+        montoCobrado: 50000,
+        metodoPago: "Efectivo",
+        abonoDeuda: 30000,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(tx.cliente.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { saldoDeuda: { decrement: 80000 } }, // 50000 (pedido) + 30000 (abono)
+    });
+  });
+
+  it("debería retornar 400 si el abonoDeuda es mayor al saldoDeuda actual del cliente", async () => {
+    mockSesion(sesionEntregadorMock);
+    mockAsigFindUnique({
+      ...asignacionMock,
+      estado: "EnRuta",
+      pedido: {
+        ...asignacionMock.pedido,
+        cliente: { id: 1, nombre: "Juan Pérez", telefono: null, saldoDeuda: 20000 },
+      },
+    });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/asignaciones/1/estado",
+      headers: authEntregador(),
+      payload: {
+        nuevoEstado: "Entregado",
+        montoCobrado: 50000,
+        metodoPago: "Efectivo",
+        abonoDeuda: 30000,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/abono/i);
+  });
 });

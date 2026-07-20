@@ -286,6 +286,30 @@ select.form-control option {
   font-size: 18px;
 }
 
+/* ─── Forma de pago: hints y abono a deuda anterior ───────────*/
+.form-hint {
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  margin-top: 4px;
+  display: block;
+}
+
+.form-hint--error {
+  color: var(--error);
+}
+
+.entr-abono-deuda {
+  padding: 0.75rem;
+  background: rgba(255, 200, 80, 0.08);
+  border: 1px solid rgba(255, 200, 80, 0.3);
+  border-radius: var(--radius-md);
+}
+
+.entr-abono-deuda .form-hint {
+  margin-bottom: 6px;
+}
+
 /* ─── Spinner ────────────────────────────────────────────────*/
 .entr-spinner-wrap {
   display: flex;

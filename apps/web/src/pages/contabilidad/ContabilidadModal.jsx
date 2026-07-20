@@ -10,6 +10,27 @@ import { memo } from "react";
 
 const HOY = new Date().toISOString().split("T")[0];
 
+// Sugerencias para el autocompletar del campo "Concepto" de egresos. Es
+// texto libre (el usuario puede escribir cualquier cosa), esto solo ayuda
+// a que no queden 10 variantes distintas de "viáticos" por errores de tipeo.
+const CONCEPTOS_EGRESO_SUGERIDOS = [
+  "Viáticos",
+  "Nómina",
+  "Salarios",
+  "Prestación de servicios",
+  "Arriendo",
+  "Servicios públicos",
+  "Mantenimiento vehículos",
+  "Combustible",
+  "Transporte",
+  "Papelería",
+  "Publicidad",
+  "Impuestos",
+  "Seguridad social",
+  "Dotación",
+  "Otros gastos",
+];
+
 // Función pura hoisted fuera del componente — no usa estado local
 const parseMaybeNumber = (valor) => {
   const numero = Number(
@@ -232,7 +253,14 @@ const ContabilidadModal = memo(
                   className={`${inputClase} ${errores.concepto ? "cont-input--error" : ""}`}
                   maxLength={200}
                   aria-invalid={Boolean(errores.concepto)}
+                  list="cont-conceptos-sugeridos"
+                  autoComplete="off"
                 />
+                <datalist id="cont-conceptos-sugeridos">
+                  {CONCEPTOS_EGRESO_SUGERIDOS.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
                 <ErrorField mensaje={errores.concepto} />
               </div>
               <div className={grupoClase}>

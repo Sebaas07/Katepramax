@@ -21,7 +21,7 @@ const incluirDetalle = {
           producto: { select: { descripcion: true } },
         },
       },
-      cliente: { select: { id: true, nombre: true, telefono: true } },
+      cliente: { select: { id: true, nombre: true, telefono: true, saldoDeuda: true } },
     },
   },
   entregador: { select: { id: true, nombreCompleto: true, telefono: true } },

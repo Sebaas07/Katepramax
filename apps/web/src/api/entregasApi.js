@@ -25,11 +25,17 @@ const entregasApi = {
     return response.data;
   },
 
-  confirmarEntrega: async (asignacionId, { montoCobrado, metodoPago, observacionesEntrega, fechaConfirmada }) => {
+  confirmarEntrega: async (
+    asignacionId,
+    { montoCobrado, metodoPago, montoEfectivo, montoTransferencia, abonoDeuda, observacionesEntrega, fechaConfirmada },
+  ) => {
     const response = await clienteApi.patch(`/asignaciones/${asignacionId}/estado`, {
       nuevoEstado: "Entregado",
       montoCobrado: parseFloat(montoCobrado),
       metodoPago,
+      ...(montoEfectivo !== undefined ? { montoEfectivo: parseFloat(montoEfectivo) } : {}),
+      ...(montoTransferencia !== undefined ? { montoTransferencia: parseFloat(montoTransferencia) } : {}),
+      ...(abonoDeuda ? { abonoDeuda: parseFloat(abonoDeuda) } : {}),
       ...(observacionesEntrega ? { observacionesEntrega } : {}),
       ...(fechaConfirmada ? { fechaConfirmada } : {}),
     });

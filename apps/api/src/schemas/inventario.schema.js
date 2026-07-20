@@ -70,6 +70,7 @@ const listarInventario = {
       semana: { type: "integer" },
       sedeId: { type: "integer" },
       productoId: { type: "integer" },
+      tipo: { type: "string", enum: ["entrada", "salida", "ajuste"] },
       skip: { type: "integer", minimum: 0, default: 0 },
       take: { type: "integer", minimum: 1, maximum: 200, default: 50 },
     },

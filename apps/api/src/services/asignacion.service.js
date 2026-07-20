@@ -5,7 +5,15 @@
  *  1. Bodega/Admin crea una asignación -> pedido pasa a "Asignado"
  *  2. Entregador actualiza estado a EnRuta, Entregado o Fallido
  *  3. Al marcar Entregado -> se registra montoCobrado, metodoPago,
- *     fechaConfirmada y se reduce el saldoDeuda del cliente
+ *     fechaConfirmada y se reduce el saldoDeuda del cliente. Si además
+ *     el cliente tenía deuda de pedidos anteriores, el entregador puede
+ *     recibir un abonoDeuda adicional que también reduce el saldoDeuda
+ *     en la misma transacción.
+ *
+ *     metodoPago admite: Efectivo, Transferencia, Mixto (requiere
+ *     montoEfectivo + montoTransferencia sumando montoCobrado), Parcial
+ *     (se cobra menos del total del pedido, el resto queda en saldoDeuda)
+ *     y Credito (no se cobra nada ahora, montoCobrado = 0).
  *
  * Reglas de sede por rol:
  * - Admin: acceso total.
@@ -140,7 +148,7 @@ const asignacionService = (app) => ({
             observaciones: true,
             sedeId: true,
             creador: { select: { sedeId: true } },
-            cliente: { select: { id: true, nombre: true, telefono: true } },
+            cliente: { select: { id: true, nombre: true, telefono: true, saldoDeuda: true } },
           },
         },
         entregador: { select: { id: true, nombreCompleto: true, telefono: true } },
@@ -217,7 +225,16 @@ const asignacionService = (app) => ({
       Fallido:    [],
     };
 
-    const { nuevoEstado, montoCobrado, metodoPago, observacionesEntrega, fechaConfirmada } = body;
+    const {
+      nuevoEstado,
+      montoCobrado,
+      metodoPago,
+      montoEfectivo,
+      montoTransferencia,
+      abonoDeuda,
+      observacionesEntrega,
+      fechaConfirmada,
+    } = body;
 
     if (!transiciones[asignacion.estado]?.includes(nuevoEstado)) {
       throw new AppError(
@@ -234,38 +251,96 @@ const asignacionService = (app) => ({
         throw new AppError("Se requiere metodoPago al confirmar la entrega", 400);
       }
 
+      const monto = Number(montoCobrado);
+      if (Number.isNaN(monto) || monto < 0) {
+        throw new AppError("montoCobrado inválido", 400);
+      }
+
+      const abono = Number(abonoDeuda ?? 0);
+      if (Number.isNaN(abono) || abono < 0) {
+        throw new AppError("abonoDeuda inválido", 400);
+      }
+
+      let efectivo = null;
+      let transferencia = null;
+
+      if (metodoPago === "Mixto") {
+        if (
+          montoEfectivo === undefined || montoEfectivo === null ||
+          montoTransferencia === undefined || montoTransferencia === null
+        ) {
+          throw new AppError(
+            "Para metodoPago Mixto se requieren montoEfectivo y montoTransferencia",
+            400,
+          );
+        }
+        efectivo = Number(montoEfectivo);
+        transferencia = Number(montoTransferencia);
+        if (
+          Number.isNaN(efectivo) || Number.isNaN(transferencia) ||
+          efectivo < 0 || transferencia < 0
+        ) {
+          throw new AppError("montoEfectivo/montoTransferencia inválidos", 400);
+        }
+        if (Math.abs(efectivo + transferencia - monto) > 0.01) {
+          throw new AppError(
+            "montoEfectivo + montoTransferencia debe ser igual a montoCobrado",
+            400,
+          );
+        }
+      }
+
+      if (metodoPago === "Credito" && monto !== 0) {
+        throw new AppError("Con metodoPago Credito, montoCobrado debe ser 0", 400);
+      }
+
+      const clienteId = asignacion.pedido?.cliente?.id ?? asignacion.pedido?.clienteId;
+      if (!clienteId) {
+        throw new AppError("No se pudo determinar el cliente del pedido.", 400);
+      }
+
+      if (abono > 0) {
+        const saldoActual = Number(asignacion.pedido?.cliente?.saldoDeuda ?? 0);
+        if (abono > saldoActual) {
+          throw new AppError(
+            `El abono (${abono}) no puede ser mayor al saldo deudor actual del cliente (${saldoActual}).`,
+            400,
+          );
+        }
+      }
+
       await this.prisma.$transaction(async (tx) => {
         await tx.asignacionEntrega.update({
           where: { id },
           data: {
-            estado:              "Entregado",
-            montoCobrado,
+            estado:               "Entregado",
+            montoCobrado:         monto,
+            montoEfectivo:        efectivo,
+            montoTransferencia:   transferencia,
+            abonoDeuda:           abono,
             metodoPago,
-            fechaConfirmada:     fechaConfirmada ? new Date(fechaConfirmada) : new Date(),
+            fechaConfirmada:      fechaConfirmada ? new Date(fechaConfirmada) : new Date(),
             observacionesEntrega: observacionesEntrega ?? asignacion.observacionesEntrega,
           },
         });
 
         await tx.pedido.update({
           where: { id: asignacion.pedidoId },
-          data:  { estado: "Entregado", totalRecibido: montoCobrado },
+          data:  { estado: "Entregado", totalRecibido: monto },
         });
 
-        const clienteId = asignacion.pedido?.cliente?.id ?? asignacion.pedido?.clienteId;
-        if (!clienteId) {
-          throw new AppError("No se pudo determinar el cliente del pedido.", 400);
-        }
         await tx.cliente.update({
           where: { id: clienteId },
-          data:  { saldoDeuda: { decrement: Number(montoCobrado) } },
+          data:  { saldoDeuda: { decrement: monto + abono } },
         });
       });
 
+      const detalleAbono = abono > 0 ? `, + abono de ${abono} a deuda anterior` : "";
       await registrarAccion(
         app,
         usuarioId,
         "CONFIRMAR_ENTREGA",
-        `Confirmó la entrega #${id} del pedido #${asignacion.pedidoId} (cobró ${montoCobrado} vía ${metodoPago}).`,
+        `Confirmó la entrega #${id} del pedido #${asignacion.pedidoId} (cobró ${monto} vía ${metodoPago}${detalleAbono}).`,
       );
 
       return this.repo.findById(id);

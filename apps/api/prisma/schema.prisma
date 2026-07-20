@@ -32,6 +32,9 @@ enum EstadoAsignacion {
 enum MetodoPago {
   Efectivo
   Transferencia
+  Mixto
+  Parcial
+  Credito
 }
 
 model Sede {
@@ -262,6 +265,9 @@ model AsignacionEntrega {
   asignadoEn           DateTime         @default(now()) @map("asignado_en")
   fechaConfirmada      DateTime?        @map("confirmado_en")
   montoCobrado         Decimal?         @map("monto_cobrado") @db.Decimal(12, 2)
+  montoEfectivo        Decimal?         @map("monto_efectivo") @db.Decimal(12, 2)
+  montoTransferencia   Decimal?         @map("monto_transferencia") @db.Decimal(12, 2)
+  abonoDeuda           Decimal          @default(0.00) @map("abono_deuda") @db.Decimal(12, 2)
   metodoPago           MetodoPago?      @map("metodo_pago")
   observacionesEntrega String?          @map("observaciones_entrega") @db.Text
   estado               EstadoAsignacion @default(Pendiente)

@@ -25,4 +25,8 @@ async function cobrosPorEntregador(req, reply) {
   );
 }
 
-module.exports = { arqueoSemanal, panelGeneral, historialSemanal, cobrosPorEntregador };
+async function corteCaja(req, reply) {
+  return reply.send(await svc.corteCaja(req.server, req.query, req.user));
+}
+
+module.exports = { arqueoSemanal, panelGeneral, historialSemanal, cobrosPorEntregador, corteCaja };

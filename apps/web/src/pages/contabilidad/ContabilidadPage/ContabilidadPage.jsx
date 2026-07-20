@@ -3,6 +3,7 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import contabilidadService from "@/services/contabilidad.service";
 import reporteService from "@/services/reporte.service";
+import inventarioService from "@/services/inventario.service";
 import { getSemanaISO, formatFecha } from "@/utils/formatters";
 import {
   construirPayloadContabilidad,
@@ -22,6 +23,7 @@ import ProveedoresTab from "../ProveedoresTab";
 import PanelGeneralTab from "../PanelGeneralTab";
 import ArqueoSemanalTab from "../ArqueoSemanalTab";
 import HistorialSemanalTab from "../HistorialSemanalTab";
+import GananciaGastoTab from "../GananciaGastoTab";
 
 // ── Shared UI
 import { Spinner, EmptyState } from "../ContabilidadUI";
@@ -34,18 +36,13 @@ import "./ContabilidadPage.css";
 const HOY = new Date().toISOString().split("T")[0];
 const SEM_ACTUAL = getSemanaISO(new Date());
 
-const SEDES = [
-  { id: 1, nombre: "Bogota" },
-  { id: 2, nombre: "Cartagena" },
-  { id: 3, nombre: "Villavicencio" },
-];
-
 const TABS = [
   { key: "ingresos", label: "Ingresos Diarios", icon: "trending_up" },
   { key: "egresos", label: "Egresos Diarios", icon: "trending_down" },
   //{ key: "cartera", label: "Cartera", icon: "account_balance" },
   { key: "proveedores", label: "Abonos a Proveedores", icon: "payments" },
   { key: "panel", label: "Panel General", icon: "dashboard" },
+  { key: "ganancia", label: "Ganancia / Gasto", icon: "point_of_sale" },
   { key: "arqueo", label: "Arqueo Semanal", icon: "summarize" },
   { key: "historial", label: "Historial Semanal", icon: "timeline" },
 ];
@@ -75,6 +72,7 @@ const ContabilidadPage = () => {
   // ── Estado de datos ───────────────────────────────────────
   const [tab, setTab] = useState("ingresos");
   const [cargando, setCargando] = useState(false);
+  const [sedes, setSedes] = useState([]);
   const [ingresos, setIngresos] = useState([]);
   const [egresos, setEgresos] = useState([]);
   //const [cartera, setCartera] = useState([]);
@@ -91,6 +89,8 @@ const ContabilidadPage = () => {
   const [arqueoError, setArqueoError] = useState("");
   const [panelGeneral, setPanelGeneral] = useState(null);
   const [historialSemanal, setHistorialSemanal] = useState([]);
+  const [corteCaja, setCorteCaja] = useState(null);
+  const [cargandoCorte, setCargandoCorte] = useState(false);
 
   // ── Filtros ───────────────────────────────────────────────
   const [filtroSemana, setFiltroSemana] = useState(String(SEM_ACTUAL));
@@ -98,6 +98,8 @@ const ContabilidadPage = () => {
     sedeIdUsuario ? String(sedeIdUsuario) : "",
   );
   const [filtroPanelF, setFiltroPanelFecha] = useState(HOY);
+  const [periodoGanancia, setPeriodoGanancia] = useState("dia");
+  const [fechaGanancia, setFechaGanancia] = useState(HOY);
 
   // ── Estado del modal ──────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false);
@@ -133,6 +135,10 @@ const ContabilidadPage = () => {
 
   // ── Carga de datos ────────────────────────────────────────
   const cargarDatos = useCallback(async () => {
+    if (tab === "ganancia") {
+      setCargando(false); // esta pestaña usa su propio loader (cargandoCorte)
+      return;
+    }
     setCargando(true);
     setArqueoError("");
     try {
@@ -213,6 +219,17 @@ const ContabilidadPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
+    inventarioService
+      .obtenerSedes()
+      .then((data) => setSedes(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        console.error("Error al cargar sedes:", err);
+        setSedes([]);
+      });
+  }, [isSessionChecked, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
     // Catálogo de proveedores para el selector del modal de abonos
     // (independiente de la tab activa y de los datos de la tabla de abonos).
     contabilidadService
@@ -229,6 +246,39 @@ const ContabilidadPage = () => {
     return () => window.clearTimeout(id);
   }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
+  // ── Corte de caja (Ganancia / Gasto) ──────────────────────
+  const rangoGanancia = useMemo(() => {
+    const [anio, mes, dia] = fechaGanancia.split("-").map(Number);
+    if (periodoGanancia === "dia") {
+      return { desde: fechaGanancia, hasta: fechaGanancia };
+    }
+    if (periodoGanancia === "quincena") {
+      const ultimoDiaMes = new Date(anio, mes, 0).getDate();
+      const pad = (n) => String(n).padStart(2, "0");
+      return dia <= 15
+        ? { desde: `${anio}-${pad(mes)}-01`, hasta: `${anio}-${pad(mes)}-15` }
+        : { desde: `${anio}-${pad(mes)}-16`, hasta: `${anio}-${pad(mes)}-${pad(ultimoDiaMes)}` };
+    }
+    // mes
+    const ultimoDiaMes = new Date(anio, mes, 0).getDate();
+    const pad = (n) => String(n).padStart(2, "0");
+    return { desde: `${anio}-${pad(mes)}-01`, hasta: `${anio}-${pad(mes)}-${pad(ultimoDiaMes)}` };
+  }, [periodoGanancia, fechaGanancia]);
+
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    if (tab !== "ganancia") return;
+    setCargandoCorte(true);
+    reporteService
+      .obtenerCorteCaja({ ...rangoGanancia, sedeId: filtroSedeId || undefined })
+      .then(setCorteCaja)
+      .catch((err) => {
+        toast.error("Error al cargar el corte de caja: " + (err?.message || "desconocido"));
+        setCorteCaja(null);
+      })
+      .finally(() => setCargandoCorte(false));
+  }, [tab, rangoGanancia, filtroSedeId, isSessionChecked, isAuthenticated]);
+
   // ── Datos mapeados (nombre de sede/proveedor inyectado) ───
   const mapSede = useCallback(
     (items) =>
@@ -236,11 +286,11 @@ const ContabilidadPage = () => {
         ...i,
         sede:
           i.sede?.nombre ??
-          SEDES.find((s) => s.id === i.sedeId)?.nombre ??
+          sedes.find((s) => s.id === i.sedeId)?.nombre ??
           `Sede ${i.sedeId}`,
         observaciones: i.observacion ?? i.observaciones ?? "",
       })),
-    [],
+    [sedes],
   );
 
   const mapProveedor = useCallback(
@@ -249,7 +299,7 @@ const ContabilidadPage = () => {
         ...i,
         sede:
           i.sede?.nombre ??
-          SEDES.find((s) => s.id === i.sedeId)?.nombre ??
+          sedes.find((s) => s.id === i.sedeId)?.nombre ??
           `Sede ${i.sedeId}`,
         proveedor:
           i.proveedor?.nombre ??
@@ -257,7 +307,7 @@ const ContabilidadPage = () => {
           `Proveedor ${i.proveedorId ?? ""}`.trim(),
         observacion: i.observacion ?? "",
       })),
-    [],
+    [sedes],
   );
 
   const ingresosMapeados = useMemo(
@@ -489,7 +539,9 @@ const ContabilidadPage = () => {
           <p className="cont-subtitulo">
             {tab === "panel"
               ? formatFecha(filtroPanelF)
-              : `Semana ${filtroSemana || SEM_ACTUAL}`}
+              : tab === "ganancia"
+                ? `${formatFecha(rangoGanancia.desde)}${rangoGanancia.desde !== rangoGanancia.hasta ? ` — ${formatFecha(rangoGanancia.hasta)}` : ""}`
+                : `Semana ${filtroSemana || SEM_ACTUAL}`}
           </p>
         </div>
         <div className="cont-page__acciones">
@@ -503,7 +555,7 @@ const ContabilidadPage = () => {
                 className="filter-select"
               >
                 <option value="">Todas</option>
-                {SEDES.map((s) => (
+                {sedes.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.nombre}
                   </option>
@@ -511,7 +563,7 @@ const ContabilidadPage = () => {
               </select>
             </div>
           )}
-          {tab !== "panel" && (
+          {tab !== "panel" && tab !== "ganancia" && (
             <div className="filter-group">
               <label htmlFor="cont-semana">Semana</label>
               <input
@@ -571,7 +623,7 @@ const ContabilidadPage = () => {
           {tab === "ingresos" && (
             <IngresosTab
               ingresos={ingresosMapeados}
-              sedes={SEDES}
+              sedes={sedes}
               esAdmin={esAdmin}
               onEditar={abrirEditar}
               onEliminar={abrirEliminar}
@@ -583,7 +635,7 @@ const ContabilidadPage = () => {
           {tab === "egresos" && (
             <EgresosTab
               egresos={egresosMapeados}
-              sedes={SEDES}
+              sedes={sedes}
               esAdmin={esAdmin}
               onEditar={abrirEditar}
               onEliminar={abrirEliminar}
@@ -597,7 +649,7 @@ const ContabilidadPage = () => {
           {tab === "cartera" && (
             <CarteraTab
               cartera={carteraMapeada}
-              sedes={SEDES}
+              sedes={sedes}
               esAdmin={esAdmin}
               onEditar={abrirEditar}
               onEliminar={abrirEliminar}
@@ -627,11 +679,22 @@ const ContabilidadPage = () => {
 
           {tab === "panel" && panelGeneral && (
             <PanelGeneralTab
-              panelGeneral={{ ...panelGeneral, _sedes: SEDES }}
+              panelGeneral={{ ...panelGeneral, _sedes: sedes }}
               fecha={filtroPanelF}
               semanaNumero={semanaNumero}
               totalesDiaIngresos={totalesDiaIng}
               totalesDiaEgresos={totalesDiaEgr}
+            />
+          )}
+
+          {tab === "ganancia" && (
+            <GananciaGastoTab
+              periodo={periodoGanancia}
+              onPeriodoChange={setPeriodoGanancia}
+              fechaReferencia={fechaGanancia}
+              onFechaReferenciaChange={setFechaGanancia}
+              corte={corteCaja}
+              cargando={cargandoCorte}
             />
           )}
 
@@ -641,7 +704,7 @@ const ContabilidadPage = () => {
               arqueoError={arqueoError}
               filtroSemana={filtroSemana}
               onFiltroSemanaChange={handleFiltroSemana}
-              sedes={SEDES}
+              sedes={sedes}
             />
           )}
 
@@ -662,7 +725,7 @@ const ContabilidadPage = () => {
         onFormChange={handleFormChange}
         totalIngresoForm={totalIngresoForm}
         esAdmin={esAdmin}
-        sedes={SEDES}
+        sedes={sedes}
         proveedores={catalogoProveedores}
         errores={erroresForm}
         cargando={cargando}
