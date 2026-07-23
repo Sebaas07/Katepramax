@@ -382,11 +382,16 @@ const ContabilidadPage = () => {
     [sedeIdUsuario],
   );
 
+  const TAB_A_MODAL_TIPO = {
+    ingresos: "ingreso",
+    egresos: "egreso",
+    cartera: "cartera",
+    proveedores: "abono",
+  };
+
   const abrirNuevo = useCallback(() => {
     setItemEditar(null);
-    setModalTipo(
-      tab === "cartera" ? "cartera" : tab === "proveedores" ? "abono" : tab,
-    );
+    setModalTipo(TAB_A_MODAL_TIPO[tab] ?? tab);
     setForm(resetForm());
     setModalOpen(true);
   }, [tab, resetForm]);
