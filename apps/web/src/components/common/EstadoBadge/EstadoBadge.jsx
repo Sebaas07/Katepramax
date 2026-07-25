@@ -24,6 +24,7 @@ const CONFIG_ESTADO = {
   inactivo:   { label: "Inactivo",   color: "#ffb4ab", bg: "rgba(255,180,171,0.12)", border: "rgba(255,180,171,0.3)" },
   recibido:   { label: "Recibido",   color: "#4ade80", bg: "rgba(74,222,128,0.12)",  border: "rgba(74,222,128,0.3)"  },
   incompleto: { label: "Incompleto", color: "#e9c349", bg: "rgba(233,195,73,0.12)",  border: "rgba(233,195,73,0.3)"  },
+  connovedad: { label: "Con novedad", color: "#e9c349", bg: "rgba(233,195,73,0.12)", border: "rgba(233,195,73,0.3)" },
   // ── Deudas proveedores ──
   pagado:     { label: "Pagado",     color: "#4ade80", bg: "rgba(74,222,128,0.12)",  border: "rgba(74,222,128,0.3)"  },
   parcial:    { label: "Parcial",    color: "#e9c349", bg: "rgba(233,195,73,0.12)",  border: "rgba(233,195,73,0.3)"  },

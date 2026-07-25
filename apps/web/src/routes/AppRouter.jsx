@@ -40,6 +40,9 @@ const LogsPage = lazy(
 const EntregasPage = lazy(
   () => import("@/pages/entregas/EntregasPage/EntregasPage"),
 );
+const EnviosPage = lazy(
+  () => import("@/pages/envios/EnviosPage/EnviosPage"),
+);
 
 // ── Roles ─────────────────────────────────────────────────────
 const ROLES = {
@@ -92,6 +95,14 @@ const AppRouter = () => (
           <Route path="/inventario" element={<InventarioPage />} />
           <Route path="/productos" element={<ProductosPage />} />
           <Route path="/distribucion" element={<DistribucionPage />} />
+          <Route
+            path="/envios"
+            element={
+              <Suspense fallback={<AuthLoading />}>
+                <EnviosPage />
+              </Suspense>
+            }
+          />
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/clientes/cartera" element={<CarteraClientesPage />} />
           <Route path="/proveedores" element={<ProveedoresPage />} />

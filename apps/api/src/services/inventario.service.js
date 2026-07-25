@@ -48,6 +48,18 @@ async function registrar(app, body, usuario) {
 
   const tipo = body.tipo ?? "entrada";
   const cantidad = Number(body.cantidadIngresada);
+
+  if (tipo === "ajuste") {
+    if (cantidad === 0) {
+      throw new AppError(
+        "El ajuste no puede ser 0: indica si quieres sumar (+) o restar (-) unidades.",
+        400,
+      );
+    }
+  } else if (cantidad <= 0) {
+    throw new AppError("La cantidad debe ser mayor a 0.", 400);
+  }
+
   const costoUnitarioRegistro =
     body.costoUnitario ?? Number(producto.precioCosto);
 
@@ -164,6 +176,17 @@ async function editar(app, id, body, usuario) {
       body.cantidadIngresada !== undefined
         ? Number(body.cantidadIngresada)
         : Math.abs(anterior.cantidadIngresada); // cantidad original sin signo
+
+    if (tipoNuevo === "ajuste") {
+      if (cantidadNueva === 0) {
+        throw new AppError(
+          "El ajuste no puede ser 0: indica si quieres sumar (+) o restar (-) unidades.",
+          400,
+        );
+      }
+    } else if (cantidadNueva <= 0) {
+      throw new AppError("La cantidad debe ser mayor a 0.", 400);
+    }
 
     const deltaNuevo = calcularDelta(tipoNuevo, cantidadNueva);
     const deltaAnterior = anterior.cantidadIngresada; // ya tiene signo guardado

@@ -65,10 +65,27 @@
 
 /* Label */
 .sidebar-link__label {
+  flex: 1;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.sidebar-link__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  background: var(--error);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 /* Logout — color rojo */

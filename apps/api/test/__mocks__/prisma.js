@@ -55,6 +55,7 @@ const prisma = {
   },
   stockSede: {
     findUnique:  vi.fn(),
+    findMany:    vi.fn(),
     upsert:      vi.fn(),
     update:      vi.fn(),
     aggregate:   vi.fn(),
@@ -120,6 +121,16 @@ const prisma = {
   },
   errorLog: {
     create: vi.fn(),
+  },
+  envio: {
+    findUnique:  vi.fn(),
+    findMany:    vi.fn(),
+    create:      vi.fn(),
+    update:      vi.fn(),
+    count:       vi.fn(),
+  },
+  envioDetalle: {
+    update: vi.fn(),
   },
   // FIX: $transaction ejecuta el callback con el mismo prisma mock
   // para que los tests que usan transacciones funcionen correctamente

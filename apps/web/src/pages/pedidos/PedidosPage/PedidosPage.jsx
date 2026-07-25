@@ -31,6 +31,7 @@ const crearItemVacio = () => ({
   productoId: "",
   cantidad: "",
   precioUnitario: "",
+  busqueda: "",
 });
 
 const crearFormInicial = () => ({
@@ -95,6 +96,7 @@ const PedidosPage = () => {
 
   const [formPedido, setFormPedido] = useState(crearFormInicial);
   const [entregadorId, setEntregadorId] = useState("");
+  const [dropdownProductoAbierto, setDropdownProductoAbierto] = useState(null);
 
   const mapaProductosPorCodigo = useMemo(
     () => Object.fromEntries(productos.map((p) => [String(p.codigo), p])),
@@ -300,6 +302,7 @@ const PedidosPage = () => {
           ? {
               ...item,
               productoId,
+              busqueda: prod ? `[${prod.codigo}] ${prod.nombre ?? prod.descripcion}` : "",
               precioUnitario: prod
                 ? String(prod.precioVenta ?? prod.precioDetal ?? "")
                 : "",
@@ -307,6 +310,32 @@ const PedidosPage = () => {
           : item,
       ),
     }));
+    setDropdownProductoAbierto(null);
+  };
+
+  // El texto de búsqueda es independiente del producto confirmado: escribir
+  // (o borrar) nunca queda "trabado" — solo se confirma un producto nuevo al
+  // elegirlo de la lista. Si el campo queda vacío, se limpia el producto.
+  const handleBuscarProducto = (index, texto) => {
+    setFormPedido((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) =>
+        i === index
+          ? { ...item, busqueda: texto, productoId: "", precioUnitario: "" }
+          : item,
+      ),
+    }));
+    setDropdownProductoAbierto(index);
+  };
+
+  const handleLimpiarProducto = (index) => {
+    setFormPedido((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) =>
+        i === index ? { ...item, productoId: "", busqueda: "", precioUnitario: "" } : item,
+      ),
+    }));
+    setDropdownProductoAbierto(null);
   };
 
   const handleAgregarItem = () => {
@@ -740,12 +769,27 @@ const PedidosPage = () => {
                   (p) => String(p.codigo) === String(item.productoId),
                 );
                 const precioBase = prodSel
-                  ? (prodSel.precioVenta ?? prodSel.precioDetal ?? 0)
+                  ? Number(prodSel.precioVenta ?? prodSel.precioDetal ?? 0)
                   : 0;
-                const cantidad = parseInt(item.cantidad, 10);
-                const subtotal =
-                  (Number.isNaN(cantidad) ? 0 : cantidad) *
-                  (parseFloat(item.precioUnitario || String(precioBase)) || 0);
+                const cantidadNum = parseInt(item.cantidad, 10) || 0;
+                const precioNum =
+                  item.precioUnitario !== ""
+                    ? parseFloat(item.precioUnitario) || 0
+                    : precioBase;
+                const subtotal = cantidadNum * precioNum;
+
+                const terminoBusqueda = (item.busqueda || "").trim().toLowerCase();
+                const productosFiltrados = (
+                  terminoBusqueda
+                    ? productos.filter(
+                        (p) =>
+                          String(p.codigo).includes(terminoBusqueda) ||
+                          String(p.nombre ?? p.descripcion ?? "")
+                            .toLowerCase()
+                            .includes(terminoBusqueda),
+                      )
+                    : productos
+                ).slice(0, 8);
 
                 return (
                   <div key={item.id} className="item-group" role="listitem">
@@ -769,49 +813,72 @@ const PedidosPage = () => {
                     </div>
 
                     <div className="item-fields">
-                      <div className="item-field--producto">
+                      <div className="item-field--producto ped-combobox">
                         <label htmlFor={`ped-buscar-${index}`}>Producto</label>
-                        <input
-                          id={`ped-buscar-${index}`}
-                          type="text"
-                          list={`ped-buscar-dl-${index}`}
-                          className="form-control"
-                          placeholder="Busca por código o nombre..."
-                          value={
-                            prodSel
-                              ? `[${prodSel.codigo}] ${prodSel.nombre ?? prodSel.descripcion}`
-                              : ""
-                          }
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            const match = raw.match(/\[(\d+)\]/);
-                            if (match) {
-                              handleSeleccionProducto(index, match[1]);
-                            } else {
-                              const prodPorNombre = productos.find((p) =>
-                                String(p.nombre ?? p.descripcion ?? "")
-                                  .toLowerCase()
-                                  .includes(raw.toLowerCase()),
-                              );
-                              if (prodPorNombre && !item.productoId) {
-                                handleSeleccionProducto(
-                                  index,
-                                  prodPorNombre.codigo,
+                        <div className="ped-combobox__input-wrap">
+                          <input
+                            id={`ped-buscar-${index}`}
+                            type="text"
+                            className="form-control"
+                            placeholder="Busca por código o nombre..."
+                            autoComplete="off"
+                            value={item.busqueda}
+                            onFocus={() => setDropdownProductoAbierto(index)}
+                            onChange={(e) => handleBuscarProducto(index, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") setDropdownProductoAbierto(null);
+                            }}
+                            onBlur={() => {
+                              // pequeño margen para que el click en una opción
+                              // se registre antes de cerrar el dropdown
+                              window.setTimeout(() => {
+                                setDropdownProductoAbierto((cur) =>
+                                  cur === index ? null : cur,
                                 );
-                              }
-                            }
-                          }}
-                        />
-                        <datalist id={`ped-buscar-dl-${index}`}>
-                          {productos.map((p) => (
-                            <option
-                              key={p.codigo}
-                              value={`[${p.codigo}] ${p.nombre ?? p.descripcion ?? ""}`}
+                              }, 150);
+                            }}
+                          />
+                          {item.busqueda && (
+                            <button
+                              type="button"
+                              className="ped-combobox__clear"
+                              aria-label="Quitar producto seleccionado"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleLimpiarProducto(index)}
                             >
-                              {p.sede?.nombre ?? nombreSede(p.sedeId)}
-                            </option>
-                          ))}
-                        </datalist>
+                              <span className="material-symbols-outlined" aria-hidden="true">
+                                close
+                              </span>
+                            </button>
+                          )}
+                        </div>
+
+                        {dropdownProductoAbierto === index && (
+                          <div className="ped-combobox__dropdown">
+                            {productosFiltrados.length === 0 ? (
+                              <div className="ped-combobox__vacio">
+                                Sin resultados para “{item.busqueda}”
+                              </div>
+                            ) : (
+                              productosFiltrados.map((p) => (
+                                <button
+                                  type="button"
+                                  key={p.codigo}
+                                  className="ped-combobox__opcion"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => handleSeleccionProducto(index, p.codigo)}
+                                >
+                                  <span className="ped-combobox__opcion-nombre">
+                                    [{p.codigo}] {p.nombre ?? p.descripcion}
+                                  </span>
+                                  <span className="ped-combobox__opcion-sede">
+                                    {p.sede?.nombre ?? nombreSede(p.sedeId)}
+                                  </span>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="item-field--cantidad">
@@ -895,15 +962,15 @@ const PedidosPage = () => {
                     const prod = productos.find(
                       (p) => String(p.codigo) === String(it.productoId),
                     );
-                    const precio = prod
-                      ? (prod.precioVenta ?? prod.precioDetal ?? 0)
+                    const precioBase = prod
+                      ? Number(prod.precioVenta ?? prod.precioDetal ?? 0)
                       : 0;
-                    const cant = parseInt(it.cantidad, 10);
-                    return (
-                      acc +
-                      (Number.isNaN(cant) ? 0 : cant) *
-                        (parseFloat(it.precioUnitario || String(precio)) || 0)
-                    );
+                    const cantidadNum = parseInt(it.cantidad, 10) || 0;
+                    const precioNum =
+                      it.precioUnitario !== ""
+                        ? parseFloat(it.precioUnitario) || 0
+                        : precioBase;
+                    return acc + cantidadNum * precioNum;
                   }, 0)
                   .toLocaleString("es-CO", { minimumFractionDigits: 0 })}
               </strong>

@@ -13,6 +13,7 @@ export default function SidebarLink({
   esBoton = false,
   className = "",
   activo = false,
+  badge = 0,
 }) {
   if (esBoton) {
     return (
@@ -41,6 +42,9 @@ export default function SidebarLink({
         {icon}
       </span>
       <span className="sidebar-link__label">{label}</span>
+      {badge > 0 && (
+        <span className="sidebar-link__badge">{badge > 99 ? "99+" : badge}</span>
+      )}
     </NavLink>
   );
 }

@@ -52,6 +52,8 @@ model Sede {
   carteras    Cartera[]
   pedidos     Pedido[]
   clientes    Cliente[]
+  enviosOrigen  Envio[] @relation("EnvioOrigen")
+  enviosDestino Envio[] @relation("EnvioDestino")
 
   @@map("sedes")
 }
@@ -89,6 +91,8 @@ model Usuario {
   asignacionesRealizadas AsignacionEntrega[]     @relation("AsignadoPor")
   // FIX: una sola relación hacia HistorialEstadoPedido con nombre consistente
   historialEstadoPedidos HistorialEstadoPedido[] @relation("HistorialUsuario")
+  enviosCreados          Envio[]                 @relation("EnvioCreador")
+  enviosConfirmados      Envio[]                 @relation("EnvioConfirmador")
 
   @@map("usuarios")
 }
@@ -164,6 +168,7 @@ model Producto {
   pedidoDetalles PedidoDetalle[] @relation("DetalleProducto")
   inventarios    Inventario[]
   stockSedes     StockSede[]
+  envioDetalles  EnvioDetalle[]
 
   @@map("productos")
 }
@@ -375,4 +380,56 @@ model Cartera {
   @@index([semana])
   @@index([fecha])
   @@map("cartera")
+}
+
+enum EstadoEnvio {
+  Pendiente
+  Confirmado
+  ConNovedad
+}
+
+// Guía de envío de mercancía entre sedes. Un Admin/AdminBogota crea un envío
+// hacia una o varias sedes destino (una fila Envio por cada sede destino, cada
+// una con su propia lista de productos/cantidades). Al crear, se descuenta el
+// stock de la sede origen y se registra una salida en Inventario. Al confirmar
+// la recepción en la sede destino, se registra la entrada correspondiente en
+// Inventario (y se crea el StockSede si aún no existía para ese producto en
+// esa sede) usando la cantidad realmente recibida, no la enviada.
+model Envio {
+  id                   Int         @id @default(autoincrement())
+  sedeOrigenId         Int         @map("sede_origen_id")
+  sedeDestinoId        Int         @map("sede_destino_id")
+  creadoPorId          Int         @map("creado_por")
+  confirmadoPorId      Int?        @map("confirmado_por")
+  estado               EstadoEnvio @default(Pendiente)
+  observaciones        String?     @map("observaciones") @db.Text
+  observacionRecepcion String?     @map("observacion_recepcion") @db.Text
+  fechaEnvio           DateTime    @default(now()) @map("fecha_envio")
+  fechaConfirmacion    DateTime?   @map("fecha_confirmacion")
+
+  sedeOrigen  Sede     @relation("EnvioOrigen", fields: [sedeOrigenId], references: [id])
+  sedeDestino Sede     @relation("EnvioDestino", fields: [sedeDestinoId], references: [id])
+  creador     Usuario  @relation("EnvioCreador", fields: [creadoPorId], references: [id])
+  confirmador Usuario? @relation("EnvioConfirmador", fields: [confirmadoPorId], references: [id])
+
+  detalles EnvioDetalle[]
+
+  @@index([sedeDestinoId, estado])
+  @@index([sedeOrigenId])
+  @@map("envios")
+}
+
+model EnvioDetalle {
+  id               Int     @id @default(autoincrement())
+  envioId          Int     @map("envio_id")
+  productoId       Int     @map("producto_id")
+  cantidadEnviada  Int     @map("cantidad_enviada")
+  cantidadRecibida Int?    @map("cantidad_recibida")
+  observacion      String? @map("observacion") @db.VarChar(500)
+
+  envio    Envio    @relation(fields: [envioId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [codigo])
+
+  @@index([envioId])
+  @@map("envio_detalles")
 }

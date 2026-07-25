@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import envioService from "@/services/envio.service";
 import SidebarLink from "./SidebarLink";
 import "./MenuItems.css";
 
@@ -46,6 +48,13 @@ const MENU = [
     roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
+    path:  "/envios",
+    label: "Envíos entre Sedes",
+    icon:  "local_shipping",
+    roles: ["Admin", "AdminBogota", "Bodega"],
+    notificable: true,
+  },
+  {
     path:  "/proveedores",
     label: "Proveedores",
     icon:  "conveyor_belt",
@@ -88,8 +97,28 @@ const MENU = [
 
 export default function MenuItems({ cerrar }) {
   const location = useLocation();
-  const { usuario, esAdminBogota } = useAuth();
+  const { usuario, esAdminBogota, isAuthenticated, isSessionChecked } = useAuth();
   const rol = usuario?.rol ?? "";
+  const [enviosPendientes, setEnviosPendientes] = useState(0);
+
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    if (!["Admin", "Bodega", "AdminBogota"].includes(rol)) return;
+
+    let activo = true;
+    const cargar = () => {
+      envioService.obtenerPendientesCount().then((n) => {
+        if (activo) setEnviosPendientes(n);
+      });
+    };
+    cargar();
+    // Refresca cada minuto — es la "notificación" de que llegó un envío nuevo
+    const id = window.setInterval(cargar, 60000);
+    return () => {
+      activo = false;
+      window.clearInterval(id);
+    };
+  }, [isSessionChecked, isAuthenticated, rol]);
 
   const menuFiltrado = MENU.filter((item) => item.roles.includes(rol));
 
@@ -107,6 +136,7 @@ export default function MenuItems({ cerrar }) {
           to={item.path}
           activo={location.pathname === item.path}
           onClick={cerrar}
+          badge={item.notificable ? enviosPendientes : 0}
         />
       ))}
 

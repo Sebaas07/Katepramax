@@ -327,7 +327,7 @@ select.form-control option {
   align-items: flex-end;
 }
 
-.item-field--producto { flex: 3; min-width: 160px; }
+.item-field--producto { flex: 3; min-width: 160px; position: relative; }
 .item-field--cantidad { flex: 1; min-width: 80px; }
 .item-field--precio   { flex: 1.5; min-width: 110px; }
 .item-field--subtotal {
@@ -553,3 +553,96 @@ select.form-control option {
    text-transform: uppercase;
    color: var(--secondary);
  }
+
+/* ─── Combobox de producto (buscador + dropdown) ──────────────*/
+.ped-combobox__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ped-combobox__input-wrap .form-control {
+  padding-right: 2rem;
+}
+
+.ped-combobox__clear {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+}
+
+.ped-combobox__clear:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--error);
+}
+
+.ped-combobox__clear .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.ped-combobox__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface-container-high);
+  border: 1px solid var(--aged-gold-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  padding: 4px;
+}
+
+.ped-combobox__opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--on-surface);
+  font-family: var(--font-label);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ped-combobox__opcion:hover,
+.ped-combobox__opcion:focus-visible {
+  background: var(--aged-gold-dim);
+}
+
+.ped-combobox__opcion-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ped-combobox__opcion-sede {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--on-surface-variant);
+}
+
+.ped-combobox__vacio {
+  padding: 0.75rem;
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  text-align: center;
+}

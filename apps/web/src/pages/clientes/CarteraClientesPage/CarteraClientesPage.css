@@ -40,3 +40,54 @@
   color: var(--on-surface-variant);
   margin: 0 0 0.5rem 0;
 }
+
+/* ─── Header: botón volver ────────────────────────────────────*/
+.cc-header-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cc-volver {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cc-volver:hover {
+  border-color: var(--aged-gold-border);
+  color: var(--aged-gold);
+  background: var(--aged-gold-dim);
+}
+
+.cc-volver .material-symbols-outlined {
+  font-size: 20px;
+}
+
+/* ─── Estado vacío ────────────────────────────────────────────*/
+.cc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.875rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+  text-align: center;
+}
+
+.cc-empty .material-symbols-outlined {
+  font-size: 48px;
+  color: #4ade80;
+  opacity: 0.5;
+}

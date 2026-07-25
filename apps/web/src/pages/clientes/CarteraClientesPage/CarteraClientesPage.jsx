@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import clientesService from "@/services/clientes.service";
@@ -16,6 +17,7 @@ const Spinner = () => (
 const CarteraClientesPage = () => {
   const { esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
   const puedeAbonar = esAdmin || esBodega;
+  const navigate = useNavigate();
 
   const [clientes, setClientes] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -48,6 +50,13 @@ const CarteraClientesPage = () => {
     const { name, value } = e.target;
     setFiltros((prev) => ({ ...prev, [name]: value }));
   };
+
+  // Cartera = cuentas por cobrar: solo tiene sentido mostrar clientes que
+  // realmente deben algo. Un cliente con saldo en 0 no pinta acá.
+  const clientesConDeuda = useMemo(
+    () => clientes.filter((c) => Number(c.saldoDeuda) > 0),
+    [clientes],
+  );
 
   const abrirModalAbono = (cliente) => {
     setClienteSeleccionado(cliente);
@@ -104,7 +113,17 @@ const CarteraClientesPage = () => {
   return (
     <div className="cc-page">
       <div className="page-header">
-        <h1>Cartera de Clientes</h1>
+        <div className="cc-header-titulo">
+          <button
+            type="button"
+            className="cc-volver"
+            onClick={() => navigate(-1)}
+            aria-label="Volver atrás"
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          </button>
+          <h1>Cartera de Clientes</h1>
+        </div>
         <div className="filters">
           <div className="filter-group">
             <label htmlFor="cc-filtro-activo">Estado</label>
@@ -126,10 +145,15 @@ const CarteraClientesPage = () => {
       <div className="tab-content">
         {cargando ? (
           <Spinner />
+        ) : clientesConDeuda.length === 0 ? (
+          <div className="cc-empty">
+            <span className="material-symbols-outlined" aria-hidden="true">check_circle</span>
+            <p>Ningún cliente tiene saldo en deuda por ahora.</p>
+          </div>
         ) : (
           <TablaGenerica
             columnas={columnas}
-            datos={clientes}
+            datos={clientesConDeuda}
             filasPorPagina={10}
             mostrarBuscador
             buscarEnCampos={["nombre", "telefono"]}

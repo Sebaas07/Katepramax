@@ -197,6 +197,84 @@ describe("POST /api/v1/inventario", () => {
 
     expect(res.statusCode).toBe(201);
   });
+
+  it("debería aceptar cantidadIngresada negativa cuando tipo es ajuste y descontar del stock", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.inventario.create.mockResolvedValue({ ...inventarioMock, cantidadIngresada: -10, tipo: "ajuste" });
+    prisma.stockSede.upsert.mockResolvedValue({});
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/inventario",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+      payload: {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: -10,
+        tipo: "ajuste",
+        fecha: "2026-06-02",
+        semana: 23,
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    // El schema ya no debe rechazar el número negativo (antes tenía minimum: 0)
+    expect(prisma.inventario.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ cantidadIngresada: -10 }) }),
+    );
+    expect(prisma.stockSede.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: { stockActual: { increment: -10 } },
+      }),
+    );
+  });
+
+  it("debería retornar 400 si el ajuste es 0", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/inventario",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+      payload: {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: 0,
+        tipo: "ajuste",
+        fecha: "2026-06-02",
+        semana: 23,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/sumar|restar/i);
+  });
+
+  it("debería retornar 400 si entrada/salida viene con cantidad <= 0", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/inventario",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+      payload: {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: -5,
+        tipo: "entrada",
+        fecha: "2026-06-02",
+        semana: 23,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
 });
 
 // ── GET /api/v1/inventario ────────────────────────────────────────────────────

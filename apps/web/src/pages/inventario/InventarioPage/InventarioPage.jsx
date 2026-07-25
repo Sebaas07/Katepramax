@@ -46,6 +46,7 @@ const InventarioPage = () => {
     tipo: "entrada",
     productoId: "",
     cantidad: "",
+    signoAjuste: "sumar",
     nota: "",
     sedeId: "",
     fecha: HOY,
@@ -127,6 +128,7 @@ const InventarioPage = () => {
       tipo: TAB_TIPO[activeTab] ?? "entrada",
       productoId: "",
       cantidad: "",
+      signoAjuste: "sumar",
       nota: "",
       sedeId: esAdmin ? "" : String(sedeIdUsuario),
       fecha: HOY,
@@ -137,10 +139,19 @@ const InventarioPage = () => {
   const handleGuardarMovimiento = async () => {
     setGuardandoMov(true);
     try {
+      const magnitud = Math.abs(parseInt(form.cantidad) || 0);
+      if (form.tipo === "ajuste" && magnitud === 0) {
+        toast.error("Indica cuántas unidades quieres sumar o restar.");
+        setGuardandoMov(false);
+        return;
+      }
+      const cantidadFinal =
+        form.tipo === "ajuste" && form.signoAjuste === "restar" ? -magnitud : magnitud;
+
       await inventarioService.registrarMovimiento({
         tipo: form.tipo,
         productoId: form.productoId,
-        cantidad: parseInt(form.cantidad),
+        cantidad: cantidadFinal,
         nota: form.nota || null,
         sedeId: parseInt(form.sedeId),
         fecha: form.fecha,
@@ -344,22 +355,67 @@ const InventarioPage = () => {
           </div>
 
           {/* Cantidad */}
-          <div className="form-group">
-            <label htmlFor="mov-cantidad">
-              {form.tipo === "ajuste" ? "Ajuste (número)" : "Cantidad *"}
-            </label>
-            <input
-              id="mov-cantidad"
-              name="cantidad"
-              type="number"
-              value={form.cantidad}
-              onChange={handleCambioForm}
-              className="form-control"
-              min={form.tipo === "ajuste" ? undefined : "1"}
-              step="1"
-              placeholder={form.tipo === "ajuste" ? "-10 o +20" : "0"}
-            />
-          </div>
+          {form.tipo === "ajuste" ? (
+            <div className="form-group">
+              <span className="form-label-standalone">¿Sumar o restar? *</span>
+              <div className="mov-signo-toggle">
+                <button
+                  type="button"
+                  className={form.signoAjuste === "sumar" ? "mov-signo-btn mov-signo-btn--activo-suma" : "mov-signo-btn"}
+                  onClick={() => setForm({ ...form, signoAjuste: "sumar" })}
+                >
+                  <span className="material-symbols-outlined" aria-hidden="true">add</span>
+                  Sumar
+                </button>
+                <button
+                  type="button"
+                  className={form.signoAjuste === "restar" ? "mov-signo-btn mov-signo-btn--activo-resta" : "mov-signo-btn"}
+                  onClick={() => setForm({ ...form, signoAjuste: "restar" })}
+                >
+                  <span className="material-symbols-outlined" aria-hidden="true">remove</span>
+                  Restar
+                </button>
+              </div>
+
+              <label htmlFor="mov-cantidad" className="mov-cantidad-label">
+                Unidades a {form.signoAjuste === "restar" ? "restar" : "sumar"} *
+              </label>
+              <input
+                id="mov-cantidad"
+                name="cantidad"
+                type="number"
+                value={form.cantidad}
+                onChange={handleCambioForm}
+                className="form-control"
+                min="1"
+                step="1"
+                placeholder="0"
+              />
+              <span className="form-hint">
+                Se guardará como{" "}
+                <strong>
+                  {form.signoAjuste === "restar" ? "−" : "+"}
+                  {Math.abs(parseInt(form.cantidad) || 0)}
+                </strong>{" "}
+                en el inventario.
+              </span>
+            </div>
+          ) : (
+            <div className="form-group">
+              <label htmlFor="mov-cantidad">Cantidad *</label>
+              <input
+                id="mov-cantidad"
+                name="cantidad"
+                type="number"
+                value={form.cantidad}
+                onChange={handleCambioForm}
+                className="form-control"
+                min="1"
+                step="1"
+                placeholder="0"
+              />
+            </div>
+          )}
 
           {/* Fecha */}
           <div className="form-group">

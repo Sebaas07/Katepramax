@@ -45,7 +45,7 @@ const crearInventario = {
       semana: { type: "integer", minimum: 1, maximum: 53 },
       sedeId: { type: "integer" },
       productoId: { type: "integer" },
-      cantidadIngresada: { type: "integer", minimum: 0 },
+      cantidadIngresada: { type: "integer" }, // el signo se valida en el service según el tipo
       costoUnitario: { type: "number", minimum: 0 },
       tipo: { type: "string", enum: ["entrada", "salida", "ajuste"] },
       nota: { type: "string" },
@@ -110,7 +110,7 @@ const editarInventario = {
   body: {
     type: "object",
     properties: {
-      cantidadIngresada: { type: "integer", minimum: 0 },
+      cantidadIngresada: { type: "integer" }, // el signo se valida en el service según el tipo
       costoUnitario: { type: "number", minimum: 0 },
     },
     minProperties: 1,
