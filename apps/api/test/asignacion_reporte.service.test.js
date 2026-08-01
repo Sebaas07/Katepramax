@@ -165,12 +165,14 @@ describe("asignacionService.actualizarEstado", () => {
     const txAsig   = vi.fn();
     const txPedido = vi.fn();
     const txCliente = vi.fn();
+    const txIngreso = vi.fn();
 
     prisma.$transaction.mockImplementation(async (fn) => {
       await fn({
         asignacionEntrega: { update: txAsig },
         pedido:            { update: txPedido },
         cliente:           { update: txCliente },
+        ingreso:           { create: txIngreso },
       });
     });
 
@@ -183,6 +185,16 @@ describe("asignacionService.actualizarEstado", () => {
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(txCliente).toHaveBeenCalledWith(
       expect.objectContaining({ data: { saldoDeuda: { decrement: 50000 } } }),
+    );
+    expect(txIngreso).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          sedeId: 1,
+          efectivo: 50000,
+          cuentas: 0,
+          total: 50000,
+        }),
+      }),
     );
   });
 

@@ -28,9 +28,6 @@ import DistribucionPage from "@/pages/distribucion/DistribucionPage/Distribucion
 import ContabilidadPage from "@/pages/contabilidad/ContabilidadPage/ContabilidadPage";
 
 // ── Lazy-loaded ───────────────────────────────────────────────
-const ReportesPage = lazy(
-  () => import("@/pages/reportes/ReportesPage/ReportesPage"),
-);
 const UsuariosPage = lazy(
   () => import("@/pages/admin/UsuariosPage/UsuariosPage"),
 );
@@ -107,14 +104,10 @@ const AppRouter = () => (
           <Route path="/clientes/cartera" element={<CarteraClientesPage />} />
           <Route path="/proveedores" element={<ProveedoresPage />} />
           <Route path="/contabilidad" element={<ContabilidadPage />} />
-          <Route
-            path="/reportes"
-            element={
-              <Suspense fallback={<AuthLoading />}>
-                <ReportesPage />
-              </Suspense>
-            }
-          />
+          {/* Reportes se fusionó dentro de Contabilidad (pestaña "Cobros
+              por Entregador"); "Gastos Diarios" ya existía en Egresos.
+              Se deja un redirect por si hay links/bookmarks viejos. */}
+          <Route path="/reportes" element={<Navigate to="/contabilidad" replace />} />
         </Route>
 
         {/* Solo Admin */}

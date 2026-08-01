@@ -85,6 +85,118 @@
   gap: 1.25rem;
 }
 
+/* ─── Tarjetas KPI (portadas de Reportes al fusionar) ─────────*/
+.cont-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.cont-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-top: 3px solid var(--kpi-color, var(--secondary));
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.cont-kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--kpi-color, var(--secondary));
+}
+
+.cont-kpi-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--outline-variant);
+  flex-shrink: 0;
+}
+
+.cont-kpi-card__icon .material-symbols-outlined {
+  font-size: 22px;
+  color: var(--kpi-color, var(--secondary));
+}
+
+.cont-kpi-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cont-kpi-card__titulo {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cont-kpi-card__valor {
+  font-family: var(--font-headline);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
+}
+
+.cont-kpi-card__sub {
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--on-surface-variant);
+}
+
+.cont-section {
+  background: var(--surface-container);
+  border: 1px solid var(--aged-gold-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+}
+
+.cont-section__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-headline);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin: 0 0 1rem;
+}
+
+.cont-section__title .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--aged-gold);
+}
+
+.cont-chart-wrap {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--aged-gold-border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem;
+}
+
+.cont-tabla-wrap {
+  background: var(--surface-container);
+  border: 1px solid rgba(197, 179, 88, 0.12);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 180px;
+}
+
+@media (max-width: 640px) {
+  .cont-kpis { grid-template-columns: 1fr; }
+}
+
 /* ─── Tarjetas resumen ───────────────────────────────────────*/
 .cont-resumen-row {
   display: grid;
@@ -279,12 +391,17 @@
   width: 100%;
   box-sizing: border-box;
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.cont-input:hover:not(:disabled):not(:focus) {
+  background: var(--surface-container-low, var(--surface-container-lowest));
+  border-bottom-color: var(--on-surface-variant);
 }
 
 .cont-input:focus {
   border-bottom-color: var(--secondary);
-  box-shadow: 0 2px 0 0 rgba(233, 195, 73, 0.15);
+  box-shadow: 0 2px 0 0 rgba(233, 195, 73, 0.15), 0 0 0 3px rgba(233, 195, 73, 0.08);
 }
 
 .cont-input::placeholder { color: rgba(151, 141, 157, 0.4); }
@@ -297,6 +414,9 @@
   font-size: 12px;
   color: var(--error);
   line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .cont-select {
@@ -328,10 +448,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--aged-gold-dim);
+  background: linear-gradient(135deg, var(--aged-gold-dim), var(--surface-container-lowest));
   border: 1px solid var(--aged-gold-border);
   border-radius: var(--radius-md);
-  padding: 0.625rem 0.875rem;
+  padding: 0.75rem 0.875rem;
   font-family: var(--font-label);
   font-size: 13px;
   color: var(--on-surface-variant);
@@ -339,7 +459,7 @@
 
 .cont-total-valor {
   font-family: var(--font-headline);
-  font-size: 1rem;
+  font-size: 1.0625rem;
   font-weight: 700;
   color: var(--secondary);
 }

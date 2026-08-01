@@ -72,12 +72,6 @@ const MENU = [
     icon:  "account_balance",
     roles: ["Admin", "AdminBogota", "Bodega"],
   },
-  {
-    path:  "/reportes",
-    label: "Reportes",
-    icon:  "assessment",
-    roles: ["Admin", "AdminBogota", "Bodega"],
-  },
   // Sección Admin
   {
     path:  "/admin/usuarios",

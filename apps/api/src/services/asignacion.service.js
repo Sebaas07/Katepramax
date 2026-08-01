@@ -23,8 +23,10 @@
 
 const asignacionRepo = require("../repositories/asignacion.repository");
 const repoPedido      = require("../repositories/pedido.repository");
+const ingresoRepo     = require("../repositories/ingreso.repository");
 const AppError        = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
+const { semanaDesdeFecha } = require("../utils/contabilidad");
 
 function sedeEsPermitida(usuario) {
   if (!usuario) return false;
@@ -309,6 +311,23 @@ const asignacionService = (app) => ({
         }
       }
 
+      // Determina cuánto de lo cobrado va como efectivo vs. cuentas/
+      // transferencia, para poder reflejarlo en Contabilidad > Ingresos.
+      // Crédito no cobra nada ahora mismo, así que no genera ingreso.
+      let efectivoIngreso = 0;
+      let cuentasIngreso = 0;
+      if (metodoPago === "Mixto") {
+        efectivoIngreso = efectivo;
+        cuentasIngreso = transferencia;
+      } else if (metodoPago === "Transferencia") {
+        cuentasIngreso = monto;
+      } else if (metodoPago === "Efectivo" || metodoPago === "Parcial") {
+        efectivoIngreso = monto;
+      }
+
+      const fechaConfirmacion = fechaConfirmada ? new Date(fechaConfirmada) : new Date();
+      const sedeIdPedido = asignacion.pedido?.sedeId;
+
       await this.prisma.$transaction(async (tx) => {
         await tx.asignacionEntrega.update({
           where: { id },
@@ -319,7 +338,7 @@ const asignacionService = (app) => ({
             montoTransferencia:   transferencia,
             abonoDeuda:           abono,
             metodoPago,
-            fechaConfirmada:      fechaConfirmada ? new Date(fechaConfirmada) : new Date(),
+            fechaConfirmada:      fechaConfirmacion,
             observacionesEntrega: observacionesEntrega ?? asignacion.observacionesEntrega,
           },
         });
@@ -333,6 +352,21 @@ const asignacionService = (app) => ({
           where: { id: clienteId },
           data:  { saldoDeuda: { decrement: monto + abono } },
         });
+
+        // Registra el cobro como Ingreso de Contabilidad, para que la
+        // plata que recibe el entregador quede reflejada ahí y no solo
+        // en el pedido/cliente.
+        if ((efectivoIngreso + cuentasIngreso) > 0 && sedeIdPedido != null) {
+          await ingresoRepo.crear(tx, {
+            fecha: fechaConfirmacion,
+            semana: semanaDesdeFecha(fechaConfirmacion),
+            sedeId: sedeIdPedido,
+            efectivo: efectivoIngreso,
+            cuentas: cuentasIngreso,
+            total: efectivoIngreso + cuentasIngreso,
+            observacion: `Cobro entrega pedido #${asignacion.pedidoId} (asignación #${id})`,
+          });
+        }
       });
 
       const detalleAbono = abono > 0 ? `, + abono de ${abono} a deuda anterior` : "";

@@ -108,18 +108,21 @@ const ContabilidadModal = memo(
 
     const manejarCambio = (e) => {
       const { name, value } = e.target;
+      // OJO: e.target es un nodo DOM real; sus propiedades (name, value...)
+      // viven en el prototipo (accessors), no como propiedades "own"
+      // enumerables. Por eso `{ ...e.target }` da un objeto vacío y no
+      // conserva `name`. Hay que reconstruir el target a mano incluyendo
+      // `name` explícitamente, o el padre no sabe qué campo actualizar.
       if (esCampoNumerico(name)) {
         onFormChange({
-          ...e,
-          target: { ...e.target, value: normalizarNumeroInput(value) },
+          target: { name, value: normalizarNumeroInput(value) },
         });
         return;
       }
       if (esCampoTexto(name)) {
         onFormChange({
-          ...e,
           target: {
-            ...e.target,
+            name,
             value: sanitizarTexto(value, name === "concepto" ? 200 : 500),
           },
         });

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import contabilidadService from "@/services/contabilidad.service";
 import reporteService from "@/services/reporte.service";
 import inventarioService from "@/services/inventario.service";
-import { getSemanaISO, formatFecha } from "@/utils/formatters";
+import { getSemanaISO, getRangoSemana, formatFecha } from "@/utils/formatters";
 import {
   construirPayloadContabilidad,
   esCampoNumerico,
@@ -24,6 +24,7 @@ import PanelGeneralTab from "../PanelGeneralTab";
 import ArqueoSemanalTab from "../ArqueoSemanalTab";
 import HistorialSemanalTab from "../HistorialSemanalTab";
 import GananciaGastoTab from "../GananciaGastoTab";
+import CobrosEntregadorTab from "../CobrosEntregadorTab";
 
 // ── Shared UI
 import { Spinner, EmptyState } from "../ContabilidadUI";
@@ -41,6 +42,7 @@ const TABS = [
   { key: "egresos", label: "Egresos Diarios", icon: "trending_down" },
   //{ key: "cartera", label: "Cartera", icon: "account_balance" },
   { key: "proveedores", label: "Abonos a Proveedores", icon: "payments" },
+  { key: "cobros", label: "Cobros por Entregador", icon: "delivery_dining" },
   { key: "panel", label: "Panel General", icon: "dashboard" },
   { key: "ganancia", label: "Ganancia / Gasto", icon: "point_of_sale" },
   { key: "arqueo", label: "Arqueo Semanal", icon: "summarize" },
@@ -91,6 +93,7 @@ const ContabilidadPage = () => {
   const [historialSemanal, setHistorialSemanal] = useState([]);
   const [corteCaja, setCorteCaja] = useState(null);
   const [cargandoCorte, setCargandoCorte] = useState(false);
+  const [cobrosEntregador, setCobrosEntregador] = useState(null);
 
   // ── Filtros ───────────────────────────────────────────────
   const [filtroSemana, setFiltroSemana] = useState(String(SEM_ACTUAL));
@@ -100,6 +103,12 @@ const ContabilidadPage = () => {
   const [filtroPanelF, setFiltroPanelFecha] = useState(HOY);
   const [periodoGanancia, setPeriodoGanancia] = useState("dia");
   const [fechaGanancia, setFechaGanancia] = useState(HOY);
+  const [fechaInicioCobros, setFechaInicioCobros] = useState(
+    () => getRangoSemana(SEM_ACTUAL).inicio,
+  );
+  const [fechaFinCobros, setFechaFinCobros] = useState(
+    () => getRangoSemana(SEM_ACTUAL).fin,
+  );
 
   // ── Estado del modal ──────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false);
@@ -209,13 +218,21 @@ const ContabilidadPage = () => {
         setTotalesDiaEgr(totEgrDia);
       } else if (tab === "historial") {
         setHistorialSemanal(await reporteService.obtenerHistorialSemanal());
+      } else if (tab === "cobros") {
+        const sede = esAdmin ? (filtroSedeId ? parseInt(filtroSedeId, 10) : undefined) : undefined;
+        const data = await reporteService.obtenerCobrosEntregador({
+          fechaInicio: fechaInicioCobros,
+          fechaFin: fechaFinCobros,
+          sedeId: sede,
+        });
+        setCobrosEntregador(data);
       }
     } catch (err) {
       toast.error("Error al cargar datos: " + (err?.message || "desconocido"));
     } finally {
       setCargando(false);
     }
-  }, [tab, filtroSemana, filtroSedeId, filtroPanelF]);
+  }, [tab, filtroSemana, filtroSedeId, filtroPanelF, fechaInicioCobros, fechaFinCobros]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -546,7 +563,9 @@ const ContabilidadPage = () => {
               ? formatFecha(filtroPanelF)
               : tab === "ganancia"
                 ? `${formatFecha(rangoGanancia.desde)}${rangoGanancia.desde !== rangoGanancia.hasta ? ` — ${formatFecha(rangoGanancia.hasta)}` : ""}`
-                : `Semana ${filtroSemana || SEM_ACTUAL}`}
+                : tab === "cobros"
+                  ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
+                  : `Semana ${filtroSemana || SEM_ACTUAL}`}
           </p>
         </div>
         <div className="cont-page__acciones">
@@ -568,7 +587,7 @@ const ContabilidadPage = () => {
               </select>
             </div>
           )}
-          {tab !== "panel" && tab !== "ganancia" && (
+          {tab !== "panel" && tab !== "ganancia" && tab !== "cobros" && (
             <div className="filter-group">
               <label htmlFor="cont-semana">Semana</label>
               <input
@@ -582,6 +601,33 @@ const ContabilidadPage = () => {
                 style={{ minWidth: 72 }}
               />
             </div>
+          )}
+          {tab === "cobros" && (
+            <>
+              <div className="filter-group">
+                <label htmlFor="cont-cobros-desde">Desde</label>
+                <input
+                  id="cont-cobros-desde"
+                  type="date"
+                  value={fechaInicioCobros}
+                  max={fechaFinCobros || HOY}
+                  onChange={(e) => setFechaInicioCobros(e.target.value)}
+                  className="filter-select"
+                />
+              </div>
+              <div className="filter-group">
+                <label htmlFor="cont-cobros-hasta">Hasta</label>
+                <input
+                  id="cont-cobros-hasta"
+                  type="date"
+                  value={fechaFinCobros}
+                  min={fechaInicioCobros}
+                  max={HOY}
+                  onChange={(e) => setFechaFinCobros(e.target.value)}
+                  className="filter-select"
+                />
+              </div>
+            </>
           )}
           {tab === "panel" && (
             <div className="filter-group">
@@ -671,6 +717,14 @@ const ContabilidadPage = () => {
               onAbonar={abrirAbono}
               onEditar={abrirEditarProv}
               onEliminar={abrirEliminar}
+            />
+          )}
+
+          {tab === "cobros" && (
+            <CobrosEntregadorTab
+              cobros={cobrosEntregador}
+              fechaInicio={fechaInicioCobros}
+              fechaFin={fechaFinCobros}
             />
           )}
 
