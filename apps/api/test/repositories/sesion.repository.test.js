@@ -48,18 +48,18 @@ describe("sesionRepository.crear", () => {
     expect(hashGuardado).not.toBe(refreshToken);
   });
 
-  it("debería usar 7 días de expiración por defecto", async () => {
-    prisma.sesion.create.mockResolvedValue({ id: 1 });
+it("debería usar 15 minutos de expiración por defecto", async () => {
+     prisma.sesion.create.mockResolvedValue({ id: 1 });
 
-    await repo.crear({ usuarioId: 1, ip: "127.0.0.1" });
+     await repo.crear({ usuarioId: 1, ip: "127.0.0.1" });
 
-    const callArgs = prisma.sesion.create.mock.calls[0][0];
-    const expiraEn = callArgs.data.expiraEn;
-    const diasDiferencia = (expiraEn - Date.now()) / (1000 * 60 * 60 * 24);
+     const callArgs = prisma.sesion.create.mock.calls[0][0];
+     const expiraEn = callArgs.data.expiraEn;
+     const diasDiferencia = (expiraEn - Date.now()) / (1000 * 60 * 60 * 24);
 
-    expect(diasDiferencia).toBeGreaterThanOrEqual(6.9);
-    expect(diasDiferencia).toBeLessThanOrEqual(7.1);
-  });
+     // 15 minutos = 0.0104166667 días
+     expect(diasDiferencia).toBeCloseTo(0.0104, 3);
+   });
 });
 
 // ── findByRefreshToken ────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@ const AppError = require("../errors/AppError");
  */
 
 // ── 1. Verificar JWT y sesión en BD ───────────────────────────
-const verifyToken = async (request) => {
+const verifyToken = async (request, reply) => {
   try {
     await request.jwtVerify();
   } catch {
@@ -21,6 +21,18 @@ const verifyToken = async (request) => {
 
   if (!sesion)                          throw new AppError("Sesión inexistente o revocada.", 401);
   if (!sesion.usuario?.activo)          throw new AppError("El usuario ya no tiene acceso al sistema.", 401);
+
+  await sesRepo.actualizarExpiracion(sesion.id);
+
+  if (request.cookies?.refreshToken) {
+    reply.setCookie("refreshToken", request.cookies.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 15 * 60,
+      path: "/api/v1",
+    });
+  }
 
   // Sobreescribir con datos REALES de la BD — nunca confiar en el payload del JWT
   request.user = {

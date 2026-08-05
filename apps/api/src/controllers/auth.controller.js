@@ -18,8 +18,8 @@ const login = async (request, reply) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "Strict",
-    maxAge: 7 * 24 * 60 * 60, // 7 días
-    path: "/api/v1/auth/refresh",
+    maxAge: 15 * 60, // 15 minutos de inactividad
+    path: "/api/v1",
   });
 
   return reply.code(200).send(result);
@@ -40,8 +40,8 @@ const refresh = async (request, reply) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "Strict",
-    maxAge: 7 * 24 * 60 * 60,
-    path: "/api/v1/auth/refresh",
+    maxAge: 15 * 60,
+    path: "/api/v1",
   });
 
   return reply.code(200).send(result);

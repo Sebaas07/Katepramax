@@ -111,7 +111,7 @@ const capitalizar = (texto) => {
  */
 export const getSemanaISO = (fecha = new Date()) => {
   const d = new Date(
-    Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()),
+    Date.UTC(fecha.getUTCFullYear(), fecha.getUTCMonth(), fecha.getUTCDate()),
   );
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
@@ -123,14 +123,14 @@ export const getSemanaISO = (fecha = new Date()) => {
  * Ej: getRangoSemana(19, 2025) → { inicio: "2025-05-05", fin: "2025-05-11" }
  */
 export const getRangoSemana = (semana, anio = new Date().getFullYear()) => {
-  const jan4 = new Date(anio, 0, 4);
-  const dayOfWeek = jan4.getDay() || 7;
+  const jan4 = new Date(Date.UTC(anio, 0, 4));
+  const dayOfWeek = jan4.getUTCDay() || 7;
   const week1Start = new Date(jan4);
-  week1Start.setDate(jan4.getDate() - dayOfWeek + 1);
+  week1Start.setUTCDate(jan4.getUTCDate() - dayOfWeek + 1);
   const start = new Date(week1Start);
-  start.setDate(week1Start.getDate() + (semana - 1) * 7);
+  start.setUTCDate(week1Start.getUTCDate() + (semana - 1) * 7);
   const end = new Date(start);
-  end.setDate(start.getDate() + 6);
+  end.setUTCDate(start.getUTCDate() + 6);
   return {
     inicio: start.toISOString().split("T")[0],
     fin: end.toISOString().split("T")[0],

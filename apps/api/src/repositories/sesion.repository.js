@@ -12,13 +12,14 @@ const sesionRepository = (prisma) => {
     /**
      * Crea una nueva sesión y devuelve el refreshToken en texto plano
      * (solo se retorna una vez, luego solo existe el hash).
+     * El refresh token vence tras 15 minutos de inactividad.
      */
-    crear: async ({ usuarioId, ip, userAgent, diasExpiracion = 7 }) => {
+    crear: async ({ usuarioId, ip, userAgent, minutosExpiracion = 15 }) => {
       const refreshToken = crypto.randomBytes(40).toString("hex");
       const refreshHash = hashToken(refreshToken);
 
       const expiraEn = new Date();
-      expiraEn.setDate(expiraEn.getDate() + diasExpiracion);
+      expiraEn.setMinutes(expiraEn.getMinutes() + minutosExpiracion);
 
       const sesion = await prisma.sesion.create({
         data: { usuarioId, refreshHash, ip, userAgent, expiraEn },
@@ -65,12 +66,12 @@ const sesionRepository = (prisma) => {
       }),
 
     /** Rota el refresh token (invalida el anterior, crea uno nuevo). */
-    rotar: async (sesionId, ip, userAgent) => {
+    rotar: async (sesionId, ip, userAgent, minutosExpiracion = 15) => {
       const refreshToken = crypto.randomBytes(40).toString("hex");
       const refreshHash = hashToken(refreshToken);
 
       const expiraEn = new Date();
-      expiraEn.setDate(expiraEn.getDate() + 7);
+      expiraEn.setMinutes(expiraEn.getMinutes() + minutosExpiracion);
 
       await prisma.sesion.update({
         where: { id: sesionId },
@@ -89,6 +90,12 @@ const sesionRepository = (prisma) => {
         },
         data: { activa: false },
       }),
+
+    actualizarExpiracion: async (id, minutosExpiracion = 15) => {
+      const expiraEn = new Date();
+      expiraEn.setMinutes(expiraEn.getMinutes() + minutosExpiracion);
+      return prisma.sesion.update({ where: { id }, data: { expiraEn } });
+    },
 
     /** Revoca TODAS las sesiones de un usuario (cambio de clave, etc). */
     revocarTodas: async (usuarioId) =>
