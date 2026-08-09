@@ -1,0 +1,4 @@
+# Fuerza finales de línea Unix en scripts que se ejecutan en contenedores Linux
+*.sh text eol=lf
+Dockerfile text eol=lf
+nginx.conf text eol=lf

@@ -1,0 +1,79 @@
+# =============================================================================
+# Docker Compose de desarrollo para Katepramax
+# Levanta: MySQL + API (Fastify, hot-reload) + Web (Vite, HMR)
+# Uso:  docker compose up -d --build
+# =============================================================================
+
+name: katepramax
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: katepramax-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-katepramax}
+      MYSQL_USER: ${MYSQL_USER:-katepramax}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-katepramax}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-katepramax_root}
+    ports:
+      # Puerto expuesto en el host. 3306 suele estar ocupado por un MySQL local
+      # (p.ej. Laragon), por eso el default es 3307. Internamente la BD sigue
+      # en db:3306 para el API.
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-katepramax_root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: dev
+    container_name: katepramax-api
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      NODE_ENV: development
+      DATABASE_URL: mysql://${MYSQL_USER:-katepramax}:${MYSQL_PASSWORD:-katepramax}@db:3306/${MYSQL_DATABASE:-katepramax}
+      JWT_SECRET: ${JWT_SECRET:-clave-super-secreta-de-desarrollo-16chars}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-1h}
+      SEED_ON_START: ${SEED_ON_START:-true}
+    ports:
+      - "8000:3000"
+    volumes:
+      # Monta el código del API para hot-reload. El volumen api_app_node_modules
+      # protege los node_modules instalados en la imagen (symlinks de pnpm).
+      - ./apps/api:/app/apps/api
+      - api_app_node_modules:/app/apps/api/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: dev
+    container_name: katepramax-web
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/web:/app/apps/web
+      - web_app_node_modules:/app/apps/web/node_modules
+    depends_on:
+      - api
+
+volumes:
+  db_data:
+  api_app_node_modules:
+  web_app_node_modules:

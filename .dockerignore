@@ -1,0 +1,37 @@
+# Dependencias
+node_modules/
+**/node_modules/
+.pnpm-store/
+.pnpm/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# Salidas de build
+dist/
+**/dist/
+build/
+coverage/
+**/coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Datos locales de la BD (si usas SQLite)
+*.db
+*.db-journal

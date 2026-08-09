@@ -6,3 +6,7 @@ allowBuilds:
   "@prisma/engines": true
   bcrypt: true
   prisma: true
+# Evita que pnpm reinstale dependencias automáticamente antes de cada comando
+# (default "install" en v11). Las imágenes Docker y el entorno local ya
+# dejan node_modules resuelto.
+verifyDepsBeforeRun: false
