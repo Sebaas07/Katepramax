@@ -17,7 +17,7 @@ const login = async (request, reply) => {
   reply.setCookie("refreshToken", result.refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
     maxAge: 15 * 60, // 15 minutos de inactividad
     path: "/api/v1",
   });
@@ -39,7 +39,7 @@ const refresh = async (request, reply) => {
   reply.setCookie("refreshToken", result.refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
     maxAge: 15 * 60,
     path: "/api/v1",
   });

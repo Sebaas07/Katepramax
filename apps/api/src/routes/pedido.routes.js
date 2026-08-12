@@ -1,10 +1,11 @@
 /**
  *
  * Control de roles por endpoint:
- *  POST   /pedidos              → Admin, Bodega, AdminBogota (crean pedidos)
- *  GET    /pedidos              → Admin, Bodega, AdminBogota (ven pedidos de su sede)
- *  GET    /pedidos/:id          → Admin, Bodega, AdminBogota (detalle de un pedido)
- *  GET    /pedidos/:id/historial → Admin, Bodega, AdminBogota (ver historial)
+ *  POST   /pedidos              → Admin, AdminBogota, Oficinista (crean pedidos)
+ *  GET    /pedidos              → Admin, AdminBogota, Oficinista (gestión) +
+ *                                 Bodega (solo lectura, vista entregas)
+ *  GET    /pedidos/:id          → ídem (detalle de un pedido)
+ *  GET    /pedidos/:id/historial → ídem (ver historial)
  *  PATCH  /pedidos/:id/estado   → solo Admin     (única acción manual = Cancelar)
  *
  * La transición Pendiente -> Asignado -> Entregado se gestiona desde /asignaciones.
@@ -13,33 +14,32 @@
 const ctrl    = require("../controllers/pedido.controller");
 const schemas = require("../schemas/pedido.schema");
 const {
-  verifyToken,
-  requireRole,
-  adminOBodega,
+  gestion,
+  consultaBodega,
   soloAdmin,
 } = require("../middlewares/auth.middleware");
 
 async function pedidoRoutes(app) {
   app.post("/pedidos", {
     schema:        schemas.crearPedido,
-    preValidation: adminOBodega.preValidation,
+    preValidation: gestion.preValidation,
     handler:       ctrl.crear,
   });
 
   app.get("/pedidos", {
     schema:        schemas.listarPedidos,
-    preValidation: adminOBodega.preValidation,
+    preValidation: consultaBodega.preValidation,
     handler:       ctrl.listar,
   });
 
   app.get("/pedidos/:id", {
     schema:        schemas.obtenerPedido,
-    preValidation: adminOBodega.preValidation,
+    preValidation: consultaBodega.preValidation,
     handler:       ctrl.obtenerPorId,
   });
 
   app.get("/pedidos/:id/historial", {
-    preValidation: adminOBodega.preValidation,
+    preValidation: consultaBodega.preValidation,
     handler:       ctrl.obtenerHistorial,
   });
 

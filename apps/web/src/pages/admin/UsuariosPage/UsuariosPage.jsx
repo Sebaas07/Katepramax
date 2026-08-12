@@ -12,6 +12,7 @@ import "./UsuariosPage.css";
 const ROLES = [
   { value: "Admin", label: "Admin" },
   { value: "AdminBogota", label: "AdminBogota" },
+  { value: "Oficinista", label: "Oficinista" },
   { value: "Bodega", label: "Bodega" },
   { value: "Entregador", label: "Entregador" },
 ];
@@ -44,6 +45,11 @@ const RoleBadge = ({ rol }) => {
       color: "#fde68a",
       bg: "rgba(253,230,138,0.14)",
       border: "rgba(253,230,138,0.35)",
+    },
+    Oficinista: {
+      color: "#f0abfc",
+      bg: "rgba(240,171,252,0.14)",
+      border: "rgba(240,171,252,0.35)",
     },
     Bodega: {
       color: "#93c5fd",

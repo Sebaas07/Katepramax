@@ -8,7 +8,8 @@ const { registrarAccion } = require("../utils/logger");
  *
  * Reglas de sede por rol:
  * - Admin: acceso total, puede crear en cualquier sede.
- * - Bodega / AdminBogota: acceso restringido a su propia sede.
+ * - AdminBogota / Oficinista: acceso restringido a su propia sede.
+ * - Bodega: solo lectura (vista de entregas).
  *
  * Al crear un pedido:
  *  1. Valida cliente, productos y stock disponible.
@@ -17,11 +18,20 @@ const { registrarAccion } = require("../utils/logger");
  *  4. Incrementa el saldoDeuda del cliente.
  */
 
-function sedeEsPermitida(usuario) {
+// Puede crear y gestionar pedidos: Admin, AdminBogota, Oficinista
+function sedeEsPermitidaGestion(usuario) {
   return (
     usuario.rol === "Admin" ||
-    usuario.rol === "Bodega" ||
-    usuario.rol === "AdminBogota"
+    usuario.rol === "AdminBogota" ||
+    usuario.rol === "Oficinista"
+  );
+}
+
+// Puede leer pedidos (incluye Bodega solo lectura): + Bodega
+function sedeEsPermitidaLectura(usuario) {
+  return (
+    sedeEsPermitidaGestion(usuario) ||
+    usuario.rol === "Bodega"
   );
 }
 
@@ -49,7 +59,7 @@ async function crear(app, body, usuarioId) {
     where: { id: usuarioId },
   });
   if (!creador) throw new AppError("Usuario no encontrado", 404);
-  if (!sedeEsPermitida(creador)) {
+  if (!sedeEsPermitidaGestion(creador)) {
     throw new AppError("Rol no autorizado para crear pedidos.", 403);
   }
 
@@ -166,7 +176,7 @@ async function crear(app, body, usuarioId) {
 }
 
 async function obtenerLista(app, query, usuario) {
-  if (!sedeEsPermitida(usuario)) {
+  if (!sedeEsPermitidaLectura(usuario)) {
     throw new AppError("No tienes permiso para listar pedidos.", 403);
   }
 
@@ -188,7 +198,7 @@ async function obtenerLista(app, query, usuario) {
 }
 
 async function obtenerPorId(app, id, usuario) {
-  if (!sedeEsPermitida(usuario)) {
+  if (!sedeEsPermitidaLectura(usuario)) {
     throw new AppError("No tienes permiso para ver este pedido.", 403);
   }
 
@@ -206,7 +216,7 @@ async function obtenerPorId(app, id, usuario) {
 }
 
 async function cambiarEstado(app, id, nuevoEstado, usuario) {
-  if (!sedeEsPermitida(usuario)) {
+  if (!sedeEsPermitidaGestion(usuario)) {
     throw new AppError(
       "No tienes permiso para cambiar el estado del pedido.",
       403,

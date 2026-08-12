@@ -28,7 +28,7 @@ const verifyToken = async (request, reply) => {
     reply.setCookie("refreshToken", request.cookies.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
       maxAge: 15 * 60,
       path: "/api/v1",
     });
@@ -66,7 +66,7 @@ const injectSedeFilter = async (request) => {
   const { rol, sedeId } = request.user ?? {};
   if (rol === "Admin") {
     request.sedeFilter = {};
-  } else if (rol === "Bodega" || rol === "AdminBogota") {
+  } else if (rol === "AdminBogota" || rol === "Bodega" || rol === "Oficinista") {
     if (!sedeId) throw new AppError("El usuario no tiene sede asignada.", 403);
     request.sedeFilter = { sedeId };
   } else {
@@ -83,6 +83,47 @@ module.exports = {
   // Solo Admin
   soloAdmin: {
     preValidation: [verifyToken, requireRole(["Admin"])],
+  },
+
+  // Admin + AdminBogota (escriben en módulos de gestión)
+  adminGestion: {
+    preValidation: [verifyToken, requireRole(["Admin", "AdminBogota"])],
+  },
+
+  // Gestión de pedidos y asignaciones — Admin + AdminBogota + Oficinista
+  gestion: {
+    preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Oficinista"])],
+  },
+
+  // Gestión de pedidos/asignaciones — con filtro de sede por rol
+  gestionConSede: {
+    preValidation: [
+      verifyToken,
+      requireRole(["Admin", "AdminBogota", "Oficinista"]),
+      injectSedeFilter,
+    ],
+  },
+
+  // Consulta de información para Bodega (solo lectura) — + Admin/AdminBogota
+  consultaBodega: {
+    preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Bodega"])],
+  },
+
+  // Consulta con filtro de sede — Admin + AdminBogota + Bodega
+  consultaBodegaConSede: {
+    preValidation: [
+      verifyToken,
+      requireRole(["Admin", "AdminBogota", "Bodega"]),
+      injectSedeFilter,
+    ],
+  },
+
+  // Ver entregas (asignaciones) — Admin + AdminBogota + Oficinista + Bodega
+  verEntregas: {
+    preValidation: [
+      verifyToken,
+      requireRole(["Admin", "AdminBogota", "Oficinista", "Bodega"]),
+    ],
   },
 
   // Admin + Bodega + AdminBogota

@@ -1,7 +1,7 @@
 import usuariosApi from "@/api/usuariosApi";
 import { getApiErrorMessage, normalizeArrayResponse } from "@/utils/apiHelpers";
 
-const ROLES_PERMITIDOS = ["Admin", "Bodega", "Entregador", "AdminBogota"];
+const ROLES_PERMITIDOS = ["Admin", "AdminBogota", "Oficinista", "Bodega", "Entregador"];
 
 const limpiarTexto = (valor) => String(valor ?? "").trim();
 

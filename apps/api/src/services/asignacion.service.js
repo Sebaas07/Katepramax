@@ -17,7 +17,7 @@
  *
  * Reglas de sede por rol:
  * - Admin: acceso total.
- * - Bodega / AdminBogota: solo su sede.
+ * - AdminBogota / Bodega / Oficinista: solo su sede.
  * - Entregador: solo sus propias asignaciones.
  */
 
@@ -28,9 +28,16 @@ const AppError        = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
 const { semanaDesdeFecha } = require("../utils/contabilidad");
 
+// Roles que pueden CREAR /asignar pedidos a entregadores
+function esGestion(usuario) {
+  if (!usuario) return false;
+  return ["Admin", "AdminBogota", "Oficinista"].includes(usuario.rol);
+}
+
+// Roles que pueden VER entregas (incluye Bodega en modo lectura)
 function sedeEsPermitida(usuario) {
   if (!usuario) return false;
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";
+  return ["Admin", "AdminBogota", "Oficinista", "Bodega"].includes(usuario.rol);
 }
 
 const asignacionService = (app) => ({
@@ -38,11 +45,11 @@ const asignacionService = (app) => ({
   prisma: app.prisma,
 
   /**
-   * Bodega/Admin asigna un pedido pendiente a un entregador.
+   * Admin/AdminBogota/Oficinista asigna un pedido pendiente a un entregador.
    * Valida que el pedido pertenezca a su sede.
    */
   async crear({ pedidoId, entregadorId, observacionesEntrega }, asignadoPorId, usuario) {
-    if (!sedeEsPermitida(usuario)) {
+    if (!esGestion(usuario)) {
       throw new AppError("No tienes permiso para crear asignaciones.", 403);
     }
 
@@ -202,7 +209,7 @@ const asignacionService = (app) => ({
    * El entregador actualiza el estado de su asignación.
    */
   async actualizarEstado(id, body, usuarioId, rolUsuario, sedeIdUsuario) {
-    if (!["Admin", "Bodega", "AdminBogota", "Entregador"].includes(rolUsuario)) {
+    if (!["Admin", "AdminBogota", "Entregador"].includes(rolUsuario)) {
       throw new AppError("No tienes permiso para actualizar asignaciones.", 403);
     }
 

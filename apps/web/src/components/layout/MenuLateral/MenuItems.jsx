@@ -15,7 +15,7 @@ const MENU = [
     path:  "/dashboard",
     label: "Dashboard",
     icon:  "dashboard",
-    roles: ["Admin", "AdminBogota", "Bodega", "Entregador"],
+    roles: ["Admin", "AdminBogota", "Bodega", "Oficinista", "Entregador"],
   },
   {
     path:  "/entregas",
@@ -27,7 +27,7 @@ const MENU = [
     path:  "/pedidos",
     label: "Pedidos",
     icon:  "shopping_cart",
-    roles: ["Admin", "AdminBogota", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Oficinista"],
   },
   {
     path:  "/inventario",
@@ -39,44 +39,57 @@ const MENU = [
     path:  "/productos",
     label: "Productos",
     icon:  "category",
-    roles: ["Admin", "AdminBogota", "Bodega"],
+    roles: ["Admin", "AdminBogota"],
   },
   {
     path:  "/distribucion",
-    label: "Distribución",
+    label: "Distribución y Entregas",
     icon:  "sync_alt",
-    roles: ["Admin", "AdminBogota", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Oficinista", "Bodega"],
   },
   {
     path:  "/envios",
     label: "Envíos entre Sedes",
     icon:  "local_shipping",
-    roles: ["Admin", "AdminBogota", "Bodega"],
+    roles: ["Admin", "AdminBogota"],
     notificable: true,
+  },
+  {
+    path:  "/reportes",
+    label: "Reportes",
+    icon:  "monitoring",
+    roles: ["Admin", "AdminBogota", "Bodega"],
   },
   {
     path:  "/proveedores",
     label: "Proveedores",
     icon:  "conveyor_belt",
-    roles: ["Admin", "AdminBogota", "Bodega"],
+    roles: ["Admin", "AdminBogota"],
   },
   {
     path:  "/clientes",
     label: "Clientes",
     icon:  "people",
-    roles: ["Admin", "AdminBogota", "Bodega"],
+    roles: ["Admin", "AdminBogota"],
   },
   {
     path:  "/contabilidad",
     label: "Contabilidad",
     icon:  "account_balance",
-    roles: ["Admin", "AdminBogota", "Bodega"],
+    roles: ["Admin", "AdminBogota"],
   },
   // Sección Admin
   {
     path:  "/admin/usuarios",
     label: "Usuarios",
     icon:  "group",
+    roles: ["Admin"],
+    seccion: "admin",
+  },
+  {
+    path:  "/admin/sedes",
+    label: "Sedes",
+    icon:  "location_city",
     roles: ["Admin"],
     seccion: "admin",
   },
@@ -97,7 +110,7 @@ export default function MenuItems({ cerrar }) {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    if (!["Admin", "Bodega", "AdminBogota"].includes(rol)) return;
+    if (!["Admin", "AdminBogota"].includes(rol)) return;
 
     let activo = true;
     const cargar = () => {

@@ -1,12 +1,13 @@
 const {
   getAll,
   getById,
+  getEntregadores,
   create,
   update,
   desactivar,
   activar,
 } = require("../controllers/user.controller");
-const { soloAdmin } = require("../middlewares/auth.middleware");
+const { soloAdmin, gestion } = require("../middlewares/auth.middleware");
 const {
   createUsuarioBody,
   updateUsuarioBody,
@@ -26,6 +27,31 @@ async function userRoutes(app) {
     },
     preValidation,
     handler: getAll,
+  });
+
+  // GET /api/usuarios/entregadores — Admin, AdminBogota y Oficinista
+  // (lista de entregadores activos para asignar pedidos). DEBE ir antes
+  // de /:id para que Fastify lo matchee como ruta estática.
+  app.get("/usuarios/entregadores", {
+    schema: {
+      summary: "Listar entregadores activos",
+      tags: ["Usuarios"],
+      response: {
+        200: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "integer" },
+              nombreCompleto: { type: "string" },
+              telefono: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    preValidation: gestion.preValidation,
+    handler: getEntregadores,
   });
 
   // GET /api/usuarios/:id

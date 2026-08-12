@@ -10,8 +10,9 @@ datasource db {
 
 enum Rol {
   Admin
-  Bodega
   AdminBogota
+  Oficinista
+  Bodega
   Entregador
 }
 

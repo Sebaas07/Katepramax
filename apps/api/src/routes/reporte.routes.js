@@ -1,13 +1,15 @@
 const ctrl    = require("../controllers/reporte.controller");
 const schemas = require("../schemas/reporte.schema");
-const { soloAdmin, adminOBodega } = require("../middlewares/auth.middleware");
+const { soloAdmin, consultaBodega } = require("../middlewares/auth.middleware");
 
 /**
  * reporte.routes.js
  *
  * GET /reportes/arqueo-semanal    → solo Admin
- * GET /reportes/panel-general     → Admin + Bodega (con filtro de sede automático)
+ * GET /reportes/panel-general     → Admin + AdminBogota + Bodega (con filtro de sede automático)
  * GET /reportes/historial-semanal → solo Admin
+ * GET /reportes/cobros-entregador → Admin + AdminBogota + Bodega (reporte de entregas)
+ * GET /reportes/corte-caja        → Admin + AdminBogota + Bodega
  */
 async function reporteRoutes(app) {
   app.get("/reportes/arqueo-semanal",
@@ -15,9 +17,9 @@ async function reporteRoutes(app) {
     ctrl.arqueoSemanal,
   );
 
-  // panel-general: Bodega solo ve su sede; Admin puede filtrar con ?sedeId=
+  // Bodega solo ve su sede; Admin puede filtrar con ?sedeId=
   app.get("/reportes/panel-general",
-    { schema: schemas.panelGeneralSchema, ...adminOBodega },
+    { schema: schemas.panelGeneralSchema, ...consultaBodega },
     ctrl.panelGeneral,
   );
 
@@ -27,13 +29,13 @@ async function reporteRoutes(app) {
   );
 
   app.get("/reportes/cobros-entregador",
-    { schema: schemas.cobrosPorEntregadorSchema, ...adminOBodega },
+    { schema: schemas.cobrosPorEntregadorSchema, ...consultaBodega },
     ctrl.cobrosPorEntregador,
   );
 
   // corte-caja: ganancia (recaudo entregadores) vs gasto (egresos) en un rango
   app.get("/reportes/corte-caja",
-    { schema: schemas.corteCajaSchema, ...adminOBodega },
+    { schema: schemas.corteCajaSchema, ...consultaBodega },
     ctrl.corteCaja,
   );
 }

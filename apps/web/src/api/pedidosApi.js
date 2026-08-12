@@ -59,10 +59,10 @@ const pedidosApi = {
     return response.data;
   },
 
-  // TODO: Requiere Admin - backend usa /usuarios con restricción soloAdmin
+  // Endpoint GET /usuarios/entregadores — Admin, AdminBogota y Oficinista
   obtenerEntregadores: async () => {
-    const response = await clienteApi.get("/usuarios");
-    return response.data.filter(u => u.rol === "Entregador");
+    const response = await clienteApi.get("/usuarios/entregadores");
+    return response.data;
   },
 };
 

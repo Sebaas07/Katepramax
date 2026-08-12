@@ -1,21 +1,20 @@
 const ctrl    = require("../controllers/cliente.controller");
 const schemas = require("../schemas/cliente.schema");
-const { adminOBodega, soloAdmin } = require("../middlewares/auth.middleware");
+const { adminGestion, soloAdmin } = require("../middlewares/auth.middleware");
 
 async function clienteRoutes(app) {
-  // Listar y consultar: Bodega y Admin
-  app.get("/clientes",     { schema: schemas.listarClientes,  ...adminOBodega }, ctrl.listar);
-  app.get("/clientes/:id", { schema: schemas.obtenerCliente,  ...adminOBodega }, ctrl.obtenerPorId);
+  // Solo Admin y AdminBogota gestionan clientes (Bodega es solo lectura de inventario/entregas/reportes)
+  app.get("/clientes",     { schema: schemas.listarClientes,  ...adminGestion }, ctrl.listar);
+  app.get("/clientes/:id", { schema: schemas.obtenerCliente,  ...adminGestion }, ctrl.obtenerPorId);
 
-  // Crear y editar: Bodega y Admin
-  app.post("/clientes",         { schema: schemas.crearCliente,    ...adminOBodega }, ctrl.crear);
-  app.patch("/clientes/:id",    { schema: schemas.editarCliente,   ...adminOBodega }, ctrl.actualizar);
+  app.post("/clientes",         { schema: schemas.crearCliente,    ...adminGestion }, ctrl.crear);
+  app.patch("/clientes/:id",    { schema: schemas.editarCliente,   ...adminGestion }, ctrl.actualizar);
 
   // Desactivar: solo Admin
   app.delete("/clientes/:id",   { schema: schemas.desactivarCliente, ...soloAdmin  }, ctrl.desactivar);
 
-  // Abonar a deuda: Admin y Bodega
-  app.post("/clientes/:id/abonar", { schema: schemas.abonarCliente, ...adminOBodega }, ctrl.abonar);
+  // Abonar a deuda: Admin y AdminBogota
+  app.post("/clientes/:id/abonar", { schema: schemas.abonarCliente, ...adminGestion }, ctrl.abonar);
 }
 
 module.exports = clienteRoutes;

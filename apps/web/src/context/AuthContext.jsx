@@ -164,9 +164,17 @@ export const AuthProvider = ({ children }) => {
     esBodega:       usuario?.rol === "Bodega" || usuario?.rol === "AdminBogota",
     esEntregador:   usuario?.rol === "Entregador",
     esAdminBogota:  usuario?.rol === "AdminBogota",
+    esOficinista:   usuario?.rol === "Oficinista",
+    esBodegaBogota: usuario?.rol === "AdminBogota",
+
+    // Tabajos de gestión con escritura (pedidos/asignaciones) → Admin, AdminBogota, Oficinista
+    puedeGestionarPedidos: ["Admin", "AdminBogota", "Oficinista"].includes(usuario?.rol),
+
+    // Escritura en módulos de gestión (inventario, contabilidad, etc.) → Admin, AdminBogota
+    esAdminGestion: usuario?.rol === "Admin" || usuario?.rol === "AdminBogota",
 
     // Puede ver y editar datos de gestión (inventario, productos, pedidos, etc.)
-    puedeGestionar: ["Admin", "Bodega", "AdminBogota"].includes(usuario?.rol),
+    puedeGestionar: ["Admin", "AdminBogota", "Bodega", "Oficinista"].includes(usuario?.rol),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -3,22 +3,23 @@ const schemas = require("../schemas/asignacion.schema");
 const {
   verifyToken,
   requireRole,
-  adminOBodega,
+  gestion,
+  verEntregas,
 } = require("../middlewares/auth.middleware");
 
 async function asignacionRoutes(app) {
 
-  // Crear asignación — solo Bodega y Admin
+  // Crear asignación — Admin, AdminBogota y Oficinista
   app.post("/asignaciones", {
     schema:        schemas.crearAsignacion,
-    preValidation: adminOBodega.preValidation,
+    preValidation: gestion.preValidation,
     handler:       ctrl.crear,
   });
 
-  // Listar todas — Bodega y Admin
+  // Listar entregas — Admin, AdminBogota, Oficinista y Bodega (solo lectura)
   app.get("/asignaciones", {
     schema:        schemas.listarAsignaciones,
-    preValidation: adminOBodega.preValidation,
+    preValidation: verEntregas.preValidation,
     handler:       ctrl.listar,
   });
 
@@ -29,17 +30,17 @@ async function asignacionRoutes(app) {
     handler:       ctrl.misEntregas,
   });
 
-  // Obtener una — Bodega, Admin y el propio Entregador
+  // Obtener una — Admin, AdminBogota, Oficinista, Bodega y el propio Entregador
   app.get("/asignaciones/:id", {
     schema:        schemas.obtenerAsignacion,
     preValidation: [verifyToken],
     handler:       ctrl.obtenerPorId,
   });
 
-  // Actualizar estado — Entregador (sus propias) o Bodega/Admin
+  // Actualizar estado — Entregador (sus propias) o Admin/AdminBogota
   app.patch("/asignaciones/:id/estado", {
     schema:        schemas.actualizarEstado,
-    preValidation: [verifyToken, requireRole(["Admin", "Bodega", "Entregador"])],
+    preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Entregador"])],
     handler:       ctrl.actualizarEstado,
   });
 }

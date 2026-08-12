@@ -1,0 +1,229 @@
+/* ============================================================
+   SedesPage.css — Katepramax
+   ============================================================ */
+
+.sedes-page { min-height: 100vh; }
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-header h1 {
+  font-family: var(--font-headline);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.sed-subtitulo {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+  margin: 0.25rem 0 0;
+}
+
+/* ─── Stats ──────────────────────────────────────────────────*/
+.sed-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+.sed-stat-card {
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.sed-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--aged-gold-border);
+}
+
+.sed-stat-card .material-symbols-outlined {
+  font-size: 24px;
+  color: var(--on-surface-variant);
+  flex-shrink: 0;
+}
+
+.sed-stat-card--activa .material-symbols-outlined { color: #4ade80; }
+.sed-stat-card--inactiva .material-symbols-outlined { color: var(--error); }
+.sed-stat-card--activa { border-color: rgba(74, 222, 128, 0.2); }
+.sed-stat-card--inactiva { border-color: rgba(255, 180, 171, 0.2); }
+
+.sed-stat-card > div { display: flex; flex-direction: column; gap: 2px; }
+
+.sed-stat-valor {
+  font-family: var(--font-headline);
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  line-height: 1;
+}
+
+.sed-stat-card--activa .sed-stat-valor { color: #4ade80; }
+.sed-stat-card--inactiva .sed-stat-valor { color: var(--error); }
+
+.sed-stat-label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ─── Estado badge ───────────────────────────────────────────*/
+.sed-estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sed-estado-badge .material-symbols-outlined { font-size: 15px; }
+
+.sed-estado-badge--activa {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.sed-estado-badge--inactiva {
+  color: var(--error);
+  background: rgba(255, 120, 110, 0.12);
+  border: 1px solid rgba(255, 120, 110, 0.3);
+}
+
+/* ─── Tabla ──────────────────────────────────────────────────*/
+.tab-content {
+  background: var(--surface-container);
+  border: 1px solid var(--aged-gold-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 200px;
+}
+
+/* ─── Formulario modal ───────────────────────────────────────*/
+.modal-form--sede {
+  display: grid;
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 0.45rem; }
+
+.form-group label {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  color: var(--on-surface);
+  font-family: var(--font-label);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-control:focus {
+  border-color: var(--aged-gold);
+  box-shadow: 0 0 0 3px rgba(197, 179, 88, 0.12);
+}
+
+.form-control::placeholder { color: var(--on-surface-variant); opacity: 0.65; }
+
+.form-error {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--error);
+  line-height: 1.35;
+}
+
+/* ─── Confirmación ───────────────────────────────────────────*/
+.sed-confirm-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.875rem;
+  padding: 0.5rem 0;
+}
+
+.sed-confirm-icon { font-size: 48px; color: var(--error); }
+
+.sed-confirm-body p {
+  font-family: var(--font-label);
+  font-size: 14px;
+  color: var(--on-surface);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sed-confirm-body strong { color: var(--aged-gold); }
+
+.sed-confirm-sub {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ─── Spinner ────────────────────────────────────────────────*/
+.sed-spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+}
+
+.sed-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--outline-variant);
+  border-top-color: var(--aged-gold);
+  border-radius: 50%;
+  animation: sed-spin 0.8s linear infinite;
+}
+
+@keyframes sed-spin { to { transform: rotate(360deg); } }
+
+/* ─── Responsive ─────────────────────────────────────────────*/
+@media (max-width: 767.98px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sed-stats { grid-template-columns: 1fr; }
+}

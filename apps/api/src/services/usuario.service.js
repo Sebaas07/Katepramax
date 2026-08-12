@@ -9,6 +9,14 @@ const usuarioService = (app) => {
   return {
     getAll: () => repo.findAll(),
 
+    // Usado por Oficinista/Admin para asignar pedidos a entregadores
+    getEntregadores: () =>
+      app.prisma.usuario.findMany({
+        where: { rol: "Entregador", activo: true },
+        select: { id: true, nombreCompleto: true, telefono: true },
+        orderBy: { nombreCompleto: "asc" },
+      }),
+
     getById: async (id) => {
       const user = await repo.findById(id);
       if (!user) throw new AppError("Usuario no encontrado", 404);

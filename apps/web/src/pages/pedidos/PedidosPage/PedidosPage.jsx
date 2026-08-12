@@ -57,10 +57,10 @@ const normalizarEstado = (raw) => {
 };
 
 const PedidosPage = () => {
-  const { esAdmin, esBodega, usuario, isAuthenticated, isSessionChecked } =
+  const { esAdmin, puedeGestionarPedidos, usuario, isAuthenticated, isSessionChecked } =
     useAuth();
-  const puedeCrear = esAdmin || esBodega;
-  const puedeAsignar = esAdmin || esBodega;
+  const puedeCrear = puedeGestionarPedidos;
+  const puedeAsignar = puedeGestionarPedidos;
   const sedeIdUsuario = usuario?.sedeId ?? null;
   const esEntregador = usuario?.rol === "Entregador";
 
@@ -142,7 +142,7 @@ const PedidosPage = () => {
           pedidosService.obtenerPedidos(),
           inventarioService.obtenerProductos({ activo: "true" }),
           clientesService.obtenerClientes({ activo: "true" }),
-          esAdmin ? inventarioService.obtenerSedes() : Promise.resolve([]),
+          puedeGestionarPedidos ? inventarioService.obtenerSedes() : Promise.resolve([]),
         ]);
       setPedidos(pedidosData);
       // Log para diagnóstico: mostrar las primeras entradas
@@ -150,7 +150,7 @@ const PedidosPage = () => {
       setProductos(productosData);
       setClientes(clientesData);
       setSedes(Array.isArray(sedesData) ? sedesData : []);
-      if (esAdmin) {
+      if (puedeGestionarPedidos) {
         setEntregadores(await pedidosService.obtenerEntregadores());
       } else {
         setEntregadores([]);
@@ -165,7 +165,7 @@ const PedidosPage = () => {
     } finally {
       setCargando(false);
     }
-  }, [esAdmin]);
+  }, [esAdmin, puedeGestionarPedidos]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;

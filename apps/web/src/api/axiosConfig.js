@@ -97,7 +97,7 @@ clienteApi.interceptors.response.use(
         const { data } = await axios.post(
           `${API_BASE_URL}/auth/refresh`,
           { refreshToken },
-          { timeout: 8000 },
+          { timeout: 8000, withCredentials: true },
         );
 
         const nuevoAccess  = data.accessToken  ?? data.token;
