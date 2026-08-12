@@ -1,0 +1,51 @@
+name: CI Pipeline (Pruebas y Verificación)
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    name: Test & Lint Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Instalar dependencias del Backend
+        run: |
+          cd apps/api
+          pnpm install
+
+      - name: Generar cliente de Prisma
+        run: |
+          cd apps/api
+          pnpm run db:generate
+
+  deploy:
+    name: Deploy to Production
+    needs: test-backend 
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Disparar Deploy en Vercel (Frontend)
+        run: |
+          curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
+
+      - name: Disparar Deploy en Render (API)
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
