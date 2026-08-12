@@ -55,12 +55,6 @@ const MENU = [
     notificable: true,
   },
   {
-    path:  "/reportes",
-    label: "Reportes",
-    icon:  "monitoring",
-    roles: ["Admin", "AdminBogota", "Bodega"],
-  },
-  {
     path:  "/proveedores",
     label: "Proveedores",
     icon:  "conveyor_belt",

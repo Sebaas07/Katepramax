@@ -16,32 +16,40 @@ const verifyToken = async (request, reply) => {
   }
 
   const { sesionId } = request.user;
-  const sesRepo = sesionRepository(request.server.prisma);
-  const sesion  = await sesRepo.findById(sesionId);
+  
+  try {
+    const sesRepo = sesionRepository(request.server.prisma);
+    const sesion  = await sesRepo.findById(sesionId);
 
-  if (!sesion)                          throw new AppError("Sesión inexistente o revocada.", 401);
-  if (!sesion.usuario?.activo)          throw new AppError("El usuario ya no tiene acceso al sistema.", 401);
+    if (!sesion)                          throw new AppError("Sesión inexistente o revocada.", 401);
+    if (!sesion.usuario?.activo)          throw new AppError("El usuario ya no tiene acceso al sistema.", 401);
 
-  await sesRepo.actualizarExpiracion(sesion.id);
+    await sesRepo.actualizarExpiracion(sesion.id);
 
-  if (request.cookies?.refreshToken) {
-    reply.setCookie("refreshToken", request.cookies.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
-      maxAge: 15 * 60,
-      path: "/api/v1",
-    });
+    if (request.cookies?.refreshToken) {
+      reply.setCookie("refreshToken", request.cookies.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+        maxAge: 15 * 60,
+        path: "/api/v1",
+      });
+    }
+
+    // Sobreescribir con datos REALES de la BD — nunca confiar en el payload del JWT
+    request.user = {
+      id:       sesion.usuario.id,
+      usuario:  sesion.usuario.usuario,
+      rol:      sesion.usuario.rol,
+      sedeId:   sesion.usuario.sedeId,
+      sesionId: sesion.id,
+    };
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError("Error al verificar la sesión. Intenta iniciar sesión de nuevo.", 401);
   }
-
-  // Sobreescribir con datos REALES de la BD — nunca confiar en el payload del JWT
-  request.user = {
-    id:       sesion.usuario.id,
-    usuario:  sesion.usuario.usuario,
-    rol:      sesion.usuario.rol,
-    sedeId:   sesion.usuario.sedeId,
-    sesionId: sesion.id,
-  };
 };
 
 // ── 2. RBAC ───────────────────────────────────────────────────

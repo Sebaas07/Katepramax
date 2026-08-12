@@ -98,6 +98,11 @@ const UsuariosPage = () => {
   const [usuarioAEliminar, setUsuarioAEliminar] = useState(null);
   const [form, setForm] = useState(FORM_INICIAL);
   const [errores, setErrores] = useState({});
+  const [filtroRol, setFiltroRol] = useState("");
+  const [filtroSedeId, setFiltroSedeId] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [sedes, setSedes] = useState([]);
+  const [cargandoSedes, setCargandoSedes] = useState(false);
 
   const cargarUsuarios = useCallback(async () => {
     setCargando(true);
@@ -131,6 +136,7 @@ const UsuariosPage = () => {
         const data = await inventarioService.obtenerSedes();
         setSedes(Array.isArray(data) ? data : []);
       } catch (err) {
+        console.error("Error al cargar sedes:", err);
         setSedes([]);
       } finally {
         setCargandoSedes(false);
@@ -140,19 +146,15 @@ const UsuariosPage = () => {
     void cargarSedes();
   }, [isSessionChecked, isAuthenticated]);
 
-  const [filtroRol, setFiltroRol] = useState("");
-  const [filtroSedeId, setFiltroSedeId] = useState("");
-  const [busqueda, setBusqueda] = useState("");
-  const [sedes, setSedes] = useState([]);
-  const [cargandoSedes, setCargandoSedes] = useState(false);
-
   const usuariosFiltrados = useMemo(() => {
     const termino = busqueda.trim().toLowerCase();
 
     return usuarios.filter((usuario) => {
       const pasaRol = !filtroRol || usuario.rol === filtroRol;
-      const pasaSede = !filtroSedeId || String(usuario.sedeId) === String(filtroSedeId);
-      const texto = `${usuario.nombreCompleto} ${usuario.usuario}`.toLowerCase();
+      const pasaSede =
+        !filtroSedeId || String(usuario.sedeId) === String(filtroSedeId);
+      const texto =
+        `${usuario.nombreCompleto} ${usuario.usuario}`.toLowerCase();
       const pasaBusqueda = !termino || texto.includes(termino);
 
       return pasaRol && pasaSede && pasaBusqueda;
@@ -204,7 +206,9 @@ const UsuariosPage = () => {
     setGuardando(true);
     try {
       await usuarioService.desactivarUsuario(usuarioAEliminar.id);
-      toast.success(`${usuarioAEliminar.nombreCompleto} desactivado correctamente.`);
+      toast.success(
+        `${usuarioAEliminar.nombreCompleto} desactivado correctamente.`,
+      );
       cerrarModalConfirm();
       await cargarUsuarios();
     } catch (error) {
@@ -214,19 +218,22 @@ const UsuariosPage = () => {
     }
   }, [usuarioAEliminar, cargarUsuarios, cerrarModalConfirm]);
 
-  const handleActivarUsuario = useCallback(async (usuario) => {
-    const seleccionado = normalizeUsuario(usuario);
-    setGuardando(true);
-    try {
-      await usuarioService.activarUsuario(seleccionado.id);
-      toast.success(`${seleccionado.nombreCompleto} activado correctamente.`);
-      await cargarUsuarios();
-    } catch (error) {
-      toast.error(`Error al activar: ${error.message}`);
-    } finally {
-      setGuardando(false);
-    }
-  }, [cargarUsuarios]);
+  const handleActivarUsuario = useCallback(
+    async (usuario) => {
+      const seleccionado = normalizeUsuario(usuario);
+      setGuardando(true);
+      try {
+        await usuarioService.activarUsuario(seleccionado.id);
+        toast.success(`${seleccionado.nombreCompleto} activado correctamente.`);
+        await cargarUsuarios();
+      } catch (error) {
+        toast.error(`Error al activar: ${error.message}`);
+      } finally {
+        setGuardando(false);
+      }
+    },
+    [cargarUsuarios],
+  );
 
   const cerrarModal = useCallback(() => {
     setModalAbierto(false);
@@ -253,8 +260,9 @@ const UsuariosPage = () => {
 
     if (!usuario) {
       nuevosErrores.usuario = "El nombre de usuario es obligatorio.";
-    } else if (!/^[a-zA-Z0-9_]{5,50}$/.test(usuario)) {
-      nuevosErrores.usuario = "Usa de 5 a 50 caracteres: letras, números y guión bajo.";
+    } else if (!/^[a-zA-Z0-9_]{5,10}$/.test(usuario)) {
+      nuevosErrores.usuario =
+        "Usa de 5 a 10 caracteres: letras, números y guión bajo.";
     }
 
     if (!form.rol) {
@@ -269,7 +277,8 @@ const UsuariosPage = () => {
       if (!form.contrasena) {
         nuevosErrores.contrasena = "La contraseña es obligatoria.";
       } else if (form.contrasena.length < 6) {
-        nuevosErrores.contrasena = "La contraseña debe tener al menos 6 caracteres.";
+        nuevosErrores.contrasena =
+          "La contraseña debe tener al menos 6 caracteres.";
       }
 
       if (form.contrasena !== form.confirmarContrasena) {
@@ -280,7 +289,7 @@ const UsuariosPage = () => {
     const usuarioDuplicado = usuarios.some(
       (item) =>
         item.id !== usuarioSel?.id &&
-        String(item.usuario).toLowerCase() === usuario.toLowerCase()
+        String(item.usuario).toLowerCase() === usuario.toLowerCase(),
     );
 
     if (usuarioDuplicado) {
@@ -303,7 +312,12 @@ const UsuariosPage = () => {
           rol: form.rol,
           sedeId: form.sedeId,
           activo: form.activo,
-          ...(form.contrasena ? { contrasena: form.contrasena, confirmarContrasena: form.confirmarContrasena } : {}),
+          ...(form.contrasena
+            ? {
+                contrasena: form.contrasena,
+                confirmarContrasena: form.confirmarContrasena,
+              }
+            : {}),
         });
         toast.success("Usuario actualizado correctamente.");
       } else {
@@ -337,7 +351,7 @@ const UsuariosPage = () => {
       { campo: "activo", label: "Estado", tipo: "booleano" },
       { campo: "creadoEn", label: "Fecha de creación", tipo: "fecha" },
     ],
-    []
+    [],
   );
 
   const renderAcciones = useCallback(
@@ -365,7 +379,7 @@ const UsuariosPage = () => {
           : []),
       ];
     },
-    [abrirEditar, abrirModalConfirmDesactivar, handleActivarUsuario]
+    [abrirEditar, abrirModalConfirmDesactivar, handleActivarUsuario],
   );
 
   const renderCeldaCustom = useCallback((fila, columna) => {
@@ -413,8 +427,11 @@ const UsuariosPage = () => {
               value={filtroSedeId}
               onChange={(event) => setFiltroSedeId(event.target.value)}
               className="filter-select"
+              disabled={cargandoSedes}
             >
-              <option value="">Todas las sedes</option>
+              <option value="">
+                {cargandoSedes ? "Cargando sedes..." : "Todas las sedes"}
+              </option>
               {sedes.map((sede) => (
                 <option key={sede.id} value={sede.id}>
                   {sede.nombre}
@@ -480,7 +497,11 @@ const UsuariosPage = () => {
             detalle="Crea el primer usuario para comenzar a administrar accesos."
           >
             {esAdmin && (
-              <button className="btn-primary" onClick={abrirCrear} type="button">
+              <button
+                className="btn-primary"
+                onClick={abrirCrear}
+                type="button"
+              >
                 <span className="material-symbols-outlined">person_add</span>
                 Nuevo Usuario
               </button>
@@ -521,7 +542,13 @@ const UsuariosPage = () => {
         isOpen={modalAbierto}
         onClose={cerrarModal}
         titulo={usuarioSel ? "Editar Usuario" : "Nuevo Usuario"}
-        textoBotonConfirmar={guardando ? "Guardando..." : usuarioSel ? "Actualizar" : "Crear Usuario"}
+        textoBotonConfirmar={
+          guardando
+            ? "Guardando..."
+            : usuarioSel
+              ? "Actualizar"
+              : "Crear Usuario"
+        }
         onConfirmar={handleGuardar}
         mostrarCancelar
         disabled={guardando}
@@ -579,7 +606,9 @@ const UsuariosPage = () => {
                 placeholder="usuario_sistema"
                 autoComplete="off"
               />
-              {errores.usuario && <span className="form-error">{errores.usuario}</span>}
+              {errores.usuario && (
+                <span className="form-error">{errores.usuario}</span>
+              )}
             </div>
 
             <div className="form-group">
@@ -598,7 +627,9 @@ const UsuariosPage = () => {
                   </option>
                 ))}
               </select>
-              {errores.sedeId && <span className="form-error">{errores.sedeId}</span>}
+              {errores.sedeId && (
+                <span className="form-error">{errores.sedeId}</span>
+              )}
             </div>
           </div>
 
@@ -622,7 +653,9 @@ const UsuariosPage = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="usr-confirmar-contrasena">Confirmar contraseña *</label>
+                <label htmlFor="usr-confirmar-contrasena">
+                  Confirmar contraseña *
+                </label>
                 <input
                   id="usr-confirmar-contrasena"
                   name="confirmarContrasena"
@@ -634,7 +667,9 @@ const UsuariosPage = () => {
                   autoComplete="new-password"
                 />
                 {errores.confirmarContrasena && (
-                  <span className="form-error">{errores.confirmarContrasena}</span>
+                  <span className="form-error">
+                    {errores.confirmarContrasena}
+                  </span>
                 )}
               </div>
             </div>
@@ -673,7 +708,8 @@ const UsuariosPage = () => {
             <strong>{usuarioAEliminar?.nombreCompleto}</strong>?
           </p>
           <p className="usr-confirm-sub">
-            El usuario no podrá iniciar sesión hasta que sea activado nuevamente.
+            El usuario no podrá iniciar sesión hasta que sea activado
+            nuevamente.
           </p>
         </div>
       </Modal>

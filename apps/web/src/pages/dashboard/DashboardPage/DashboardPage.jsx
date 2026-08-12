@@ -9,6 +9,7 @@ import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import { formatCOP, formatFechaHora } from "@/utils/formatters";
 import "./DashboardPage.css";
 
+
 // ── Config KPIs ───────────────────────────────────────────────
 const KPI_CONFIG = [
   {
@@ -53,9 +54,9 @@ const obtenerFechaISOHoy = () => {
 // ── Componente ────────────────────────────────────────────────
 const DashboardPage = () => {
   const { usuario, esAdmin, isAuthenticated, isSessionChecked } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Solo Admin puede filtrar por una sede específica desde el menú superior;
+  // Solo Admin puede filtrar por una sede específica desde el dashboard;
   // para el resto, el backend fuerza su propia sede sin importar este valor.
   const sedeIdSeleccionada = esAdmin ? searchParams.get("sede") : null;
 
@@ -67,6 +68,19 @@ const DashboardPage = () => {
       .then((data) => setSedesCatalogo(Array.isArray(data) ? data : []))
       .catch(() => setSedesCatalogo([]));
   }, [esAdmin]);
+
+  const sedesActivas = sedesCatalogo.filter((s) => s.activo !== false);
+
+  const manejarCambioSede = (evento) => {
+    const valor = evento.target.value;
+    const params = new URLSearchParams(searchParams);
+    if (valor) {
+      params.set("sede", valor);
+    } else {
+      params.delete("sede");
+    }
+    setSearchParams(params);
+  };
 
   const sedeNombreMostrado = (() => {
     if (esAdmin && sedeIdSeleccionada) {
@@ -157,7 +171,29 @@ const DashboardPage = () => {
             )}
           </div>
         </div>
-        <span className="dashboard-header__fecha">{fecha}</span>
+        <div className="dashboard-header__right">
+          {esAdmin && (
+            <div className="dashboard-header__filtro-sede">
+              <span className="material-symbols-outlined" aria-hidden="true">
+                location_on
+              </span>
+              <select
+                id="dashboard-filtro-sede"
+                aria-label="Filtrar dashboard por sede"
+                value={sedeIdSeleccionada ?? ""}
+                onChange={manejarCambioSede}
+              >
+                <option value="">Todas las sedes</option>
+                {sedesActivas.map((sede) => (
+                  <option key={sede.id} value={sede.id}>
+                    {sede.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <span className="dashboard-header__fecha">{fecha}</span>
+        </div>
       </div>
 
       {/* KPIs */}

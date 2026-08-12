@@ -26,24 +26,17 @@ import CarteraClientesPage from "@/pages/clientes/CarteraClientesPage/CarteraCli
 import ProveedoresPage from "@/pages/proveedores/ProveedoresPage/ProveedoresPage";
 import DistribucionPage from "@/pages/distribucion/DistribucionPage/DistribucionPage";
 import ContabilidadPage from "@/pages/contabilidad/ContabilidadPage/ContabilidadPage";
-import ReportesPage from "@/pages/reportes/ReportesPage/ReportesPage";
 
 // ── Lazy-loaded ───────────────────────────────────────────────
 const UsuariosPage = lazy(
   () => import("@/pages/admin/UsuariosPage/UsuariosPage"),
 );
-const SedesPage = lazy(
-  () => import("@/pages/admin/SedesPage/SedesPage"),
-);
-const LogsPage = lazy(
-  () => import("@/pages/admin/LogsPage/LogsPage"),
-);
+const SedesPage = lazy(() => import("@/pages/admin/SedesPage/SedesPage"));
+const LogsPage = lazy(() => import("@/pages/admin/LogsPage/LogsPage"));
 const EntregasPage = lazy(
   () => import("@/pages/entregas/EntregasPage/EntregasPage"),
 );
-const EnviosPage = lazy(
-  () => import("@/pages/envios/EnviosPage/EnviosPage"),
-);
+const EnviosPage = lazy(() => import("@/pages/envios/EnviosPage/EnviosPage"));
 
 // ── Roles ─────────────────────────────────────────────────────
 const ROLES = {
@@ -104,8 +97,7 @@ const AppRouter = () => (
 
         {/* Consulta sin escritura (Bodega lee inventario y reportes) */}
         <Route element={<RequireRole roles={ROLES.CONSULTA} />}>
-          <Route path="/inventario" element={<InventarioPage />} />
-          <Route path="/reportes" element={<ReportesPage />} />
+          <Route path="/inventario" element={<InventarioPage />} />{" "}
         </Route>
 
         {/* Distribución / entregas: Admin, AdminBogota, Oficinista y Bodega */}

@@ -3,7 +3,7 @@
  */
 
 // Campos reutilizables
-const rolEnum = { type: "string", enum: ["Admin", "Bodega", "AdminBogota", "Entregador"] };
+const rolEnum = { type: "string", enum: ["Admin", "Bodega", "AdminBogota", "Oficinista", "Entregador"] };
 
 const usuarioResponse = {
   type: "object",

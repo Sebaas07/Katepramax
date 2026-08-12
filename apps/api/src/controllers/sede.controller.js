@@ -22,7 +22,7 @@ const sedeController = {
     }
 
     const existe = await request.server.prisma.sede.findFirst({
-      where: { nombre: { equals: nombre, mode: "insensitive" } },
+      where: { nombre: { equals: nombre } },
       select: { id: true },
     });
     if (existe) {
@@ -55,7 +55,7 @@ const sedeController = {
       const duplicada = await request.server.prisma.sede.findFirst({
         where: {
           id: { not: id },
-          nombre: { equals: nombre, mode: "insensitive" },
+          nombre: { equals: nombre },
         },
         select: { id: true },
       });

@@ -12,8 +12,6 @@ const _copFormatter = new Intl.NumberFormat("es-CO", {
   minimumFractionDigits: 0,
 });
 
-const _numFormatter = new Intl.NumberFormat("es-CO");
-
 /**
  * Formatea un número como peso colombiano.
  * Ej: 1270000 → "$1.270.000"
@@ -68,41 +66,12 @@ export const formatRelativo = (iso) => {
 };
 
 /**
- * Formatea un número con separador de miles.
- * Ej: 1270000 → "1.270.000"
- * (Sin export — no se usa en ningún módulo actualmente)
- */
-const formatNumero = (valor) => {
-  if (valor === null || valor === undefined) return "0";
-  return _numFormatter.format(Number(valor));
-};
-
-/**
- * Formatea un porcentaje.
- * Ej: 0.1523 → "15,23%"
- * (Sin export — no se usa en ningún módulo actualmente)
- */
-const formatPorcentaje = (valor, decimales = 1) => {
-  if (valor === null || valor === undefined) return "0%";
-  return `${Number(valor).toFixed(decimales)}%`;
-};
-
-/**
  * Trunca texto largo con elipsis.
  * Ej: "Texto muy largo..." → "Texto muy lar..."
  */
 export const truncar = (texto, max = 40) => {
   if (!texto) return "—";
   return texto.length > max ? texto.slice(0, max) + "..." : texto;
-};
-
-/**
- * Capitaliza la primera letra de un string.
- * (Sin export — no se usa en ningún módulo actualmente)
- */
-const capitalizar = (texto) => {
-  if (!texto) return "";
-  return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
 };
 
 /**

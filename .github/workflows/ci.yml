@@ -35,6 +35,14 @@ jobs:
           cd apps/api
           pnpm run db:generate
 
+      - name: Ejecutar Tests de Vitest
+        env:
+          NODE_ENV: test
+          JWT_SECRET: 1f7f73e124735f955ecdde8f6605e0eb4ec3b4dadfe1308089704d6befdbad1a
+        run: |
+          cd apps/api
+          pnpm run test
+
   deploy:
     name: Deploy to Production
     needs: test-backend 

@@ -46,6 +46,13 @@
   color: var(--secondary);
 }
 
+.dashboard-header__right {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
 .dashboard-header__fecha {
   font-family: var(--font-label);
   font-size: 12px;
@@ -53,6 +60,48 @@
   text-transform: capitalize;
   text-align: right;
   padding-top: 4px;
+}
+
+.dashboard-header__filtro-sede {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container);
+}
+
+.dashboard-header__filtro-sede .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--secondary);
+}
+
+.dashboard-header__filtro-sede select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0.5rem 1.75rem 0.5rem 0.625rem;
+  background: transparent;
+  border: none;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--on-surface);
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23978d9d' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 16px;
+}
+
+.dashboard-header__filtro-sede select:focus {
+  outline: none;
+  border-color: var(--secondary);
+}
+
+.dashboard-header__filtro-sede select option {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
 }
 
 .dashboard-badge-mock {
@@ -83,7 +132,9 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  transition: border-color var(--transition-fast), transform var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .kpi-card:hover {
@@ -101,7 +152,9 @@
   flex-shrink: 0;
 }
 
-.kpi-card__icon .material-symbols-outlined { font-size: 24px; }
+.kpi-card__icon .material-symbols-outlined {
+  font-size: 24px;
+}
 
 .kpi-card__valor {
   font-family: var(--font-headline);
@@ -129,7 +182,9 @@
 }
 
 @keyframes kpi-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ─── Tabla últimos pedidos ──────────────────────────────────*/
@@ -220,7 +275,9 @@
   white-space: nowrap;
 }
 
-.dashboard-tabla__cliente { font-weight: 500; }
+.dashboard-tabla__cliente {
+  font-weight: 500;
+}
 
 .dashboard-tabla__sede {
   display: inline-flex;

@@ -1,8 +1,7 @@
-import { useReducer, useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useReducer } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import MenuLateral from "@/components/layout/MenuLateral/MenuLateral";
-import inventarioService from "@/services/inventario.service";
 import "./MenuSuperior.css";
 
 function menuReducer(state, action) {
@@ -21,21 +20,8 @@ export default function MenuSuperior() {
     mostrarSidebar: false,
   });
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { usuario, logout, esAdmin, esBodega } = useAuth();
 
-  const [sedes, setSedes] = useState([]);
-
-  // Solo el Admin necesita el catálogo completo de sedes para el selector.
-  useEffect(() => {
-    if (!esAdmin) return;
-    inventarioService
-      .obtenerSedes()
-      .then((data) => setSedes(Array.isArray(data) ? data : []))
-      .catch(() => setSedes([]));
-  }, [esAdmin]);
-
-  const sedeIdDesdeURL = searchParams.get("sede") || "";
   const abrirSidebar = () => dispatch({ type: "ABRIR_SIDEBAR" });
   const cerrarSidebar = () => dispatch({ type: "CERRAR_SIDEBAR" });
 
@@ -85,36 +71,6 @@ export default function MenuSuperior() {
             </span>
           </div>
         </div>
-
-        {/* ── Centro: selector de sede (Admin) o chip de sede (Bodega) ── */}
-        {esAdmin && (
-          <nav
-            className="menu-superior__sedes d-none d-md-flex"
-            aria-label="Selector de sede"
-          >
-            <button
-              className={`menu-superior__sede-btn ${!sedeIdDesdeURL ? "menu-superior__sede-btn--activa" : ""}`}
-              type="button"
-              onClick={() => navigate("/dashboard", { replace: true })}
-              aria-pressed={!sedeIdDesdeURL}
-            >
-              Todas
-            </button>
-            {sedes.map((sede) => (
-              <button
-                key={sede.id}
-                className={`menu-superior__sede-btn ${String(sedeIdDesdeURL) === String(sede.id) ? "menu-superior__sede-btn--activa" : ""}`}
-                type="button"
-                onClick={() =>
-                  navigate(`/dashboard?sede=${sede.id}`, { replace: true })
-                }
-                aria-pressed={String(sedeIdDesdeURL) === String(sede.id)}
-              >
-                {sede.nombre}
-              </button>
-            ))}
-          </nav>
-        )}
 
         {sedeChip && (
           <div
