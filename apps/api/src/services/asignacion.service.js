@@ -31,7 +31,7 @@ const { semanaDesdeFecha } = require("../utils/contabilidad");
 // Roles que pueden CREAR /asignar pedidos a entregadores
 function esGestion(usuario) {
   if (!usuario) return false;
-  return ["Admin", "AdminBogota", "Oficinista"].includes(usuario.rol);
+  return ["Admin", "AdminBogota", "Oficinista", "Bodega"].includes(usuario.rol);
 }
 
 // Roles que pueden VER entregas (incluye Bodega en modo lectura)

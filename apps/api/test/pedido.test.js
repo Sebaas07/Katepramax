@@ -245,17 +245,8 @@ describe("POST /api/v1/pedidos", () => {
     expect(res.json().estado).toBe("Pendiente");
   });
 
-  it("debería retornar 201 al crear correctamente (Bodega)", async () => {
+  it("debería retornar 403 al intentar crear (Bodega — solo lectura, crear es de Oficinista/Admin/AdminBogota)", async () => {
     mockSesion(sesionBodegaMock);
-    prisma.cliente.findUnique.mockResolvedValue(clienteMock);
-    prisma.usuario.findUnique.mockResolvedValue({
-      ...creadorMock,
-      id: 2,
-      rol: "Bodega",
-    });
-    prisma.producto.findUnique.mockResolvedValue(productaMock);
-    prisma.stockSede.findUnique.mockResolvedValue(stockMock);
-    prisma.$transaction.mockResolvedValue(pedidoMock);
 
     const res = await app.inject({
       method: "POST",
@@ -263,7 +254,7 @@ describe("POST /api/v1/pedidos", () => {
       headers: authBodega(),
       payload,
     });
-    expect(res.statusCode).toBe(201);
+    expect(res.statusCode).toBe(403);
   });
 });
 

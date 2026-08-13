@@ -3,16 +3,16 @@ const schemas = require("../schemas/asignacion.schema");
 const {
   verifyToken,
   requireRole,
-  gestion,
   verEntregas,
 } = require("../middlewares/auth.middleware");
 
 async function asignacionRoutes(app) {
 
-  // Crear asignación — Admin, AdminBogota y Oficinista
+  // Crear asignación — Admin, AdminBogota, Oficinista y Bodega
+  // (Bodega/Admin asignan el pedido a un entregador desde la bodega)
   app.post("/asignaciones", {
     schema:        schemas.crearAsignacion,
-    preValidation: gestion.preValidation,
+    preValidation: verEntregas.preValidation,
     handler:       ctrl.crear,
   });
 
