@@ -94,6 +94,7 @@ model Usuario {
   historialEstadoPedidos HistorialEstadoPedido[] @relation("HistorialUsuario")
   enviosCreados          Envio[]                 @relation("EnvioCreador")
   enviosConfirmados      Envio[]                 @relation("EnvioConfirmador")
+  enviosCancelados       Envio[]                 @relation("EnvioCancelador")
 
   @@map("usuarios")
 }
@@ -387,6 +388,7 @@ enum EstadoEnvio {
   Pendiente
   Confirmado
   ConNovedad
+  Cancelado
 }
 
 // Guía de envío de mercancía entre sedes. Un Admin/AdminBogota crea un envío
@@ -402,16 +404,19 @@ model Envio {
   sedeDestinoId        Int         @map("sede_destino_id")
   creadoPorId          Int         @map("creado_por")
   confirmadoPorId      Int?        @map("confirmado_por")
+  canceladoPorId       Int?        @map("cancelado_por")
   estado               EstadoEnvio @default(Pendiente)
   observaciones        String?     @map("observaciones") @db.Text
   observacionRecepcion String?     @map("observacion_recepcion") @db.Text
   fechaEnvio           DateTime    @default(now()) @map("fecha_envio")
   fechaConfirmacion    DateTime?   @map("fecha_confirmacion")
+  fechaCancelacion     DateTime?   @map("fecha_cancelacion")
 
   sedeOrigen  Sede     @relation("EnvioOrigen", fields: [sedeOrigenId], references: [id])
   sedeDestino Sede     @relation("EnvioDestino", fields: [sedeDestinoId], references: [id])
   creador     Usuario  @relation("EnvioCreador", fields: [creadoPorId], references: [id])
   confirmador Usuario? @relation("EnvioConfirmador", fields: [confirmadoPorId], references: [id])
+  cancelador  Usuario? @relation("EnvioCancelador", fields: [canceladoPorId], references: [id])
 
   detalles EnvioDetalle[]
 

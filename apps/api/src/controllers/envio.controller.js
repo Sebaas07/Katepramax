@@ -30,4 +30,10 @@ async function confirmar(request, reply) {
   return reply.send(result);
 }
 
-module.exports = { crear, listar, contarPendientes, obtenerPorId, confirmar };
+async function cancelar(request, reply) {
+  const svc = envioService(request.server);
+  const result = await svc.cancelar(Number(request.params.id), request.user);
+  return reply.send(result);
+}
+
+module.exports = { crear, listar, contarPendientes, obtenerPorId, confirmar, cancelar };

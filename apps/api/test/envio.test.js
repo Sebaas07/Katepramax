@@ -68,10 +68,15 @@ const sesionBodegaVillavoMock = {
   id: 13,
   usuario: { ...sesionAdminMock.usuario, id: 4, rol: "Bodega", sedeId: 3 },
 };
+const sesionAdminCartagenaMock = {
+  ...sesionAdminMock,
+  id: 14,
+  usuario: { ...sesionAdminMock.usuario, id: 5, rol: "Admin", sedeId: 2 },
+};
 
 // ── Setup ────────────────────────────────────────────────────────────────────
 
-let app, tokenAdmin, tokenAdminBogota, tokenBodegaCartagena, tokenBodegaVillavo;
+let app, tokenAdmin, tokenAdminBogota, tokenBodegaCartagena, tokenBodegaVillavo, tokenAdminCartagena;
 
 beforeAll(async () => {
   app = await buildApp();
@@ -82,6 +87,7 @@ beforeAll(async () => {
   tokenAdminBogota = app.jwt.sign({ sesionId: 11 });
   tokenBodegaCartagena = app.jwt.sign({ sesionId: 12 });
   tokenBodegaVillavo = app.jwt.sign({ sesionId: 13 });
+  tokenAdminCartagena = app.jwt.sign({ sesionId: 14 });
 }, 30000);
 
 afterAll(async () => {
@@ -99,6 +105,9 @@ function authBodegaCartagena() {
 }
 function authBodegaVillavo() {
   return { Authorization: `Bearer ${tokenBodegaVillavo}` };
+}
+function authAdminCartagena() {
+  return { Authorization: `Bearer ${tokenAdminCartagena}` };
 }
 function mockSesion(mock) {
   prisma.sesion.findFirst.mockResolvedValue(mock);
@@ -427,12 +436,9 @@ describe("PATCH /api/v1/envios/:id/confirmar", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("un Admin debería poder confirmar cualquier envío", async () => {
+  it("un Admin de la sede origen NO debería poder confirmar (la sede que envió no confirma)", async () => {
     mockSesion(sesionAdminMock);
-    prisma.envio.findUnique
-      .mockResolvedValueOnce(envioBase())
-      .mockResolvedValueOnce(envioBase({ estado: "Confirmado" }));
-    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.envio.findUnique.mockResolvedValue(envioBase());
 
     const res = await app.inject({
       method: "PATCH",
@@ -441,6 +447,105 @@ describe("PATCH /api/v1/envios/:id/confirmar", () => {
       payload: { detalles: [{ envioDetalleId: 1, cantidadRecibida: 5 }] },
     });
 
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/destino/i);
+  });
+
+  it("un Admin de la sede destino sí debería poder confirmar", async () => {
+    mockSesion(sesionAdminCartagenaMock);
+    prisma.envio.findUnique
+      .mockResolvedValueOnce(envioBase())
+      .mockResolvedValueOnce(envioBase({ estado: "Confirmado" }));
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/envios/1/confirmar",
+      headers: authAdminCartagena(),
+      payload: { detalles: [{ envioDetalleId: 1, cantidadRecibida: 5 }] },
+    });
+
     expect(res.statusCode).toBe(200);
+    expect(res.json().estado).toBe("Confirmado");
+  });
+});
+
+// ── PATCH /api/v1/envios/:id/cancelar ───────────────────────────────────────
+
+describe("PATCH /api/v1/envios/:id/cancelar", () => {
+  it("debería retornar 403 si la sede destino intenta cancelar", async () => {
+    mockSesion(sesionBodegaCartagenaMock);
+    prisma.envio.findUnique.mockResolvedValue(envioBase());
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/envios/1/cancelar",
+      headers: authBodegaCartagena(),
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/origin/i);
+  });
+
+  it("debería retornar 403 si un Admin no pertenece a la sede origen", async () => {
+    mockSesion(sesionAdminCartagenaMock);
+    prisma.envio.findUnique.mockResolvedValue(envioBase());
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/envios/1/cancelar",
+      headers: authAdminCartagena(),
+    });
+
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("debería retornar 409 si el envío ya no está pendiente", async () => {
+    mockSesion(sesionAdminBogotaMock);
+    prisma.envio.findUnique.mockResolvedValue(envioBase({ estado: "Confirmado" }));
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/envios/1/cancelar",
+      headers: authAdminBogota(),
+    });
+
+    expect(res.statusCode).toBe(409);
+  });
+
+  it("debería retornar 200 cuando la sede origen cancela, devolviendo el stock", async () => {
+    mockSesion(sesionAdminBogotaMock);
+    prisma.envio.findUnique
+      .mockResolvedValueOnce(envioBase())
+      .mockResolvedValueOnce(envioBase({ estado: "Cancelado" }));
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/envios/1/cancelar",
+      headers: authAdminBogota(),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().estado).toBe("Cancelado");
+
+    // El stock se devuelve a la sede origen (5 unidades)
+    expect(prisma.stockSede.upsert).toHaveBeenCalledWith({
+      where: { sedeId_productoId: { sedeId: 1, productoId: 1 } },
+      update: { stockActual: { increment: 5 } },
+      create: { sedeId: 1, productoId: 1, stockActual: 5 },
+    });
+
+    // Se registra la reversión en Inventario como entrada
+    expect(prisma.inventario.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          sedeId: 1,
+          productoId: 1,
+          cantidadIngresada: 5,
+          tipo: "entrada",
+        }),
+      }),
+    );
   });
 });

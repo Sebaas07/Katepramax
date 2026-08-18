@@ -188,7 +188,26 @@ const EnviosPage = () => {
 
   const puedeConfirmar = (envio) =>
     envio.estado === "Pendiente" &&
-    (esAdmin || envio.sedeDestinoId === usuario?.sedeId);
+    Number(envio.sedeDestinoId) === Number(usuario?.sedeId);
+
+  const puedeCancelar = (envio) =>
+    envio.estado === "Pendiente" &&
+    Number(envio.sedeOrigenId) === Number(usuario?.sedeId);
+
+  const handleCancelarEnvio = async (envio) => {
+    const destino = envio.sedeDestino?.nombre ?? `sede ${envio.sedeDestinoId}`;
+    if (!window.confirm(`¿Cancelar el envío hacia "${destino}"? Se devolverá el stock a tu sede.`)) return;
+    setGuardando(true);
+    try {
+      await envioService.cancelarEnvio(envio.id);
+      toast.success("Envío cancelado. El stock fue devuelto a tu sede.");
+      await cargarEnvios();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   const renderAcciones = (fila) => {
     const acciones = [];
@@ -197,6 +216,13 @@ const EnviosPage = () => {
         label: "Confirmar recepción",
         variante: "success",
         onClick: () => abrirConfirmar(fila),
+      });
+    }
+    if (puedeCancelar(fila)) {
+      acciones.push({
+        label: "Cancelar envío",
+        variante: "danger",
+        onClick: () => handleCancelarEnvio(fila),
       });
     }
     return acciones;

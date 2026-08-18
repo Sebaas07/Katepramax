@@ -35,6 +35,12 @@ const envioApi = {
     const { data } = await clienteApi.patch(`/envios/${id}/confirmar`, payload);
     return data;
   },
+
+  // Backend: PATCH /envios/:id/cancelar → solo la sede origen
+  cancelarEnvio: async (id) => {
+    const { data } = await clienteApi.patch(`/envios/${id}/cancelar`);
+    return data;
+  },
 };
 
 export default envioApi;

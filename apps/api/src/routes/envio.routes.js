@@ -17,6 +17,7 @@ async function envioRoutes(app) {
   app.get(   "/envios",     { schema: schemas.listarEnvios,   ...adminOBodega }, ctrl.listar);
   app.get(   "/envios/:id", { schema: schemas.obtenerEnvio,   ...adminOBodega }, ctrl.obtenerPorId);
   app.patch( "/envios/:id/confirmar", { schema: schemas.confirmarEnvio, ...adminOBodega }, ctrl.confirmar);
+  app.patch( "/envios/:id/cancelar",  { schema: schemas.cancelarEnvio,  ...adminOBodega }, ctrl.cancelar);
 }
 
 module.exports = envioRoutes;

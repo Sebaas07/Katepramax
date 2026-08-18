@@ -41,15 +41,18 @@ const envioBase = {
     sedeDestinoId: { type: "integer" },
     creadoPorId: { type: "integer" },
     confirmadoPorId: { type: ["integer", "null"] },
-    estado: { type: "string", enum: ["Pendiente", "Confirmado", "ConNovedad"] },
+    canceladoPorId: { type: ["integer", "null"] },
+    estado: { type: "string", enum: ["Pendiente", "Confirmado", "ConNovedad", "Cancelado"] },
     observaciones: { type: ["string", "null"] },
     observacionRecepcion: { type: ["string", "null"] },
     fechaEnvio: { type: "string" },
     fechaConfirmacion: { type: ["string", "null"] },
+    fechaCancelacion: { type: ["string", "null"] },
     sedeOrigen: sedeResumen,
     sedeDestino: sedeResumen,
     creador: usuarioResumen,
     confirmador: { anyOf: [usuarioResumen, { type: "null" }] },
+    cancelador: { anyOf: [usuarioResumen, { type: "null" }] },
     detalles: { type: "array", items: envioDetalleBase },
   },
 };
@@ -100,7 +103,7 @@ const listarEnvios = {
     type: "object",
     properties: {
       direccion: { type: "string", enum: ["enviados", "recibidos"] },
-      estado: { type: "string", enum: ["Pendiente", "Confirmado", "ConNovedad"] },
+      estado: { type: "string", enum: ["Pendiente", "Confirmado", "ConNovedad", "Cancelado"] },
       sedeId: { type: "integer" },
       skip: { type: "integer", minimum: 0, default: 0 },
       take: { type: "integer", minimum: 1, maximum: 200, default: 50 },
@@ -139,9 +142,10 @@ const obtenerEnvio = {
 const confirmarEnvio = {
   summary: "Confirmar la recepción de un envío",
   description:
-    "Solo la sede destino (o Admin). Si alguna cantidadRecibida es menor a " +
-    "la enviada, se exige una observación (faltante o unidades dañadas). " +
-    "Las cantidades confirmadas ingresan al inventario de la sede destino.",
+    "Solo la sede DESTINO (la que recibe) puede confirmar; la sede que envió no " +
+    "puede confirmar su propio envío. Si alguna cantidadRecibida es menor a la " +
+    "enviada, se exige una observación (faltante o unidades dañadas). Las " +
+    "cantidades confirmadas ingresan al inventario de la sede destino.",
   tags: ["Envios"],
   security: [{ bearerAuth: [] }],
   params: {
@@ -173,10 +177,27 @@ const confirmarEnvio = {
   response: { 200: envioBase },
 };
 
+const cancelarEnvio = {
+  summary: "Cancelar un envío pendiente",
+  description:
+    "Solo la sede ORIGEN (la que despachó) puede cancelar el envío y solo " +
+    "mientras esté 'Pendiente'. Al cancelar se devuelve el stock a la sede " +
+    "origen y se registra la reversión en Inventario.",
+  tags: ["Envios"],
+  security: [{ bearerAuth: [] }],
+  params: {
+    type: "object",
+    required: ["id"],
+    properties: { id: { type: "integer" } },
+  },
+  response: { 200: envioBase },
+};
+
 module.exports = {
   crearEnvio,
   listarEnvios,
   contarPendientes,
   obtenerEnvio,
   confirmarEnvio,
+  cancelarEnvio,
 };

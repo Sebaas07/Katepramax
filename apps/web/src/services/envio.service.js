@@ -105,6 +105,19 @@ const envioService = {
       throw e;
     }
   },
+
+  /**
+   * Cancela un envío pendiente. Solo la sede que lo originó puede cancelarlo.
+   */
+  cancelarEnvio: async (id) => {
+    try {
+      if (!id) throw new Error("Se requiere el ID del envío.");
+      return await envioApi.cancelarEnvio(id);
+    } catch (e) {
+      console.error("[envioService] cancelarEnvio:", e.message);
+      throw e;
+    }
+  },
 };
 
 export default envioService;

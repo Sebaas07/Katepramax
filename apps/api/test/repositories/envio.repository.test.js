@@ -12,6 +12,7 @@ const incluirDetalle = {
   sedeDestino: { select: { id: true, nombre: true } },
   creador: { select: { id: true, nombreCompleto: true } },
   confirmador: { select: { id: true, nombreCompleto: true } },
+  cancelador: { select: { id: true, nombreCompleto: true } },
   detalles: {
     include: {
       producto: { select: { codigo: true, descripcion: true, sku: true } },

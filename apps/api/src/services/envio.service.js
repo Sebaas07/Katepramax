@@ -15,6 +15,9 @@
  *     unidades confirmadas entran de una vez al inventario de la sede
  *     destino (creando el registro de stock si el producto no existía
  *     ahí todavía).
+ *  4. La sede origen puede CANCELAR un envío pendiente (antes de que la
+ *     sede destino confirme). Al cancelar se devuelve el stock a la sede
+ *     origen y se registra la reversión correspondiente en Inventario.
  */
 
 const envioRepo = require("../repositories/envio.repository");
@@ -270,6 +273,9 @@ const envioService = (app) => ({
 
   /**
    * Confirma la recepción de un envío en la sede destino.
+   * Solo la sede DESTINO (la que recibe) puede confirmar; la sede que envió
+   * no tiene permitido confirmar su propio envío. Aplica a todos los roles,
+   * incluido Admin (que debe pertenecer a la sede destino).
    * body: { detalles: [{ envioDetalleId, cantidadRecibida, observacion? }], observacionRecepcion? }
    */
   async confirmar(id, body, usuario) {
@@ -280,8 +286,8 @@ const envioService = (app) => ({
     const envio = await this.repo.buscarPorId(id);
     if (!envio) throw new AppError(`Envío ${id} no encontrado.`, 404);
 
-    if (usuario.rol !== "Admin" && envio.sedeDestinoId !== usuario.sedeId) {
-      throw new AppError("Solo la sede destino puede confirmar este envío.", 403);
+    if (envio.sedeDestinoId !== usuario.sedeId) {
+      throw new AppError("Solo la sede destino puede confirmar la recepción de este envío.", 403);
     }
     if (envio.estado !== "Pendiente") {
       throw new AppError("Este envío ya fue confirmado anteriormente.", 409);
@@ -391,6 +397,84 @@ const envioService = (app) => ({
       usuario.id,
       "CONFIRMAR_ENVIO",
       `Confirmó la recepción del envío #${id}${huboNovedad ? " con novedades (faltantes/daños)" : ""}.`,
+    );
+
+    return this.repo.buscarPorId(id);
+  },
+
+  /**
+   * Cancela un envío pendiente desde la sede ORIGEN (la que lo despachó).
+   * Solo se pueden cancelar envíos en estado "Pendiente" (todavía no
+   * confirmados por la sede destino). Al cancelar se devuelve el stock a la
+   * sede origen y se registra en Inventario una entrada compensatoria para
+   * revertir la salida que se hizo al crear el envío.
+   */
+  async cancelar(id, usuario) {
+    if (!puedeGestionar(usuario)) {
+      throw new AppError("No tienes permiso para cancelar envíos.", 403);
+    }
+
+    const envio = await this.repo.buscarPorId(id);
+    if (!envio) throw new AppError(`Envío ${id} no encontrado.`, 404);
+
+    if (envio.sedeOrigenId !== usuario.sedeId) {
+      throw new AppError("Solo la sede que originó el envío puede cancelarlo.", 403);
+    }
+    if (envio.estado !== "Pendiente") {
+      throw new AppError("Solo se pueden cancelar envíos pendientes de recepción.", 409);
+    }
+
+    const prisma = app.prisma;
+    const fecha = new Date();
+    fecha.setUTCHours(0, 0, 0, 0);
+    const semana = getSemanaISO(fecha);
+
+    await prisma.$transaction(async (tx) => {
+      for (const detalle of envio.detalles) {
+        const producto = await tx.producto.findUnique({ where: { codigo: detalle.productoId } });
+
+        // Reversión de la salida registrada al crear el envío.
+        await tx.inventario.create({
+          data: {
+            fecha,
+            semana,
+            sedeId: envio.sedeOrigenId,
+            productoId: detalle.productoId,
+            cantidadIngresada: detalle.cantidadEnviada,
+            costoUnitario: producto?.precioCosto ?? 0,
+            tipo: "entrada",
+            nota: `Reversión por cancelación del envío #${envio.id} hacia ${envio.sedeDestino.nombre}`,
+          },
+        });
+
+        await tx.stockSede.upsert({
+          where: {
+            sedeId_productoId: { sedeId: envio.sedeOrigenId, productoId: detalle.productoId },
+          },
+          update: { stockActual: { increment: detalle.cantidadEnviada } },
+          create: {
+            sedeId: envio.sedeOrigenId,
+            productoId: detalle.productoId,
+            stockActual: detalle.cantidadEnviada,
+          },
+        });
+      }
+
+      await tx.envio.update({
+        where: { id },
+        data: {
+          estado: "Cancelado",
+          canceladoPorId: usuario.id,
+          fechaCancelacion: new Date(),
+        },
+      });
+    });
+
+    await registrarAccion(
+      app,
+      usuario.id,
+      "CANCELAR_ENVIO",
+      `Canceló el envío #${id} hacia "${envio.sedeDestino.nombre}".`,
     );
 
     return this.repo.buscarPorId(id);
