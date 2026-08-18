@@ -142,6 +142,15 @@ const pedidosService = {
     if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
     return await pedidosApi.obtenerHistorial(pedidoId);
   },
+
+  /**
+   * Datos de la factura de un pedido (ticket imprimible con QR).
+   * Endpoint público: funciona incluso sin sesión iniciada.
+   */
+  obtenerFactura: async (pedidoId) => {
+    if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
+    return await pedidosApi.obtenerFactura(pedidoId);
+  },
 };
 
 export default pedidosService;

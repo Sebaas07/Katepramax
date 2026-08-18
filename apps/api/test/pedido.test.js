@@ -402,3 +402,71 @@ describe("PATCH /api/v1/pedidos/:id/estado", () => {
     expect(res.statusCode).toBe(200);
   });
 });
+
+// ── GET /api/v1/pedidos/:id/factura (público, vía QR) ────────────────────────
+
+describe("GET /api/v1/pedidos/:id/factura", () => {
+  const pedidoConSede = {
+    ...pedidoMock,
+    sede: { id: 1, nombre: "Bogotá" },
+  };
+
+  it("debería ser público (200 sin token)", async () => {
+    mockPedidoFindUnique(pedidoConSede);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/pedidos/1/factura",
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.id).toBe(1);
+    expect(body.emisor).toBe("Bogotá");
+    expect(body.cliente).toBe("Juan Pérez");
+    expect(body.total).toBe(50000);
+    expect(body.detalles).toHaveLength(1);
+    expect(body.detalles[0]).toMatchObject({
+      nombre: "Cemento Gris 50kg",
+      cantidad: 2,
+      precioUnitario: 25000,
+      subtotal: 50000,
+    });
+  });
+
+  it("debería incluir método de pago y total recibido si ya fue entregado", async () => {
+    mockPedidoFindUnique({
+      ...pedidoConSede,
+      estado: "Entregado",
+      totalRecibido: 50000,
+      asignaciones: [
+        {
+          id: 1,
+          metodoPago: "Efectivo",
+          fechaConfirmada: new Date(),
+        },
+      ],
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/pedidos/1/factura",
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.metodoPago).toBe("Efectivo");
+    expect(body.totalRecibido).toBe(50000);
+  });
+
+  it("debería retornar 404 si el pedido no existe", async () => {
+    mockPedidoFindUnique(null);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/pedidos/999/factura",
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+});

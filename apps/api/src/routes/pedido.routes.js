@@ -43,6 +43,13 @@ async function pedidoRoutes(app) {
     handler:       ctrl.obtenerHistorial,
   });
 
+  // PÚBLICA (sin sesión): la usa el código QR del ticket de factura para
+  // validar el documento. Contiene solo los campos de un comprobante.
+  app.get("/pedidos/:id/factura", {
+    schema:  schemas.obtenerFactura,
+    handler: ctrl.obtenerFactura,
+  });
+
   // Solo Admin puede cancelar un pedido manualmente
   app.patch("/pedidos/:id/estado", {
     schema:        schemas.cambiarEstadoPedido,

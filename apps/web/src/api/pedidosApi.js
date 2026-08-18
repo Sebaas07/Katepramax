@@ -48,6 +48,12 @@ const pedidosApi = {
      return response.data;
    },
 
+   // Endpoint público (QR de validación de la factura)
+   obtenerFactura: async (pedidoId) => {
+     const response = await clienteApi.get(`/pedidos/${pedidoId}/factura`);
+     return response.data;
+   },
+
   // Endpoint existe en backend
   listarAsignaciones: async (filtros = {}) => {
     const params = new URLSearchParams();

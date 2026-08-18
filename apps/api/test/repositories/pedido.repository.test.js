@@ -12,6 +12,7 @@ const incluirDetalle = {
   asignaciones: {
     select: {
       id: true, estado: true, asignadoEn: true, fechaConfirmada: true,
+      metodoPago: true, montoCobrado: true,
       entregador: { select: { id: true, nombreCompleto: true } },
     },
   },

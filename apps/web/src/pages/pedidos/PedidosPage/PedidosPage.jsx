@@ -9,6 +9,7 @@ import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
+import FacturaTicket from "@/components/common/FacturaTicket/FacturaTicket";
 import { formatFecha } from "@/utils/formatters";
 import "./PedidosPage.css";
 
@@ -87,6 +88,9 @@ const PedidosPage = () => {
   const [historialPedido, setHistorialPedido] = useState([]);
   const [asignacionAccion, setAsignacionAccion] = useState(null);
   const [motivoFalloPedido, setMotivoFalloPedido] = useState("");
+  const [modalFacturaAbierto, setModalFacturaAbierto] = useState(false);
+  const [facturaSeleccionada, setFacturaSeleccionada] = useState(null);
+  const [cargandoFactura, setCargandoFactura] = useState(false);
   const [formConfirmarPedido, setFormConfirmarPedido] = useState({
     montoCobrado: "",
     metodoPago: "Efectivo",
@@ -518,6 +522,21 @@ const PedidosPage = () => {
     }
   };
 
+  const abrirFactura = async (pedido) => {
+    setCargandoFactura(true);
+    setFacturaSeleccionada(null);
+    setModalFacturaAbierto(true);
+    try {
+      const factura = await pedidosService.obtenerFactura(pedido.id);
+      setFacturaSeleccionada(factura);
+    } catch (err) {
+      toast.error("No se pudo cargar la factura: " + err.message);
+      setModalFacturaAbierto(false);
+    } finally {
+      setCargandoFactura(false);
+    }
+  };
+
   const acciones = (pedido) => {
     const accs = [];
 
@@ -575,6 +594,12 @@ const PedidosPage = () => {
       label: "Historial",
       icon: "history",
       onClick: () => abrirHistorial(pedido),
+    });
+
+    accs.push({
+      label: "Factura",
+      icon: "receipt_long",
+      onClick: () => abrirFactura(pedido),
     });
 
     return accs;
@@ -1179,6 +1204,26 @@ const PedidosPage = () => {
               required
             />
           </div>
+        </div>
+      </Modal>
+
+      {/* Modal — Factura (imprimir ticket POS con QR) */}
+      <Modal
+        isOpen={modalFacturaAbierto}
+        onClose={() => setModalFacturaAbierto(false)}
+        titulo="Factura de venta"
+        textoBotonConfirmar="Imprimir factura"
+        onConfirmar={() => window.print()}
+        mostrarCancelar
+        disabled={!facturaSeleccionada}
+        maxWidth="420px"
+      >
+        <div className="factura-print-area">
+          {cargandoFactura ? (
+            <div className="ped-factura-carga">Cargando factura...</div>
+          ) : facturaSeleccionada ? (
+            <FacturaTicket factura={facturaSeleccionada} />
+          ) : null}
         </div>
       </Modal>
     </div>

@@ -30,4 +30,9 @@ async function obtenerHistorial(request, reply) {
   return reply.send(historial);
 }
 
-module.exports = { crear, listar, obtenerPorId, cambiarEstado, obtenerHistorial };
+async function obtenerFactura(request, reply) {
+  const factura = await svc.obtenerFactura(request.server, Number(request.params.id));
+  return reply.send(factura);
+}
+
+module.exports = { crear, listar, obtenerPorId, cambiarEstado, obtenerHistorial, obtenerFactura };

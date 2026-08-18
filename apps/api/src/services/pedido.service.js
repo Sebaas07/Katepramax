@@ -339,10 +339,47 @@ async function obtenerHistorial(app, id, usuario) {
   });
 }
 
+/**
+ * Datos de la factura de un pedido, para generar el ticket imprimible con QR.
+ * Es un endpoint PÚBLICO (sin sesión) porque el QR impreso en el ticket lo
+ * escanea cualquier persona para validar el documento. Por eso solo se
+ * exponen los campos de un comprobante, nada de stock ni datos sensibles.
+ */
+async function obtenerFactura(app, id) {
+  const pedido = await repo.buscarPorId(app.prisma, id);
+  if (!pedido) throw new AppError(`Pedido ${id} no encontrado`, 404);
+
+  const total = pedido.detalles.reduce((sum, d) => sum + Number(d.subtotal), 0);
+  const entrega = pedido.asignaciones?.[0] ?? null;
+
+  return {
+    id: pedido.id,
+    estado: pedido.estado,
+    fecha: pedido.creadoEn,
+    direccion: pedido.direccion,
+    emisor: pedido.sede?.nombre ?? "Katepramax",
+    cliente: pedido.cliente?.nombre ?? `Cliente #${pedido.clienteId}`,
+    telefonoCliente: pedido.cliente?.telefono ?? null,
+    creador: pedido.creador?.nombreCompleto ?? null,
+    detalles: pedido.detalles.map((d) => ({
+      nombre: d.productoNombre,
+      cantidad: d.cantidad,
+      precioUnitario: Number(d.precioUnitario),
+      subtotal: Number(d.subtotal),
+    })),
+    total,
+    totalRecibido:
+      pedido.totalRecibido != null ? Number(pedido.totalRecibido) : null,
+    metodoPago: entrega?.metodoPago ?? null,
+    fechaConfirmada: entrega?.fechaConfirmada ?? null,
+  };
+}
+
 module.exports = {
   crear,
   obtenerLista,
   obtenerPorId,
   cambiarEstado,
   obtenerHistorial,
+  obtenerFactura,
 };

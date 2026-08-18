@@ -1,0 +1,137 @@
+/* Ticket de factura en formato 80mm para impresora térmica POS. */
+
+.factura-ticket {
+  width: 80mm;
+  margin: 0 auto;
+  padding: 6mm 4mm;
+  box-sizing: border-box;
+  background: #fff;
+  color: #000;
+  font-family: "Courier New", "Courier", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: 0;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+.factura-ticket__centro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.factura-ticket__razon {
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.factura-ticket__sede {
+  font-size: 11px;
+}
+
+.factura-ticket__titulo {
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.factura-ticket__folio {
+  font-size: 12px;
+}
+
+.factura-ticket__sep {
+  border-top: 1px dashed #000;
+  margin: 4px 0;
+}
+
+.factura-ticket__linea {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.factura-ticket__linea > span:first-child {
+  flex-shrink: 0;
+}
+
+.factura-ticket__encabezado-items {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  border-bottom: 1px solid #000;
+  padding-bottom: 2px;
+}
+
+.factura-ticket__item {
+  margin-top: 4px;
+}
+
+.factura-ticket__item-nombre {
+  font-weight: bold;
+}
+
+.factura-ticket__item-detalle {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.factura-ticket__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.factura-ticket__qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.factura-ticket__qr-texto {
+  text-align: center;
+}
+
+.factura-ticket__url {
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+/* ── Impresión POS ────────────────────────────────────────────────────
+ * El contenedor padre puede llevar la clase `factura-print-area` para que
+ * window.print() imprima EXCLUSIVAMENTE el ticket (el resto de la UI queda
+ * oculto). Se usa visibilidad en lugar de display para conservar dimensiones.
+ */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .factura-print-area,
+  .factura-print-area * {
+    visibility: visible;
+  }
+
+  .factura-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+  }
+
+  .factura-ticket {
+    box-shadow: none;
+    border-radius: 0;
+  }
+}

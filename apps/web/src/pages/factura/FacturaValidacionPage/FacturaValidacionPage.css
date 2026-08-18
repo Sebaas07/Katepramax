@@ -1,0 +1,91 @@
+/* FacturaValidacionPage.css — página pública de validación de factura. */
+
+.factura-publica {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(160deg, #101418 0%, #1b2128 100%);
+}
+
+.factura-publica__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.factura-publica__aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  color: #14532d;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-label);
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.factura-publica__aviso p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.factura-publica__carga {
+  color: #fff;
+  font-family: var(--font-label);
+}
+
+.factura-publica__icono {
+  font-size: 48px;
+  color: #666;
+}
+
+.factura-publica__card h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.factura-publica__card p {
+  color: #666;
+  text-align: center;
+  margin: 0;
+}
+
+.factura-publica__btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.4rem;
+  font-family: var(--font-label);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.factura-publica__link {
+  color: #2563eb;
+  text-decoration: none;
+  font-family: var(--font-label);
+  font-size: 13px;
+}
+
+@media print {
+  .factura-publica {
+    background: #fff;
+    padding: 0;
+    min-height: auto;
+  }
+}

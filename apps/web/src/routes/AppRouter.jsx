@@ -12,6 +12,9 @@ import MainLayout from "@/components/layout/MainLayout";
 // ── Auth ──────────────────────────────────────────────────────
 import LoginPage from "@/pages/auth/LoginPage/LoginPage";
 
+// ── Página pública de validación de factura (vía QR) ──────────
+import FacturaValidacionPage from "@/pages/factura/FacturaValidacionPage/FacturaValidacionPage";
+
 // ── Páginas comunes ───────────────────────────────────────────
 import DashboardPage from "@/pages/dashboard/DashboardPage/DashboardPage";
 import AccesoDenegadoPage from "@/pages/common/AccesoDenegadoPage/AccesoDenegadoPage";
@@ -70,6 +73,9 @@ const AppRouter = () => (
     <Route element={<PublicRoute />}>
       <Route path="/login" element={<LoginPage />} />
     </Route>
+
+    {/* Pública sin restricción de sesión: la valida el QR de la factura */}
+    <Route path="/factura/:id" element={<FacturaValidacionPage />} />
 
     {/* Protegidas */}
     <Route element={<RequireAuth />}>

@@ -174,9 +174,56 @@ const cambiarEstadoPedido = {
   },
 };
 
+// GET /api/pedidos/:id/factura — público (QR de validación)
+const obtenerFactura = {
+  summary: "Datos de la factura de un pedido (público, vía QR)",
+  description:
+    "Endpoint público usado por el código QR impreso en el ticket para " +
+    "validar el documento. Expone solo los datos de un comprobante de venta.",
+  tags: ["Pedidos"],
+  params: {
+    type: "object",
+    required: ["id"],
+    properties: { id: { type: "integer" } },
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        id: { type: "integer" },
+        estado: { type: "string" },
+        fecha: { type: "string", format: "date-time" },
+        direccion: { type: ["string", "null"] },
+        emisor: { type: "string" },
+        cliente: { type: "string" },
+        telefonoCliente: { type: ["string", "null"] },
+        creador: { type: ["string", "null"] },
+        detalles: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              nombre: { type: "string" },
+              cantidad: { type: "integer" },
+              precioUnitario: { type: "number" },
+              subtotal: { type: "number" },
+            },
+          },
+        },
+        total: { type: "number" },
+        totalRecibido: { type: ["number", "null"] },
+        metodoPago: { type: ["string", "null"] },
+        fechaConfirmada: { type: ["string", "null"] },
+      },
+    },
+    404: { type: "object", properties: { error: { type: "string" } } },
+  },
+};
+
 module.exports = {
   crearPedido,
   listarPedidos,
   obtenerPedido,
   cambiarEstadoPedido,
+  obtenerFactura,
 };

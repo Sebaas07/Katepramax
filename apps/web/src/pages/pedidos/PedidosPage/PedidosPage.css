@@ -646,3 +646,11 @@ select.form-control option {
   color: var(--on-surface-variant);
   text-align: center;
 }
+
+/* ─── Factura (ticket POS) ───────────────────────────────────── */
+.ped-factura-carga {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+}
