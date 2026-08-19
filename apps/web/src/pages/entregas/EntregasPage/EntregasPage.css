@@ -593,3 +593,7 @@ select.form-control option {
     padding: 0.5rem 0.75rem;
   }
 }
+
+.entr-pedido-total{
+  color: white !important;
+}

@@ -3,10 +3,14 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
+import ChartTooltip from "@/components/common/ChartTooltip/ChartTooltip";
 import { formatCOP, formatFecha } from "@/utils/formatters";
 import { EmptyState } from "./ContabilidadUI";
 
 const toNumber = (v) => Number(v ?? 0);
+
+const TICK_TEMA = { fill: "var(--on-surface-variant)", fontSize: 12 };
+const AXIS_TEMA = { stroke: "var(--outline-variant)" };
 
 // Antes vivía en una página aparte ("Reportes"), pero esa sección solo
 // tenía dos pestañas y "Gastos Diarios" ya estaba duplicada con la
@@ -81,10 +85,10 @@ const CobrosEntregadorTab = ({ cobros, fechaInicio, fechaFin }) => {
           <div className="cont-chart-wrap" style={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
-                <XAxis dataKey="entregador" />
-                <YAxis />
-                <Tooltip formatter={(value) => formatCOP(value)} />
-                <Legend />
+                <XAxis dataKey="entregador" tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <YAxis tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <Tooltip content={<ChartTooltip formato={formatCOP} />} />
+                <Legend wrapperStyle={{ color: "var(--on-surface-variant)", fontSize: 12 }} />
                 <Bar dataKey="total" name="Total cobrado" fill="var(--secondary)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

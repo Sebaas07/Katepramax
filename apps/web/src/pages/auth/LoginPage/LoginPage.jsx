@@ -216,15 +216,6 @@ const LoginPage = () => {
             contabilidad en múltiples sedes.
           </p>
         </div>
-
-        <div className="login__brand-bottom">
-          <div className="login__brand-stat">
-            <span className="login__brand-stat-label">Sedes activas</span>
-            <span className="login__brand-stat-value">
-              Bogotá · Cartagena · Villavicencio
-            </span>
-          </div>
-        </div>
       </section>
 
       {/* ── Panel derecho — Formulario ── */}

@@ -6,8 +6,12 @@ import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
+import CampoPassword from "@/components/common/CampoPassword/CampoPassword";
 import { formatFecha } from "@/utils/formatters";
 import "./UsuariosPage.css";
+
+// Contraseña: mínimo 5 caracteres, al menos un número y un símbolo
+const REGEX_CONTRASENA = /^(?=.*[0-9])(?=.*[^A-Za-z0-9\s]).{5,}$/;
 
 const ROLES = [
   { value: "Admin", label: "Admin" },
@@ -273,17 +277,20 @@ const UsuariosPage = () => {
       nuevosErrores.sedeId = "Selecciona una sede.";
     }
 
-    if (!usuarioSel) {
-      if (!form.contrasena) {
-        nuevosErrores.contrasena = "La contraseña es obligatoria.";
-      } else if (form.contrasena.length < 6) {
+    if (!usuarioSel && !form.contrasena) {
+      nuevosErrores.contrasena = "La contraseña es obligatoria.";
+    } else if (form.contrasena) {
+      if (form.contrasena.length < 5) {
         nuevosErrores.contrasena =
-          "La contraseña debe tener al menos 6 caracteres.";
+          "La contraseña debe tener al menos 5 caracteres.";
+      } else if (!REGEX_CONTRASENA.test(form.contrasena)) {
+        nuevosErrores.contrasena =
+          "Debe incluir al menos un número y un símbolo.";
       }
+    }
 
-      if (form.contrasena !== form.confirmarContrasena) {
-        nuevosErrores.confirmarContrasena = "Las contraseñas no coinciden.";
-      }
+    if (form.contrasena !== form.confirmarContrasena) {
+      nuevosErrores.confirmarContrasena = "Las contraseñas no coinciden.";
     }
 
     const usuarioDuplicado = usuarios.some(
@@ -637,14 +644,12 @@ const UsuariosPage = () => {
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="usr-contrasena">Contraseña *</label>
-                <input
+                <CampoPassword
                   id="usr-contrasena"
                   name="contrasena"
-                  type="password"
                   value={form.contrasena}
                   onChange={handleCambioForm}
-                  className="form-control"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 5, con número y símbolo"
                   autoComplete="new-password"
                 />
                 {errores.contrasena && (
@@ -656,13 +661,11 @@ const UsuariosPage = () => {
                 <label htmlFor="usr-confirmar-contrasena">
                   Confirmar contraseña *
                 </label>
-                <input
+                <CampoPassword
                   id="usr-confirmar-contrasena"
                   name="confirmarContrasena"
-                  type="password"
                   value={form.confirmarContrasena}
                   onChange={handleCambioForm}
-                  className="form-control"
                   placeholder="Repite la contraseña"
                   autoComplete="new-password"
                 />

@@ -226,7 +226,7 @@
 }
 
 .env-confirmar-linea__header span {
-  color: var(--on-surface-variant);
+  color: white !important;
   font-size: 12px;
 }
 

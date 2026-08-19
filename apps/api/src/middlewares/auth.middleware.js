@@ -150,6 +150,14 @@ module.exports = {
     ],
   },
 
+  // Asignar entregador a pedidos — Admin + AdminBogota + Bodega (NO Oficinista)
+  asignarEntregador: {
+    preValidation: [
+      verifyToken,
+      requireRole(["Admin", "AdminBogota", "Bodega"]),
+    ],
+  },
+
   // Admin + Bodega + AdminBogota + Oficinista
   adminOBodega: {
     preValidation: [

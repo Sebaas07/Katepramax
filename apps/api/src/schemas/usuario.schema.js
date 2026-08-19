@@ -5,6 +5,15 @@
 // Campos reutilizables
 const rolEnum = { type: "string", enum: ["Admin", "Bodega", "AdminBogota", "Oficinista", "Entregador"] };
 
+// Contraseña: mínimo 5 caracteres, al menos un número y un símbolo
+const contrasena = {
+  type: "string",
+  minLength: 5,
+  maxLength: 25,
+  pattern: "^(?=.*[0-9])(?=.*[^A-Za-z0-9\\s]).{5,}$",
+  description: "Mínimo 5 caracteres, debe incluir al menos un número y un símbolo",
+};
+
 const usuarioResponse = {
   type: "object",
   properties: {
@@ -46,7 +55,7 @@ const createUsuarioBody = {
       description: "Solo letras, números y guión bajo",
     },
     correo: { type: "string", format: "email", maxLength: 150 },
-    contrasena: { type: "string", minLength: 6, maxLength: 25 },
+    contrasena,
     rol: rolEnum,
     telefono: {
       type: "string",
@@ -83,7 +92,7 @@ const updateUsuarioBody = {
     rol: rolEnum,
     sedeId: { type: "integer", minimum: 1 },
     activo: { type: "boolean" },
-    contrasena: { type: "string", minLength: 6, maxLength: 25 },
+    contrasena,
   },
 };
 

@@ -149,7 +149,6 @@ const ProductosPage = () => {
   const sedeIdUsuario = usuario?.sedeId ?? null;
 
   const [productos, setProductos] = useState([]);
-  const [movimientos, setMovimientos] = useState([]);
   const [sedes, setSedes] = useState([]);
   const [cargandoSedes, setCargandoSedes] = useState(false);
   const [cargando, setCargando] = useState(false);
@@ -160,7 +159,6 @@ const ProductosPage = () => {
   const [filtroStockBajo, setFiltroStockBajo] = useState(false);
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
-  const [modalHistorial, setModalHistorial] = useState(false);
   const [modalQR, setModalQR] = useState(false);
   const [productoQR, setProductoQR] = useState(null);
   const [productoSel, setProductoSel] = useState(null);
@@ -220,17 +218,6 @@ const ProductosPage = () => {
     }
   }, [filtroEstado]);
 
-  const cargarMovimientos = useCallback(async () => {
-    try {
-      const data = await inventarioService.listarMovimientos({});
-      setMovimientos(Array.isArray(data) ? data : []);
-    } catch (err) {
-      toast.error(
-        "Error al cargar movimientos: " + (err?.message || "desconocido"),
-      );
-    }
-  }, []);
-
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
 
@@ -244,7 +231,6 @@ const ProductosPage = () => {
   useEffect(() => {
     const recargar = () => {
       void cargarProductos();
-      void cargarMovimientos();
     };
 
     window.addEventListener(INVENTARIO_ACTUALIZADO_EVENT, recargar);
@@ -254,7 +240,7 @@ const ProductosPage = () => {
       window.removeEventListener(INVENTARIO_ACTUALIZADO_EVENT, recargar);
       window.removeEventListener("focus", recargar);
     };
-  }, [cargarProductos, cargarMovimientos]);
+  }, [cargarProductos]);
 
   const handleCambioForm = useCallback((e) => {
     const { name, type, value, checked } = e.target;
@@ -343,15 +329,6 @@ const ProductosPage = () => {
       setModalEditar(true);
     },
     [sedeIdUsuario, sedes],
-  );
-
-  const abrirHistorial = useCallback(
-    async (prod) => {
-      setProductoSel(normalizarProducto(prod, sedeActivaId, sedes));
-      await cargarMovimientos();
-      setModalHistorial(true);
-    },
-    [cargarMovimientos, sedeActivaId, sedes],
   );
 
   const abrirModalQR = useCallback(
@@ -567,11 +544,6 @@ const ProductosPage = () => {
     (prod) => [
       { label: "Editar", icon: "edit", onClick: () => abrirModalEditar(prod) },
       {
-        label: "Historial",
-        icon: "history",
-        onClick: () => abrirHistorial(prod),
-      },
-      {
         label: "Código QR",
         icon: "qr_code_2",
         onClick: () => abrirModalQR(prod),
@@ -587,25 +559,7 @@ const ProductosPage = () => {
           ]
         : []),
     ],
-    [puedeEditar, abrirModalEditar, abrirHistorial, abrirModalQR, abrirConfirmToggle],
-  );
-
-  const movimientosProducto = useMemo(
-    () =>
-      movimientos
-        .filter(
-          (movimiento) =>
-            String(movimiento.productoId) === String(productoSel?.id) ||
-            movimiento.producto?.codigo === productoSel?.codigo,
-        )
-        .map((movimiento) => ({
-          ...movimiento,
-          fecha: movimiento.fecha,
-          tipo: movimiento.tipo,
-          cantidad: movimiento.cantidad,
-          nota: movimiento.nota || "—",
-        })),
-    [movimientos, productoSel],
+    [puedeEditar, abrirModalEditar, abrirModalQR, abrirConfirmToggle],
   );
 
   return (
@@ -1198,67 +1152,6 @@ const ProductosPage = () => {
             </div>
           </div>
         </div>
-      </Modal>
-
-      <Modal
-        isOpen={modalHistorial}
-        onClose={() => setModalHistorial(false)}
-        titulo={`Historial: ${productoSel?.nombre || "Producto"}`}
-        mostrarCancelar={false}
-        textoBotonConfirmar="Cerrar"
-        onConfirmar={() => setModalHistorial(false)}
-        className="modal-content--producto"
-        maxWidth="680px"
-      >
-        {productoSel && (
-          <div className="historial-producto">
-            <div className="historial-header">
-              <span className="historial-codigo">
-                {productoSel.sku || productoSel.codigo}
-              </span>
-              <span className="historial-meta">
-                {productoSel.sede} · {productoSel.proveedor}
-              </span>
-            </div>
-
-            <div className="historial-stats">
-              <div className="historial-stat">
-                <span>Stock actual</span>
-                <strong>{productoSel.existencia}</strong>
-              </div>
-              <div className="historial-stat">
-                <span>Mínimo</span>
-                <strong>{productoSel.stockMinimo}</strong>
-              </div>
-              <div className="historial-stat">
-                <span>Precio</span>
-                <strong>{formatCOP(productoSel.precioDetal)}</strong>
-              </div>
-            </div>
-
-            {movimientosProducto.length > 0 ? (
-              <TablaGenerica
-                columnas={[
-                  { campo: "fecha", label: "Fecha", tipo: "fecha" },
-                  { campo: "tipo", label: "Tipo", tipo: "estado" },
-                  { campo: "cantidad", label: "Cantidad", tipo: "texto" },
-                  { campo: "nota", label: "Nota", tipo: "texto" },
-                ]}
-                datos={movimientosProducto}
-                filasPorPagina={10}
-                mostrarBuscador={false}
-                paginacion={false}
-              />
-            ) : (
-              <div className="historial-empty">
-                <span className="material-symbols-outlined" aria-hidden="true">
-                  history
-                </span>
-                <span>No hay movimientos registrados para este producto.</span>
-              </div>
-            )}
-          </div>
-        )}
       </Modal>
 
       <Modal

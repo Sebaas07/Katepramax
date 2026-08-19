@@ -11,9 +11,13 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import TarjetaKpi from "./TarjetaKpi";
+import ChartTooltip from "@/components/common/ChartTooltip/ChartTooltip";
 import { formatCOP, formatFecha, getRangoSemana } from "@/utils/formatters";
 
 const toNumber = (v) => Number(v ?? 0);
+
+const TICK_TEMA = { fill: "var(--on-surface-variant)", fontSize: 12 };
+const AXIS_TEMA = { stroke: "var(--outline-variant)" };
 
 const labelDia = (fechaStr) => {
   if (!fechaStr) return "—";
@@ -153,10 +157,10 @@ const PanelGeneralTab = ({
                 data={chartSedes}
                 margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
               >
-                <XAxis dataKey="sede" />
-                <YAxis />
-                <Tooltip formatter={(value) => formatCOP(value)} />
-                <Legend />
+                <XAxis dataKey="sede" tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <YAxis tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <Tooltip content={<ChartTooltip formato={formatCOP} />} />
+                <Legend wrapperStyle={{ color: "var(--on-surface-variant)", fontSize: 12 }} />
                 <Bar
                   dataKey="Ingresos"
                   fill="var(--secondary)"
@@ -197,10 +201,10 @@ const PanelGeneralTab = ({
                 ]}
                 margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
               >
-                <XAxis dataKey="metodo" />
-                <YAxis />
-                <Tooltip formatter={(value) => formatCOP(value)} />
-                <Legend />
+                <XAxis dataKey="metodo" tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <YAxis tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <Tooltip content={<ChartTooltip formato={formatCOP} />} />
+                <Legend wrapperStyle={{ color: "var(--on-surface-variant)", fontSize: 12 }} />
                 <Bar
                   dataKey="valor"
                   name="Valor"
@@ -224,10 +228,10 @@ const PanelGeneralTab = ({
                   data={chartDiario}
                   margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
                 >
-                  <XAxis dataKey="dia" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => formatCOP(value)} />
-                  <Legend />
+                  <XAxis dataKey="dia" tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                  <YAxis tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                  <Tooltip content={<ChartTooltip formato={formatCOP} />} />
+                  <Legend wrapperStyle={{ color: "var(--on-surface-variant)", fontSize: 12 }} />
                   <Line
                     type="monotone"
                     dataKey="Ingresos"

@@ -25,13 +25,21 @@ const refreshBody = {
 };
 
 /** Para cambiar la contraseña (requiere el access token). */
+const contrasenaPattern = "^(?=.*[0-9])(?=.*[^A-Za-z0-9\\s]).{5,}$";
+
 const cambiarClaveBody = {
   type: "object",
   required: ["claveActual", "claveNueva"],
   additionalProperties: false,
   properties: {
     claveActual: { type: "string", minLength: 6, maxLength: 100, description: "Contraseña actual" },
-    claveNueva: { type: "string", minLength: 6, maxLength: 100, description: "Nueva contraseña" },
+    claveNueva: {
+      type: "string",
+      minLength: 5,
+      maxLength: 100,
+      pattern: contrasenaPattern,
+      description: "Mínimo 5 caracteres, debe incluir al menos un número y un símbolo",
+    },
   },
 };
 

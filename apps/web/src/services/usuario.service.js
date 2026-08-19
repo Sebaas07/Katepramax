@@ -3,6 +3,21 @@ import { getApiErrorMessage, normalizeArrayResponse } from "@/utils/apiHelpers";
 
 const ROLES_PERMITIDOS = ["Admin", "AdminBogota", "Oficinista", "Bodega", "Entregador"];
 
+// Contraseña: mínimo 5 caracteres, al menos un número y un símbolo
+const REGEX_CONTRASENA = /^(?=.*[0-9])(?=.*[^A-Za-z0-9\s]).{5,}$/;
+
+const validarContrasena = (contrasena) => {
+  if (!contrasena) {
+    throw new Error("La contraseña es obligatoria.");
+  }
+  if (contrasena.length < 5) {
+    throw new Error("La contraseña debe tener al menos 5 caracteres.");
+  }
+  if (!REGEX_CONTRASENA.test(contrasena)) {
+    throw new Error("La contraseña debe incluir al menos un número y un símbolo.");
+  }
+};
+
 const limpiarTexto = (valor) => String(valor ?? "").trim();
 
 const validarRol = (rol) => {
@@ -43,9 +58,7 @@ const usuarioService = {
       if (!datos.rol) throw new Error("Selecciona un rol.");
       validarRol(datos.rol);
       validarSedeId(datos.sedeId);
-      if (!datos.contrasena || datos.contrasena.length < 6) {
-        throw new Error("La contraseña debe tener al menos 6 caracteres.");
-      }
+      validarContrasena(datos.contrasena);
       if (datos.contrasena !== datos.confirmarContrasena) {
         throw new Error("La confirmación de contraseña no coincide.");
       }
@@ -90,7 +103,8 @@ const usuarioService = {
       if (datos.activo !== undefined) {
         payload.activo = Boolean(datos.activo);
       }
-      if (datos.contrasena && datos.contrasena.length >= 6) {
+      if (datos.contrasena) {
+        validarContrasena(datos.contrasena);
         if (datos.contrasena !== datos.confirmarContrasena) {
           throw new Error("La confirmación de contraseña no coincide.");
         }

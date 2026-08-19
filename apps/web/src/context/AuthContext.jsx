@@ -170,6 +170,9 @@ export const AuthProvider = ({ children }) => {
     // Tabajos de gestión con escritura (pedidos/asignaciones) → Admin, AdminBogota, Oficinista
     puedeGestionarPedidos: ["Admin", "AdminBogota", "Oficinista"].includes(usuario?.rol),
 
+    // Asignar entregador a pedidos → Admin, AdminBogota, Bodega (Oficinista NO)
+    puedeAsignarEntregador: ["Admin", "AdminBogota", "Bodega"].includes(usuario?.rol),
+
     // Escritura en módulos de gestión (inventario, contabilidad, etc.) → Admin, AdminBogota
     esAdminGestion: usuario?.rol === "Admin" || usuario?.rol === "AdminBogota",
 

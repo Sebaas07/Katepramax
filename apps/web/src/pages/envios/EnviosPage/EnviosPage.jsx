@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import envioService from "@/services/envio.service";
 import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
-import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import Modal from "@/components/common/Modal/Modal";
 import "./EnviosPage.css";
 

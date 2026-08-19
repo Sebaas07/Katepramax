@@ -370,6 +370,10 @@ select.form-control option {
   color: var(--on-surface);
 }
 
+.item-subtotal{
+  color: white !important;
+}
+
 /* ─── Botón agregar item ─────────────────────────────────────*/
 .btn-add-item {
   display: inline-flex;

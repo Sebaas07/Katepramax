@@ -10,9 +10,13 @@ import {
 } from "recharts";
 import ArqueoBloque from "./ArqueoBloque";
 import { EmptyState } from "./ContabilidadUI";
+import ChartTooltip from "@/components/common/ChartTooltip/ChartTooltip";
 import { formatCOP } from "@/utils/formatters";
 
 const toNumber = (v) => Number(v ?? 0);
+
+const TICK_TEMA = { fill: "var(--on-surface-variant)", fontSize: 12 };
+const AXIS_TEMA = { stroke: "var(--outline-variant)" };
 
 // Backend: GET /reportes/historial-semanal → { total, skip, take, data: [{ semana, ingTotal, egrTotal, saldoNeto, ingEfectivo, ingCuentas, deudaProveedores, costoInventario }] }
 const HistorialSemanalTab = ({ historial }) => {
@@ -81,10 +85,10 @@ const HistorialSemanalTab = ({ historial }) => {
                 data={chartData}
                 margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
               >
-                <XAxis dataKey="semana" />
-                <YAxis />
-                <Tooltip formatter={(value) => formatCOP(value)} />
-                <Legend />
+                <XAxis dataKey="semana" tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <YAxis tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <Tooltip content={<ChartTooltip formato={formatCOP} />} />
+                <Legend wrapperStyle={{ color: "var(--on-surface-variant)", fontSize: 12 }} />
                 <Line
                   type="monotone"
                   dataKey="Ingresos"
@@ -122,10 +126,10 @@ const HistorialSemanalTab = ({ historial }) => {
                 data={chartDeudaInventario}
                 margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
               >
-                <XAxis dataKey="semana" />
-                <YAxis />
-                <Tooltip formatter={(value) => formatCOP(value)} />
-                <Legend />
+                <XAxis dataKey="semana" tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <YAxis tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
+                <Tooltip content={<ChartTooltip formato={formatCOP} />} />
+                <Legend wrapperStyle={{ color: "var(--on-surface-variant)", fontSize: 12 }} />
                 <Line
                   type="monotone"
                   dataKey="Deuda Proveedores"

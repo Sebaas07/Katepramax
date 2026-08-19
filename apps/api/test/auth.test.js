@@ -287,7 +287,7 @@ describe("PATCH /api/v1/auth/clave", () => {
     const res = await app.inject({
       method: "PATCH",
       url: "/api/v1/auth/clave",
-      payload: { claveActual: "password123", claveNueva: "nueva456" },
+      payload: { claveActual: "password123", claveNueva: "nueva#456" },
     });
 
     expect(res.statusCode).toBe(401);
@@ -303,7 +303,7 @@ describe("PATCH /api/v1/auth/clave", () => {
       method: "PATCH",
       url: "/api/v1/auth/clave",
       headers: { authorization: `Bearer ${token}` },
-      payload: { claveActual: "password123", claveNueva: "password123" },
+      payload: { claveActual: "password#123", claveNueva: "password#123" },
     });
 
     expect(res.statusCode).toBe(400);
@@ -320,7 +320,7 @@ describe("PATCH /api/v1/auth/clave", () => {
       method: "PATCH",
       url: "/api/v1/auth/clave",
       headers: { authorization: `Bearer ${token}` },
-      payload: { claveActual: "claveEquivocada", claveNueva: "nueva456" },
+      payload: { claveActual: "claveEquivocada", claveNueva: "nueva#456" },
     });
 
     expect(res.statusCode).toBe(400);
@@ -340,7 +340,7 @@ describe("PATCH /api/v1/auth/clave", () => {
       method: "PATCH",
       url: "/api/v1/auth/clave",
       headers: { authorization: `Bearer ${token}` },
-      payload: { claveActual: "password123", claveNueva: "nuevaClave456" },
+      payload: { claveActual: "password123", claveNueva: "nuevaClave#456" },
     });
 
     expect(res.statusCode).toBe(200);

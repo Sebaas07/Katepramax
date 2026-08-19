@@ -4,15 +4,16 @@ const {
   verifyToken,
   requireRole,
   verEntregas,
+  asignarEntregador,
 } = require("../middlewares/auth.middleware");
 
 async function asignacionRoutes(app) {
 
-  // Crear asignación — Admin, AdminBogota, Oficinista y Bodega
-  // (Bodega/Admin asignan el pedido a un entregador desde la bodega)
+  // Crear asignación — Admin, AdminBogota y Bodega
+  // (Bodega/Admin asignan el pedido a un entregador desde la bodega; Oficinista NO)
   app.post("/asignaciones", {
     schema:        schemas.crearAsignacion,
-    preValidation: verEntregas.preValidation,
+    preValidation: asignarEntregador.preValidation,
     handler:       ctrl.crear,
   });
 

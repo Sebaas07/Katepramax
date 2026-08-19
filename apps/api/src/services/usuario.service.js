@@ -9,11 +9,16 @@ const usuarioService = (app) => {
   return {
     getAll: () => repo.findAll(),
 
-    // Usado por Oficinista/Admin para asignar pedidos a entregadores
+    // Usado por Bodega/Admin para asignar pedidos a entregadores
     getEntregadores: () =>
       app.prisma.usuario.findMany({
         where: { rol: "Entregador", activo: true },
-        select: { id: true, nombreCompleto: true, telefono: true },
+        select: {
+          id: true,
+          nombreCompleto: true,
+          telefono: true,
+          sede: { select: { nombre: true } },
+        },
         orderBy: { nombreCompleto: "asc" },
       }),
 
