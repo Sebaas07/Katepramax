@@ -63,6 +63,12 @@ const MENU = [
     roles: ["Admin", "AdminBogota", "Oficinista"],
   },
   {
+    path:  "/proveedores",
+    label: "Proveedores",
+    icon:  "factory",
+    roles: ["Admin", "AdminBogota", "Oficinista"],
+  },
+  {
     path:  "/contabilidad",
     label: "Contabilidad",
     icon:  "account_balance",

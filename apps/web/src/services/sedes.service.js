@@ -26,7 +26,7 @@ const sedesService = {
       return await sedesApi.crearSede(payload);
     } catch (error) {
       console.error("sedesService.crearSede:", error);
-      throw error;
+      throw new Error(getApiErrorMessage(error), { cause: error });
     }
   },
 
@@ -53,7 +53,7 @@ const sedesService = {
       return await sedesApi.actualizarSede(id, payload);
     } catch (error) {
       console.error("sedesService.actualizarSede:", error);
-      throw error;
+      throw new Error(getApiErrorMessage(error), { cause: error });
     }
   },
 };

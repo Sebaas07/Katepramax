@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { formatCOP, formatFecha } from "@/utils/formatters";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import TarjetaKpi from "./TarjetaKpi";
 import { EmptyState, Spinner } from "./ContabilidadUI";
 
@@ -45,9 +46,8 @@ const GananciaGastoTab = ({
           <label htmlFor="gg-fecha">
             {periodo === "dia" ? "Día" : periodo === "quincena" ? "Quincena de" : "Mes de"}
           </label>
-          <input
+          <DatePicker
             id="gg-fecha"
-            type="date"
             value={fechaReferencia}
             onChange={(e) => onFechaReferenciaChange(e.target.value)}
             className="filter-select"

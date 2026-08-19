@@ -93,11 +93,7 @@ const sedeController = {
       data.activo = Boolean(request.body.activo);
     }
     if (request.body.tipo !== undefined) {
-      const tipo = request.body.tipo === "Oficina" ? "Oficina" : "Bodega";
-      if (tipo === "Bodega" && data.bodegaId !== undefined && data.bodegaId !== null) {
-        return reply.code(400).send({ error: "Una sede de tipo Bodega no puede tener bodega asignada." });
-      }
-      data.tipo = tipo;
+      data.tipo = request.body.tipo === "Oficina" ? "Oficina" : "Bodega";
     }
     if (request.body.bodegaId !== undefined) {
       data.bodegaId = request.body.bodegaId === null ? null : Number(request.body.bodegaId);
@@ -110,6 +106,9 @@ const sedeController = {
           return reply.code(400).send({ error: "La bodega seleccionada no existe, no es de tipo Bodega o está inactiva." });
         }
       }
+    }
+    if (data.tipo === "Bodega" && data.bodegaId != null) {
+      return reply.code(400).send({ error: "Una sede de tipo Bodega no puede tener bodega asignada." });
     }
 
     if (Object.keys(data).length === 0) {

@@ -222,6 +222,15 @@ describe("GET /api/v1/reportes/panel-general", () => {
     prisma.stockSede = {
       ...prisma.stockSede,
       aggregate: vi.fn().mockResolvedValue({ _sum: { stockActual: 500 } }),
+      findMany:  vi.fn().mockResolvedValue([]),
+    };
+    prisma.pedido = {
+      ...prisma.pedido,
+      count: vi.fn().mockResolvedValue(0),
+    };
+    prisma.asignacionEntrega = {
+      ...prisma.asignacionEntrega,
+      count: vi.fn().mockResolvedValue(0),
     };
 
     const res = await app.inject({
@@ -236,6 +245,9 @@ describe("GET /api/v1/reportes/panel-general", () => {
     // Fastify los serializa como {} — verificamos los campos con tipos declarados
     expect(body.cartera).toBe(800000);
     expect(typeof body.totalStockUnidades).toBe("number");
+    expect(body.pedidosPendientes).toBe(0);
+    expect(body.entregasEnRuta).toBe(0);
+    expect(body.alertasInventario).toBe(0);
   });
 
   it("debería retornar 200 para Bodega", async () => {
@@ -250,6 +262,15 @@ describe("GET /api/v1/reportes/panel-general", () => {
     prisma.stockSede = {
       ...prisma.stockSede,
       aggregate: vi.fn().mockResolvedValue({ _sum: { stockActual: 0 } }),
+      findMany:  vi.fn().mockResolvedValue([]),
+    };
+    prisma.pedido = {
+      ...prisma.pedido,
+      count: vi.fn().mockResolvedValue(0),
+    };
+    prisma.asignacionEntrega = {
+      ...prisma.asignacionEntrega,
+      count: vi.fn().mockResolvedValue(0),
     };
 
     const res = await app.inject({

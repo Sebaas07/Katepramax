@@ -124,7 +124,8 @@ const normalizarProducto = (producto, sedeId, sedes = []) => {
     sede: sedeNombre || "—",
     sedeId: stockSede?.sedeId || producto.sedeId || sedeId,
     activo: producto.activo ?? true,
-    esStockBajo: stockMinimo > 0 && existencia <= stockMinimo,
+    esStockBajo:
+      (producto.activo ?? true) && stockMinimo > 0 && existencia <= stockMinimo,
   };
 };
 
@@ -155,6 +156,7 @@ const ProductosPage = () => {
   const [errorProductos, setErrorProductos] = useState(null);
   const [filtroSede, setFiltroSede] = useState("");
   const [filtroDepto, setFiltroDepto] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("true");
   const [filtroStockBajo, setFiltroStockBajo] = useState(false);
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
@@ -162,6 +164,7 @@ const ProductosPage = () => {
   const [modalQR, setModalQR] = useState(false);
   const [productoQR, setProductoQR] = useState(null);
   const [productoSel, setProductoSel] = useState(null);
+  const [productoConfirmar, setProductoConfirmar] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const qrCanvasRef = useRef(null);
   const [form, setForm] = useState({
@@ -204,7 +207,7 @@ const ProductosPage = () => {
     setErrorProductos(null);
     try {
       const data = await inventarioService.obtenerProductos({
-        activo: "true",
+        ...(filtroEstado !== "" ? { activo: filtroEstado } : {}),
         take: 200,
       });
       setProductos(Array.isArray(data) ? data : []);
@@ -215,7 +218,7 @@ const ProductosPage = () => {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [filtroEstado]);
 
   const cargarMovimientos = useCallback(async () => {
     try {
@@ -439,21 +442,38 @@ const ProductosPage = () => {
     }
   }, [cargarProductos, form, productoSel, resetForm, porcentajeGanancia]);
 
-  const handleDesactivar = useCallback(
-    async (prod) => {
-      if (!window.confirm(`¿Desactivar producto "${prod.nombre}"?`)) return;
+  const abrirConfirmToggle = useCallback((prod) => {
+    setProductoConfirmar(prod);
+  }, []);
 
-      try {
+  const handleToggleActivo = useCallback(async () => {
+    const prod = productoConfirmar;
+    if (!prod) return;
+    const destino = !prod.activo;
+    setGuardando(true);
+
+    try {
+      if (destino) {
+        await inventarioService.actualizarProducto(prod.codigo, {
+          activo: true,
+        });
+        toast.success("Producto activado correctamente.");
+      } else {
         await inventarioService.desactivarProducto(prod.codigo);
         toast.success("Producto desactivado correctamente.");
-        window.dispatchEvent(new Event(INVENTARIO_ACTUALIZADO_EVENT));
-        await cargarProductos();
-      } catch (err) {
-        toast.error("Error al desactivar: " + (err?.message || "desconocido"));
       }
-    },
-    [cargarProductos],
-  );
+      setProductoConfirmar(null);
+      window.dispatchEvent(new Event(INVENTARIO_ACTUALIZADO_EVENT));
+      await cargarProductos();
+    } catch (err) {
+      toast.error(
+        (destino ? "Error al activar: " : "Error al desactivar: ") +
+          (err?.message || "desconocido"),
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }, [cargarProductos, productoConfirmar]);
 
   const productosNormalizados = useMemo(() => {
     return productos.map((producto) =>
@@ -561,13 +581,13 @@ const ProductosPage = () => {
             {
               label: prod.activo ? "Desactivar" : "Activar",
               icon: prod.activo ? "delete" : "restore_from_trash",
-              onClick: () => handleDesactivar(prod),
+              onClick: () => abrirConfirmToggle(prod),
               variante: prod.activo ? "danger" : "success",
             },
           ]
         : []),
     ],
-    [puedeEditar, abrirModalEditar, abrirHistorial, abrirModalQR, handleDesactivar],
+    [puedeEditar, abrirModalEditar, abrirHistorial, abrirModalQR, abrirConfirmToggle],
   );
 
   const movimientosProducto = useMemo(
@@ -651,6 +671,20 @@ const ProductosPage = () => {
                   {depto}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="filtro-estado">Estado</label>
+            <select
+              id="filtro-estado"
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="filter-select"
+            >
+              <option value="true">Activos</option>
+              <option value="false">Inactivos</option>
+              <option value="">Todos</option>
             </select>
           </div>
 
@@ -1268,6 +1302,48 @@ const ProductosPage = () => {
             </button>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={!!productoConfirmar}
+        onClose={() => setProductoConfirmar(null)}
+        titulo={
+          productoConfirmar?.activo
+            ? "Desactivar Producto"
+            : "Activar Producto"
+        }
+        textoBotonConfirmar={
+          guardando
+            ? productoConfirmar?.activo
+              ? "Desactivando..."
+              : "Activando..."
+            : productoConfirmar?.activo
+              ? "Sí, desactivar"
+              : "Sí, activar"
+        }
+        onConfirmar={handleToggleActivo}
+        mostrarCancelar
+        disabled={guardando}
+        maxWidth="420px"
+      >
+        <div className="prod-confirm-body">
+          <span
+            className="material-symbols-outlined prod-confirm-icon"
+            aria-hidden="true"
+          >
+            {productoConfirmar?.activo ? "warning" : "restore_from_trash"}
+          </span>
+          <p>
+            ¿Estás seguro de que quieres{" "}
+            {productoConfirmar?.activo ? "desactivar" : "activar"} el producto{" "}
+            <strong>{productoConfirmar?.nombre}</strong>?
+          </p>
+          <p className="prod-confirm-sub">
+            {productoConfirmar?.activo
+              ? "El producto no aparecerá en nuevos pedidos pero su historial se conserva."
+              : "El producto volverá a estar disponible en el catálogo."}
+          </p>
+        </div>
       </Modal>
     </div>
   );

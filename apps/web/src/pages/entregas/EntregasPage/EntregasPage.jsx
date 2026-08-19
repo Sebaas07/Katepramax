@@ -7,6 +7,7 @@ import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import { formatCOP, formatFecha } from "@/utils/formatters";
 import "./EntregasPage.css";
 
@@ -539,9 +540,9 @@ const EntregasPage = () => {
 
           <div className="form-group">
             <label htmlFor="entr-fecha">Fecha y Hora Confirmada *</label>
-            <input
+            <DatePicker
               id="entr-fecha"
-              type="datetime-local"
+              enableTime
               value={formConfirmar.fechaConfirmada}
               onChange={(e) =>
                 setFormConfirmar((p) => ({

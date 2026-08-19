@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import auditService from "@/services/audit.service";
 import { formatFechaHora, formatRelativo, truncar } from "@/utils/formatters";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import "./AuditLogPage.css";
 
 const Spinner = () => (
@@ -172,10 +173,9 @@ const AuditLogPage = () => {
       <div className="audit-filters">
         <div className="filter-group">
           <label htmlFor="audit-fecha-inicio">Desde</label>
-          <input
+          <DatePicker
             id="audit-fecha-inicio"
             name="fechaInicio"
-            type="date"
             value={filtros.fechaInicio}
             max={filtros.fechaFin || HOY}
             onChange={handleFiltroChange}
@@ -184,10 +184,9 @@ const AuditLogPage = () => {
         </div>
         <div className="filter-group">
           <label htmlFor="audit-fecha-fin">Hasta</label>
-          <input
+          <DatePicker
             id="audit-fecha-fin"
             name="fechaFin"
-            type="date"
             value={filtros.fechaFin}
             min={filtros.fechaInicio}
             max={HOY}

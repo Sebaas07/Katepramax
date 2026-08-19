@@ -4,6 +4,7 @@ import logsService from "@/services/logs.service";
 import usuarioService from "@/services/usuario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import { formatFecha } from "@/utils/formatters";
 import "./LogsPage.css";
 
@@ -149,9 +150,8 @@ const LogsPage = () => {
 
         <div className="filter-group">
           <label htmlFor="logs-desde">Desde</label>
-          <input
+          <DatePicker
             id="logs-desde"
-            type="date"
             value={filtroFechaInicio}
             max={filtroFechaFin || undefined}
             onChange={(e) => setFiltroFechaInicio(e.target.value)}
@@ -161,9 +161,8 @@ const LogsPage = () => {
 
         <div className="filter-group">
           <label htmlFor="logs-hasta">Hasta</label>
-          <input
+          <DatePicker
             id="logs-hasta"
-            type="date"
             value={filtroFechaFin}
             min={filtroFechaInicio || undefined}
             onChange={(e) => setFiltroFechaFin(e.target.value)}

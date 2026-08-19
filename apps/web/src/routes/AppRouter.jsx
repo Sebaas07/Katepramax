@@ -51,7 +51,7 @@ const ROLES = {
   // Distribución/entregas: incluye a Oficinista que sigue el flujo
   ENTREGAS: ["Admin", "AdminBogota", "Oficinista", "Bodega"],
   // Módulos de gestión solo Admin/AdminBogota
-  GESTION: ["Admin", "AdminBogota"],
+  GESTION: ["Admin", "AdminBogota", "Oficinista"],
   // Gestión de oficina: catálogo, clientes, envíos y contabilidad
   OFICINA: ["Admin", "AdminBogota", "Oficinista"],
   ENTREGADOR: ["Entregador"],

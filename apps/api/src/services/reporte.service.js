@@ -199,6 +199,33 @@ async function panelGeneral(app, { fecha, sedeId } = {}, usuario) {
   const stockWhere = whereSede;
   const stock = await prisma.stockSede.aggregate({ where: stockWhere, _sum: { stockActual: true } });
 
+  // ── KPIs para el dashboard ──────────────────────────────────────────────
+  // Pedidos activos (Pendiente o Asignado)
+  const pedidosPendientes = await prisma.pedido.count({
+    where: { estado: { in: ["Pendiente", "Asignado"] }, ...whereSede },
+  });
+
+  // Entregas en ruta (la sede se filtra vía la relación con Pedido)
+  const pedidoWhere = whereSede.sedeId !== undefined ? { sedeId: whereSede.sedeId } : undefined;
+  const entregasEnRuta = await prisma.asignacionEntrega.count({
+    where: { estado: "EnRuta", ...(pedidoWhere ? { pedido: pedidoWhere } : {}) },
+  });
+
+  // Productos con stock bajo: activos, con stockMinimo > 0 y stockActual <= stockMinimo
+  // (mismo criterio que el módulo de productos en el frontend).
+  const stockBajoRows = (await prisma.stockSede.findMany({
+    where: { ...whereSede, producto: { activo: true } },
+    select: {
+      stockActual: true,
+      producto:    { select: { stockMinimo: true } },
+    },
+  })) ?? [];
+  const alertasInventario = stockBajoRows.filter(
+    (s) =>
+      Number(s.producto?.stockMinimo) > 0 &&
+      Number(s.stockActual) <= Number(s.producto?.stockMinimo),
+  ).length;
+
   return {
     fecha,
     ingresos: {
@@ -213,6 +240,10 @@ async function panelGeneral(app, { fecha, sedeId } = {}, usuario) {
     },
     cartera:            toNum(cartera._sum.saldoDeuda),
     totalStockUnidades: toNum(stock._sum.stockActual),
+    ventasHoy:          ingresos.reduce((a, s) => a + s.total, 0),
+    pedidosPendientes,
+    entregasEnRuta,
+    alertasInventario,
   };
 }
 

@@ -95,14 +95,23 @@ const inventarioService = {
         precioCosto: datos.precioCosto,
         precioVenta: datos.precioVenta,
         stockMinimo: datos.stockMinimo,
-        proveedorId: datos.proveedorId ? Number(datos.proveedorId) : null,
       };
 
-      payload.precioMayoreo =
-        datos.precioMayoreo !== undefined && datos.precioMayoreo !== ""
-          ? toNumber(datos.precioMayoreo, 0)
-          : undefined;
-      payload.porcentajeGanancia = toNumber(datos.porcentajeGanancia, 0);
+      // proveedorId: solo se envía si el caller lo indica (null lo desvincula)
+      if (datos.proveedorId !== undefined) {
+        payload.proveedorId = datos.proveedorId
+          ? Number(datos.proveedorId)
+          : null;
+      }
+      if (datos.precioMayoreo !== undefined && datos.precioMayoreo !== "") {
+        payload.precioMayoreo = toNumber(datos.precioMayoreo, 0);
+      }
+      if (
+        datos.porcentajeGanancia !== undefined &&
+        datos.porcentajeGanancia !== ""
+      ) {
+        payload.porcentajeGanancia = toNumber(datos.porcentajeGanancia, 0);
+      }
       if (datos.activo !== undefined) {
         payload.activo = datos.activo;
       }

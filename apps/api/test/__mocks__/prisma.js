@@ -96,6 +96,7 @@ const prisma = {
     findMany:    vi.fn(),
     create:      vi.fn(),
     update:      vi.fn(),
+    count:       vi.fn(),
   },
   pedidoDetalle: {
     findMany: vi.fn(),
@@ -110,6 +111,7 @@ const prisma = {
     findMany:    vi.fn(),
     create:      vi.fn(),
     update:      vi.fn(),
+    count:       vi.fn(),
   },
   cartera: {
     findUnique:  vi.fn(),

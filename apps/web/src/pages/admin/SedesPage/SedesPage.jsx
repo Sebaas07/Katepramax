@@ -111,6 +111,20 @@ const SedesPage = () => {
       return;
     }
 
+    const nombreNormalizado = nombreFinal.toLowerCase();
+    const duplicada = sedes.find((s) => {
+      if (sedeSel && s.id === sedeSel.id) return false;
+      return String(s.nombre ?? "").trim().toLowerCase() === nombreNormalizado;
+    });
+    if (duplicada) {
+      setErrorNombre(
+        `Ya existe una sede llamada "${duplicada.nombre}". Usa otro nombre para ${
+          tipo === "Oficina" ? "la oficina" : "la sede"
+        }.`,
+      );
+      return;
+    }
+
     const payload = { nombre: nombreFinal, tipo };
     if (tipo === "Oficina" && bodegaId) {
       payload.bodegaId = Number(bodegaId);
@@ -132,7 +146,7 @@ const SedesPage = () => {
     } finally {
       setGuardando(false);
     }
-  }, [esAdmin, nombre, tipo, bodegaId, sedeSel, cerrarModal, cargarSedes]);
+  }, [esAdmin, nombre, tipo, bodegaId, sedeSel, cerrarModal, cargarSedes, sedes]);
 
   const abrirModalConfirmToggle = useCallback((sede) => {
     setSedeAToggle(sede);

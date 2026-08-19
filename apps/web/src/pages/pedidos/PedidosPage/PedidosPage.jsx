@@ -10,6 +10,7 @@ import Modal from "@/components/common/Modal/Modal";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
 import FacturaTicket from "@/components/common/FacturaTicket/FacturaTicket";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import { formatFecha } from "@/utils/formatters";
 import "./PedidosPage.css";
 
@@ -1129,9 +1130,9 @@ const PedidosPage = () => {
             <label htmlFor="ped-fecha-confirmar">
               Fecha y Hora Confirmada *
             </label>
-            <input
+            <DatePicker
               id="ped-fecha-confirmar"
-              type="datetime-local"
+              enableTime
               value={formConfirmarPedido.fechaConfirmada}
               onChange={(e) =>
                 setFormConfirmarPedido((p) => ({

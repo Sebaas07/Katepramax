@@ -1,4 +1,5 @@
 import Modal from "@/components/common/Modal/Modal";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import { formatCOP } from "@/utils/formatters";
 import {
   esCampoNumerico,
@@ -148,15 +149,14 @@ const ContabilidadModal = memo(
                 <Label htmlFor="cont-fecha" requerido>
                   Fecha
                 </Label>
-                <input
+                <DatePicker
                   id="cont-fecha"
-                  type="date"
                   name="fecha"
                   max={HOY}
                   value={form.fecha}
                   onChange={manejarCambio}
                   className={`${inputClase} ${errores.fecha ? "cont-input--error" : ""}`}
-                  aria-invalid={Boolean(errores.fecha)}
+                  ariaInvalid={Boolean(errores.fecha)}
                 />
                 <ErrorField mensaje={errores.fecha} />
               </div>

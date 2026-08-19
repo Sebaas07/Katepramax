@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import "./InventarioPage.css";
 
 const HOY = new Date().toISOString().split("T")[0];
@@ -420,10 +421,9 @@ const InventarioPage = () => {
           {/* Fecha */}
           <div className="form-group">
             <label htmlFor="mov-fecha">Fecha *</label>
-            <input
+            <DatePicker
               id="mov-fecha"
               name="fecha"
-              type="date"
               value={form.fecha}
               onChange={handleCambioForm}
               className="form-control"

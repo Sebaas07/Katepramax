@@ -310,7 +310,16 @@ describe("reporteService.panelGeneral", () => {
     };
     prisma.egreso = { groupBy: vi.fn().mockResolvedValue([]) };
     prisma.cliente = { ...prisma.cliente, aggregate: vi.fn().mockResolvedValue({ _sum: { saldoDeuda: 800000 } }) };
-    prisma.stockSede = { ...prisma.stockSede, aggregate: vi.fn().mockResolvedValue({ _sum: { stockActual: 500 } }) };
+    prisma.stockSede = {
+      ...prisma.stockSede,
+      aggregate: vi.fn().mockResolvedValue({ _sum: { stockActual: 500 } }),
+      findMany:  vi.fn().mockResolvedValue([
+        { stockActual: 3, producto: { stockMinimo: 5 } },
+        { stockActual: 10, producto: { stockMinimo: 5 } },
+      ]),
+    };
+    prisma.pedido = { ...prisma.pedido, count: vi.fn().mockResolvedValue(4) };
+    prisma.asignacionEntrega = { ...prisma.asignacionEntrega, count: vi.fn().mockResolvedValue(2) };
 
     const result = await reporteSvc.panelGeneral(appMock, { fecha: "2026-05-05" });
 
@@ -319,6 +328,10 @@ describe("reporteService.panelGeneral", () => {
     expect(result.cartera).toBe(800000);
     expect(result.totalStockUnidades).toBe(500);
     expect(result.fecha).toBe("2026-05-05");
+    expect(result.ventasHoy).toBe(350000);
+    expect(result.pedidosPendientes).toBe(4);
+    expect(result.entregasEnRuta).toBe(2);
+    expect(result.alertasInventario).toBe(1);
   });
 
   it("debería retornar ceros cuando no hay datos en el día", async () => {
@@ -326,7 +339,13 @@ describe("reporteService.panelGeneral", () => {
     prisma.ingreso  = { groupBy: vi.fn().mockResolvedValue([]) };
     prisma.egreso   = { groupBy: vi.fn().mockResolvedValue([]) };
     prisma.cliente  = { ...prisma.cliente, aggregate: vi.fn().mockResolvedValue({ _sum: { saldoDeuda: null } }) };
-    prisma.stockSede = { ...prisma.stockSede, aggregate: vi.fn().mockResolvedValue({ _sum: { stockActual: null } }) };
+    prisma.stockSede = {
+      ...prisma.stockSede,
+      aggregate: vi.fn().mockResolvedValue({ _sum: { stockActual: null } }),
+      findMany:  vi.fn().mockResolvedValue([]),
+    };
+    prisma.pedido = { ...prisma.pedido, count: vi.fn().mockResolvedValue(0) };
+    prisma.asignacionEntrega = { ...prisma.asignacionEntrega, count: vi.fn().mockResolvedValue(0) };
 
     const result = await reporteSvc.panelGeneral(appMock, { fecha: "2026-05-05" });
 
@@ -334,6 +353,9 @@ describe("reporteService.panelGeneral", () => {
     expect(result.egresos.total).toBe(0);
     expect(result.cartera).toBe(0);
     expect(result.totalStockUnidades).toBe(0);
+    expect(result.pedidosPendientes).toBe(0);
+    expect(result.entregasEnRuta).toBe(0);
+    expect(result.alertasInventario).toBe(0);
   });
 });
 

@@ -5,6 +5,7 @@ import contabilidadService from "@/services/contabilidad.service";
 import reporteService from "@/services/reporte.service";
 import inventarioService from "@/services/inventario.service";
 import { getSemanaISO, getRangoSemana, formatFecha } from "@/utils/formatters";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import {
   construirPayloadContabilidad,
   esCampoNumerico,
@@ -610,9 +611,8 @@ const ContabilidadPage = () => {
             <>
               <div className="filter-group">
                 <label htmlFor="cont-cobros-desde">Desde</label>
-                <input
+                <DatePicker
                   id="cont-cobros-desde"
-                  type="date"
                   value={fechaInicioCobros}
                   max={fechaFinCobros || HOY}
                   onChange={(e) => setFechaInicioCobros(e.target.value)}
@@ -621,9 +621,8 @@ const ContabilidadPage = () => {
               </div>
               <div className="filter-group">
                 <label htmlFor="cont-cobros-hasta">Hasta</label>
-                <input
+                <DatePicker
                   id="cont-cobros-hasta"
-                  type="date"
                   value={fechaFinCobros}
                   min={fechaInicioCobros}
                   max={HOY}
@@ -636,9 +635,8 @@ const ContabilidadPage = () => {
           {tab === "panel" && (
             <div className="filter-group">
               <label htmlFor="cont-panel-fecha">Fecha panel</label>
-              <input
+              <DatePicker
                 id="cont-panel-fecha"
-                type="date"
                 max={HOY}
                 value={filtroPanelF}
                 onChange={(e) => setFiltroPanelFecha(e.target.value)}

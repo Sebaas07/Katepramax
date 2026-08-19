@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { formatCOP, formatFecha, getSemanaISO, getRangoSemana } from "@/utils/formatters";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import reporteService from "@/services/reporte.service";
 import TarjetaKpi from "./TarjetaKpi";
 import { EmptyState, Spinner } from "./ContabilidadUI";
@@ -170,9 +171,8 @@ const CierreCajaTab = ({ sedeId, esAdmin }) => {
       <div className="cont-cierre-caja__filtros">
         <div className="filter-group">
           <label htmlFor="cc-fecha">Día de referencia</label>
-          <input
+          <DatePicker
             id="cc-fecha"
-            type="date"
             value={fechaDia}
             max={HOY}
             onChange={(e) => setFechaDia(e.target.value)}
