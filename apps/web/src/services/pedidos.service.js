@@ -63,6 +63,7 @@ const pedidosService = {
     items,
     direccion,
     observaciones,
+    valorDomicilio,
     sedeId,
   }) => {
     try {
@@ -87,6 +88,9 @@ const pedidosService = {
         ...(sedeFinal ? { sedeId: parseInt(sedeFinal, 10) } : {}),
         direccion: direccion?.trim() || undefined,
         observaciones: observaciones?.trim() || undefined,
+        ...(valorDomicilio != null && !Number.isNaN(Number(valorDomicilio))
+          ? { valorDomicilio: Number(valorDomicilio) }
+          : {}),
         items: items.map((item) => ({
           productoId: item.productoId,
           cantidad: parseInt(item.cantidad),
@@ -150,6 +154,20 @@ const pedidosService = {
   obtenerFactura: async (pedidoId) => {
     if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
     return await pedidosApi.obtenerFactura(pedidoId);
+  },
+
+  /**
+   * Cantidad de pedidos pendientes por asignar (notificación de la Bodega
+   * cuando una oficina crea un pedido).
+   */
+  obtenerPendientesCount: async () => {
+    try {
+      const data = await pedidosApi.obtenerPendientesCount();
+      return Number(data?.pendientes ?? 0);
+    } catch (e) {
+      console.error("[pedidosService] obtenerPendientesCount:", e.message);
+      return 0;
+    }
   },
 };
 

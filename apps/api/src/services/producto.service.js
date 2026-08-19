@@ -35,7 +35,8 @@ function sedeEsPermitida(usuario) {
     usuario &&
     (usuario.rol === "Admin" ||
       usuario.rol === "Bodega" ||
-      usuario.rol === "AdminBogota")
+      usuario.rol === "AdminBogota" ||
+      usuario.rol === "Oficinista")
   );
 }
 

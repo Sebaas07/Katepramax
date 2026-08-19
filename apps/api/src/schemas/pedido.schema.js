@@ -30,6 +30,7 @@ const pedidoBase = {
     direccion: { type: ["string", "null"] },
     observaciones: { type: ["string", "null"] },
     totalRecibido: { type: "number" },
+    valorDomicilio: { type: "number" },
     creadoEn: { type: "string", format: "date-time" },
     actualizadoEn: { type: "string", format: "date-time" },
     cliente: {
@@ -78,6 +79,7 @@ const crearPedido = {
       },
       direccion: { type: "string" },
       observaciones: { type: "string" },
+      valorDomicilio: { type: "number", minimum: 0 },
       items: {
         type: "array",
         minItems: 1,
@@ -128,6 +130,19 @@ const listarPedidos = {
   },
   response: {
     200: { type: "array", items: pedidoBase },
+  },
+};
+
+// GET /api/pedidos/pendientes-count
+const contarPendientes = {
+  summary: "Cantidad de pedidos pendientes por asignar en mi sede",
+  tags: ["Pedidos"],
+  security: [{ bearerAuth: [] }],
+  response: {
+    200: {
+      type: "object",
+      properties: { pendientes: { type: "integer" } },
+    },
   },
 };
 
@@ -212,6 +227,7 @@ const obtenerFactura = {
         },
         total: { type: "number" },
         totalRecibido: { type: ["number", "null"] },
+        valorDomicilio: { type: "number" },
         metodoPago: { type: ["string", "null"] },
         fechaConfirmada: { type: ["string", "null"] },
       },
@@ -226,4 +242,5 @@ module.exports = {
   obtenerPedido,
   cambiarEstadoPedido,
   obtenerFactura,
+  contarPendientes,
 };

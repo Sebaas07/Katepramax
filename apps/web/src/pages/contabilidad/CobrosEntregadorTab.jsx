@@ -58,6 +58,18 @@ const CobrosEntregadorTab = ({ cobros, fechaInicio, fechaFin }) => {
             <div className="cont-kpi-card__valor">{cobros?.pedidos ?? 0}</div>
           </div>
         </div>
+        <div className="cont-kpi-card" style={{ "--kpi-color": "#fbbf24" }}>
+          <div className="cont-kpi-card__icon">
+            <span className="material-symbols-outlined">local_taxi</span>
+          </div>
+          <div className="cont-kpi-card__body">
+            <div className="cont-kpi-card__titulo">Valor total domicilios</div>
+            <div className="cont-kpi-card__valor">{formatCOP(cobros?.totalDomicilios ?? 0)}</div>
+            <div className="cont-kpi-card__sub">
+              A pagar a los entregadores por despachos
+            </div>
+          </div>
+        </div>
       </div>
 
       {chartData.length > 0 && (
@@ -83,11 +95,12 @@ const CobrosEntregadorTab = ({ cobros, fechaInicio, fechaFin }) => {
       <div className="cont-tabla-wrap">
         <TablaGenerica
           columnas={[
-            { campo: "entregador", label: "Entregador",    tipo: "texto"  },
-            { campo: "pedidos",    label: "Entregas",      tipo: "numero" },
-            { campo: "total",      label: "Total cobrado", tipo: "moneda" },
-            { campo: "efectivo",   label: "Efectivo",      tipo: "moneda" },
-            { campo: "cuentas",    label: "Transferencia", tipo: "moneda" },
+            { campo: "entregador",    label: "Entregador",    tipo: "texto"  },
+            { campo: "pedidos",       label: "Entregas",      tipo: "numero" },
+            { campo: "total",         label: "Total cobrado", tipo: "moneda" },
+            { campo: "efectivo",      label: "Efectivo",      tipo: "moneda" },
+            { campo: "cuentas",       label: "Transferencia", tipo: "moneda" },
+            { campo: "valorDomicilio", label: "Domicilios a pagar", tipo: "moneda" },
           ]}
           datos={detalle}
           mostrarBuscador

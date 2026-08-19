@@ -32,6 +32,13 @@ async function pedidoRoutes(app) {
     handler:       ctrl.listar,
   });
 
+  // Cantidad de pedidos pendientes por asignar (notificación para la Bodega)
+  app.get("/pedidos/pendientes-count", {
+    schema:        schemas.contarPendientes,
+    preValidation: consultaBodega.preValidation,
+    handler:       ctrl.contarPendientes,
+  });
+
   app.get("/pedidos/:id", {
     schema:        schemas.obtenerPedido,
     preValidation: consultaBodega.preValidation,

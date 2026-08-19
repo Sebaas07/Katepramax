@@ -16,6 +16,8 @@ const listar = {
         properties: {
           id: { type: "integer" },
           nombre: { type: "string" },
+          tipo: { type: "string", enum: ["Bodega", "Oficina"] },
+          bodegaId: { type: ["integer", "null"] },
           activo: { type: "boolean" },
           creadoEn: { type: "string", format: "date-time" },
         },
@@ -32,6 +34,8 @@ const crear = {
     required: ["nombre"],
     properties: {
       nombre: { type: "string", minLength: 1, maxLength: 100 },
+      tipo: { type: "string", enum: ["Bodega", "Oficina"] },
+      bodegaId: { type: "integer" },
     },
     additionalProperties: false,
   },
@@ -41,6 +45,8 @@ const crear = {
       properties: {
         id: { type: "integer" },
         nombre: { type: "string" },
+        tipo: { type: "string", enum: ["Bodega", "Oficina"] },
+        bodegaId: { type: ["integer", "null"] },
         activo: { type: "boolean" },
       },
     },
@@ -66,6 +72,8 @@ const editar = {
     type: "object",
     properties: {
       nombre: { type: "string", minLength: 1, maxLength: 100 },
+      tipo: { type: "string", enum: ["Bodega", "Oficina"] },
+      bodegaId: { type: ["integer", "null"] },
       activo: { type: "boolean" },
     },
     additionalProperties: false,
@@ -76,6 +84,8 @@ const editar = {
       properties: {
         id: { type: "integer" },
         nombre: { type: "string" },
+        tipo: { type: "string", enum: ["Bodega", "Oficina"] },
+        bodegaId: { type: ["integer", "null"] },
         activo: { type: "boolean" },
       },
     },

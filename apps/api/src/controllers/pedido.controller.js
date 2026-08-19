@@ -35,4 +35,9 @@ async function obtenerFactura(request, reply) {
   return reply.send(factura);
 }
 
-module.exports = { crear, listar, obtenerPorId, cambiarEstado, obtenerHistorial, obtenerFactura };
+async function contarPendientes(request, reply) {
+  const resumen = await svc.contarPendientes(request.server, request.user);
+  return reply.send(resumen);
+}
+
+module.exports = { crear, listar, obtenerPorId, cambiarEstado, obtenerHistorial, obtenerFactura, contarPendientes };

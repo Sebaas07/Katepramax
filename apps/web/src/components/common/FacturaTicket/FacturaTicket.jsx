@@ -95,6 +95,12 @@ const FacturaTicket = ({ factura, mostrarQR = true, url }) => {
           <span>{fmtMoneda(factura.totalRecibido)}</span>
         </div>
       )}
+      {factura.valorDomicilio > 0 && (
+        <div className="factura-ticket__linea">
+          <span>Domicilio:</span>
+          <span>{fmtMoneda(factura.valorDomicilio)}</span>
+        </div>
+      )}
 
       <div className="factura-ticket__sep" />
 

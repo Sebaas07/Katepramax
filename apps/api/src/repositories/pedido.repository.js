@@ -28,15 +28,20 @@ async function crear(prisma, data) {
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
- * @param {{ clienteId?: number, estado?: string, creadoPorId?: number, skip?: number, take?: number }} filtros
+ * @param {{ clienteId?: number, estado?: string, creadoPorId?: number, sedeId?: number, sedeIds?: number[], skip?: number, take?: number }} filtros
  */
-async function listar(prisma, { clienteId, estado, creadoPorId, sedeId, skip = 0, take = 50 } = {}) {
+async function listar(prisma, { clienteId, estado, creadoPorId, sedeId, sedeIds, skip = 0, take = 50 } = {}) {
   const where = {};
   if (clienteId)   where.clienteId   = clienteId;
   if (estado)      where.estado      = estado;
   if (creadoPorId) where.creadoPorId = creadoPorId;
-  // Filtrar por sede: solo los pedidos creados por usuarios de esa sede
-  if (sedeId)      where.creador     = { sedeId };
+  // Filtrar por sede: solo los pedidos creados por usuarios de esas sedes.
+  // sedeIds (Bodega + sus oficinas) tiene prioridad sobre sedeId.
+  if (sedeIds?.length) {
+    where.creador = { sedeId: { in: sedeIds } };
+  } else if (sedeId) {
+    where.creador = { sedeId };
+  }
 
   return prisma.pedido.findMany({
     where,

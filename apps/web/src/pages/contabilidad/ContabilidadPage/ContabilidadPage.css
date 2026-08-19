@@ -1079,10 +1079,13 @@
     visibility: hidden;
   }
   #corte-caja-imprimible,
-  #corte-caja-imprimible * {
+  #corte-caja-imprimible *,
+  #cierre-caja-imprimible,
+  #cierre-caja-imprimible * {
     visibility: visible;
   }
-  #corte-caja-imprimible {
+  #corte-caja-imprimible,
+  #cierre-caja-imprimible {
     position: absolute;
     top: 0;
     left: 0;
@@ -1095,4 +1098,108 @@
     font-weight: 700;
     margin-bottom: 1rem;
   }
+}
+
+/* ─── Cierre de Caja (diario + semanal) ──────────────────────*/
+.cont-cierre-caja__filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.cont-cierre-caja__semana {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  padding-bottom: 0.5rem;
+}
+
+.cont-cierre-caja__bloques {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.cont-cierre-bloque {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cont-cierre-bloque .cont-resumen-card__header h4 {
+  margin: 0;
+}
+
+.cont-cierre-sub {
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--on-surface-variant);
+}
+
+.cont-cierre-bloque__kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.cont-cierre-bloque__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(197, 179, 88, 0.12);
+  border-radius: var(--radius-lg);
+}
+
+.cont-cierre-bloque__kpi-label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--on-surface-variant);
+}
+
+.cont-cierre-bloque__kpi-valor {
+  font-family: var(--font-headline);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.cont-cierre-bloque__kpi-valor--verde { color: #4ade80; }
+.cont-cierre-bloque__kpi-valor--rojo  { color: var(--error); }
+
+.cont-cierre-bloque__kpi-detalle {
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--on-surface-variant);
+}
+
+.cont-cierre-bloque__canal {
+  border-top: 1px solid rgba(197, 179, 88, 0.12);
+  padding-top: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cont-cierre-bloque__fila {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface);
+}
+
+.cont-cierre-bloque__fila strong {
+  color: var(--on-surface);
+}
+
+@media (max-width: 767.98px) {
+  .cont-cierre-caja__bloques { grid-template-columns: 1fr; }
+  .cont-cierre-bloque__kpis  { grid-template-columns: 1fr; }
 }

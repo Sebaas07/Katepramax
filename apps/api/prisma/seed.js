@@ -50,8 +50,20 @@ async function main() {
   const sedes = await Promise.all([
     prisma.sede.create({ data: { nombre: "Bogotá" } }),
     prisma.sede.create({ data: { nombre: "Cartagena" } }),
-    prisma.sede.create({ data: { nombre: "Villavicencio" } }),
+    prisma.sede.create({ data: { nombre: "Villavicencio", tipo: "Bodega" } }),
+    prisma.sede.create({ data: { nombre: "Villavicencio Centro", tipo: "Oficina" } }),
+    prisma.sede.create({ data: { nombre: "Villavicencio Norte", tipo: "Oficina" } }),
   ]);
+
+  // La bodega de Villavicencio alimenta sus dos oficinas.
+  await prisma.sede.update({
+    where: { id: sedes[3].id },
+    data: { bodegaId: sedes[2].id },
+  });
+  await prisma.sede.update({
+    where: { id: sedes[4].id },
+    data: { bodegaId: sedes[2].id },
+  });
 
   console.log("Creando usuario administrador...");
   const hashedPassword = await bcrypt.hash("Admin1234.", 10);

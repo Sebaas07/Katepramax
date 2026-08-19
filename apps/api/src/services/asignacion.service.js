@@ -40,6 +40,23 @@ function sedeEsPermitida(usuario) {
   return ["Admin", "AdminBogota", "Oficinista", "Bodega"].includes(usuario.rol);
 }
 
+/**
+ * Sedes "operativas" de un usuario para asignaciones:
+ * - Admin: null (ve todo).
+ * - Bodega: su propia sede + las oficinas que le pertenecen (bodegaId),
+ *   para poder asignar entregador a los pedidos que crean sus oficinas.
+ * - Oficinista (Oficina): su sede y, si tiene bodega asignada, la bodega.
+ * - AdminBogota: su sede.
+ * El set se resuelve en el auth middleware (`usuario.sedesOperativas`).
+ */
+function sedesOperativas(usuario) {
+  if (usuario?.rol === "Admin") return null;
+  if (Array.isArray(usuario?.sedesOperativas) && usuario.sedesOperativas.length > 0) {
+    return usuario.sedesOperativas;
+  }
+  return [usuario?.sedeId];
+}
+
 const asignacionService = (app) => ({
   repo: asignacionRepo(app.prisma),
   prisma: app.prisma,
@@ -61,8 +78,9 @@ const asignacionService = (app) => ({
     }
 
     if (usuario.rol !== "Admin") {
+      const sedes = sedesOperativas(usuario);
       const sedePedido = pedido.sedeId ?? pedido.creador?.sedeId;
-      if (sedePedido == null || sedePedido !== usuario.sedeId) {
+      if (sedePedido == null || !sedes.includes(sedePedido)) {
         throw new AppError("No tienes permiso para asignar pedidos de otra sede.", 403);
       }
     }
@@ -140,9 +158,10 @@ const asignacionService = (app) => ({
     if (pedidoId)     where.pedidoId     = Number(pedidoId);
 
     if (usuario.rol !== "Admin" && usuario.sedeId != null) {
+      const sedes = sedesOperativas(usuario);
       where.OR = [
-        { pedido: { sedeId: usuario.sedeId } },
-        { pedido: { creador: { sedeId: usuario.sedeId } } },
+        { pedido: { sedeId: { in: sedes } } },
+        { pedido: { creador: { sedeId: { in: sedes } } } },
       ];
     }
 
@@ -196,8 +215,9 @@ const asignacionService = (app) => ({
     }
 
     if (usuario.rol !== "Admin" && usuario.rol !== "Entregador" && usuario.sedeId != null) {
+      const sedes = sedesOperativas(usuario);
       const sedePedido = asignacion.pedido?.sedeId ?? asignacion.pedido?.creador?.sedeId;
-      if (sedePedido == null || sedePedido !== usuario.sedeId) {
+      if (sedePedido == null || !sedes.includes(sedePedido)) {
         throw new AppError("No tienes permiso para ver esta asignación.", 403);
       }
     }
@@ -221,8 +241,9 @@ const asignacionService = (app) => ({
     }
 
     if (rolUsuario !== "Admin" && rolUsuario !== "Entregador" && sedeIdUsuario != null) {
+      const sedes = sedesOperativas({ rol: rolUsuario, sedeId: sedeIdUsuario });
       const sedePedido = asignacion.pedido?.sedeId ?? asignacion.pedido?.creador?.sedeId;
-      if (sedePedido == null || sedePedido !== sedeIdUsuario) {
+      if (sedePedido == null || !sedes.includes(sedePedido)) {
         throw new AppError("No tienes permiso para actualizar esta asignaci\u00F3n.", 403);
       }
     }

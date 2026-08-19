@@ -48,6 +48,7 @@ const reporteService = {
       return {
         detalle: Array.isArray(datos?.detalle) ? datos.detalle : [],
         total: Number(datos?.total ?? 0),
+        totalDomicilios: Number(datos?.totalDomicilios ?? 0),
         pedidos: Number(datos?.pedidos ?? 0),
       };
     } catch (e) {

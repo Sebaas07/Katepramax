@@ -41,6 +41,8 @@ enum MetodoPago {
 model Sede {
   id       Int      @id @default(autoincrement())
   nombre   String   @db.VarChar(100)
+  tipo     TipoSede @default(Bodega)
+  bodegaId Int?     @map("bodega_id")
   activo   Boolean  @default(true)
   creadoEn DateTime @default(now()) @map("creado_en")
 
@@ -55,6 +57,8 @@ model Sede {
   clientes    Cliente[]
   enviosOrigen  Envio[] @relation("EnvioOrigen")
   enviosDestino Envio[] @relation("EnvioDestino")
+  bodega        Sede?   @relation("SedeBodega", fields: [bodegaId], references: [id])
+  oficinas      Sede[]  @relation("SedeBodega")
 
   @@map("sedes")
 }
@@ -232,6 +236,7 @@ model Pedido {
   direccion     String?      @db.VarChar(255)
   observaciones String?      @db.Text
   totalRecibido Decimal      @default(0.00) @map("total_recibido") @db.Decimal(12, 2)
+  valorDomicilio Decimal     @default(0.00) @map("valor_domicilio") @db.Decimal(12, 2)
   creadoEn      DateTime     @default(now()) @map("creado_en")
   actualizadoEn DateTime     @updatedAt @map("actualizado_en")
 
@@ -389,6 +394,11 @@ enum EstadoEnvio {
   Confirmado
   ConNovedad
   Cancelado
+}
+
+enum TipoSede {
+  Bodega
+  Oficina
 }
 
 // Guía de envío de mercancía entre sedes. Un Admin/AdminBogota crea un envío

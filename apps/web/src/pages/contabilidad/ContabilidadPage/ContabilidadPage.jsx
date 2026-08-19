@@ -25,6 +25,7 @@ import ArqueoSemanalTab from "../ArqueoSemanalTab";
 import HistorialSemanalTab from "../HistorialSemanalTab";
 import GananciaGastoTab from "../GananciaGastoTab";
 import CobrosEntregadorTab from "../CobrosEntregadorTab";
+import CierreCajaTab from "../CierreCajaTab";
 
 // ── Shared UI
 import { Spinner, EmptyState } from "../ContabilidadUI";
@@ -43,6 +44,7 @@ const TABS = [
   //{ key: "cartera", label: "Cartera", icon: "account_balance" },
   { key: "proveedores", label: "Abonos a Proveedores", icon: "payments" },
   { key: "cobros", label: "Cobros por Entregador", icon: "delivery_dining" },
+  { key: "cierre", label: "Cierre de Caja", icon: "storefront" },
   { key: "panel", label: "Panel General", icon: "dashboard" },
   { key: "ganancia", label: "Ganancia / Gasto", icon: "point_of_sale" },
   { key: "arqueo", label: "Arqueo Semanal", icon: "summarize" },
@@ -144,8 +146,8 @@ const ContabilidadPage = () => {
 
   // ── Carga de datos ────────────────────────────────────────
   const cargarDatos = useCallback(async () => {
-    if (tab === "ganancia") {
-      setCargando(false); // esta pestaña usa su propio loader (cargandoCorte)
+    if (tab === "ganancia" || tab === "cierre") {
+      setCargando(false); // estas pestañas usan su propio loader
       return;
     }
     setCargando(true);
@@ -563,9 +565,11 @@ const ContabilidadPage = () => {
               ? formatFecha(filtroPanelF)
               : tab === "ganancia"
                 ? `${formatFecha(rangoGanancia.desde)}${rangoGanancia.desde !== rangoGanancia.hasta ? ` — ${formatFecha(rangoGanancia.hasta)}` : ""}`
-                : tab === "cobros"
-                  ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
-                  : `Semana ${filtroSemana || SEM_ACTUAL}`}
+                : tab === "cierre"
+                  ? "Cierre diario y semanal"
+                  : tab === "cobros"
+                    ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
+                    : `Semana ${filtroSemana || SEM_ACTUAL}`}
           </p>
         </div>
         <div className="cont-page__acciones">
@@ -726,6 +730,10 @@ const ContabilidadPage = () => {
               fechaInicio={fechaInicioCobros}
               fechaFin={fechaFinCobros}
             />
+          )}
+
+          {tab === "cierre" && (
+            <CierreCajaTab sedeId={filtroSedeId} esAdmin={esAdmin} />
           )}
 
           {tab === "panel" && !panelGeneral && (

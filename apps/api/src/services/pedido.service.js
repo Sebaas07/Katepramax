@@ -35,18 +35,41 @@ function sedeEsPermitidaLectura(usuario) {
   );
 }
 
+/**
+ * Sedes "operativas" de un usuario para consultar pedidos:
+ * - Admin: null (ve todo).
+ * - Bodega: su propia sede + las oficinas que le pertenecen (bodegaId).
+ * - Oficinista (Oficina): su sede y, si la oficina tiene bodega asignada,
+ *   también la bodega (para ver los pedidos que debe despachar su oficina).
+ * - AdminBogota: su sede.
+ * El set se resuelve en el auth middleware (`usuario.sedesOperativas`).
+ */
+function sedesOperativas(usuario) {
+  if (usuario?.rol === "Admin") return null;
+  if (Array.isArray(usuario?.sedesOperativas) && usuario.sedesOperativas.length > 0) {
+    return usuario.sedesOperativas;
+  }
+  return [usuario?.sedeId];
+}
+
 async function crear(app, body, usuarioId) {
   const {
     clienteId,
     items,
     direccion,
     observaciones,
+    valorDomicilio,
     sedeId: sedeIdBody,
   } = body;
 
   if (!clienteId) throw new AppError("Se requiere clienteId", 400);
   if (!items || items.length === 0)
     throw new AppError("El pedido debe tener al menos un producto.", 400);
+
+  const valorDomicilioNum = Number(valorDomicilio ?? 0);
+  if (Number.isNaN(valorDomicilioNum) || valorDomicilioNum < 0) {
+    throw new AppError("valorDomicilio debe ser un número mayor o igual a 0.", 400);
+  }
 
   const cliente = await app.prisma.cliente.findUnique({
     where: { id: clienteId },
@@ -133,6 +156,7 @@ async function crear(app, body, usuarioId) {
         sedeId: sedePedido,
         direccion,
         observaciones,
+        valorDomicilio: valorDomicilioNum,
         detalles: { create: detallesPreparados },
       },
       include: {
@@ -188,8 +212,13 @@ async function obtenerLista(app, query, usuario) {
   if (query.estado) filtros.estado = query.estado;
   if (query.creadoPorId) filtros.creadoPorId = Number(query.creadoPorId);
 
-  if (usuario.rol !== "Admin") {
-    filtros.sedeId = usuario.sedeId;
+  const sedes = sedesOperativas(usuario);
+  if (sedes) {
+    if (sedes.length === 1) {
+      filtros.sedeId = sedes[0];
+    } else {
+      filtros.sedeIds = sedes;
+    }
   } else if (query.sedeId) {
     filtros.sedeId = Number(query.sedeId);
   }
@@ -206,8 +235,9 @@ async function obtenerPorId(app, id, usuario) {
   if (!pedido) throw new AppError(`Pedido ${id} no encontrado`, 404);
 
   if (usuario.rol !== "Admin") {
+    const sedes = sedesOperativas(usuario);
     const sedePedido = pedido.sedeId ?? pedido.creador?.sedeId;
-    if (sedePedido != null && sedePedido !== usuario.sedeId) {
+    if (sedePedido != null && !sedes.includes(sedePedido)) {
       throw new AppError("No tienes permiso para ver este pedido.", 403);
     }
   }
@@ -227,8 +257,9 @@ async function cambiarEstado(app, id, nuevoEstado, usuario) {
   if (!pedido) throw new AppError(`Pedido ${id} no encontrado`, 404);
 
   if (usuario.rol !== "Admin") {
+    const sedes = sedesOperativas(usuario);
     const sedePedido = pedido.sedeId ?? pedido.creador?.sedeId;
-    if (sedePedido != null && sedePedido !== usuario.sedeId) {
+    if (sedePedido != null && !sedes.includes(sedePedido)) {
       throw new AppError(
         "No tienes permiso para cambiar el estado de este pedido.",
         403,
@@ -324,8 +355,9 @@ async function obtenerHistorial(app, id, usuario) {
   if (!pedido) throw new AppError(`Pedido ${id} no encontrado`, 404);
 
   if (usuario.rol !== "Admin") {
+    const sedes = sedesOperativas(usuario);
     const sedePedido = pedido.sedeId ?? pedido.creador?.sedeId;
-    if (sedePedido != null && sedePedido !== usuario.sedeId) {
+    if (sedePedido != null && !sedes.includes(sedePedido)) {
       throw new AppError("No tienes permiso para ver este historial.", 403);
     }
   }
@@ -337,6 +369,26 @@ async function obtenerHistorial(app, id, usuario) {
       usuario: { select: { id: true, nombreCompleto: true, rol: true } },
     },
   });
+}
+
+/**
+ * Cuenta los pedidos en estado "Pendiente" (sin entregador asignado).
+ * Es la "notificación" que ve la Bodega cuando una oficina crea un pedido
+ * y está por asignar el entregador. Filtra por sede según el rol.
+ */
+async function contarPendientes(app, usuario) {
+  if (!sedeEsPermitidaLectura(usuario)) {
+    throw new AppError("No tienes permiso para consultar pedidos pendientes.", 403);
+  }
+
+  const where = { estado: "Pendiente" };
+  const sedes = sedesOperativas(usuario);
+  if (sedes) {
+    where.creador = { sedeId: { in: sedes } };
+  }
+
+  const total = await app.prisma.pedido.count({ where });
+  return { pendientes: total };
 }
 
 /**
@@ -370,6 +422,7 @@ async function obtenerFactura(app, id) {
     total,
     totalRecibido:
       pedido.totalRecibido != null ? Number(pedido.totalRecibido) : null,
+    valorDomicilio: pedido.valorDomicilio != null ? Number(pedido.valorDomicilio) : 0,
     metodoPago: entrega?.metodoPago ?? null,
     fechaConfirmada: entrega?.fechaConfirmada ?? null,
   };
@@ -382,4 +435,5 @@ module.exports = {
   cambiarEstado,
   obtenerHistorial,
   obtenerFactura,
+  contarPendientes,
 };

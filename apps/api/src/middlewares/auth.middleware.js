@@ -37,12 +37,25 @@ const verifyToken = async (request, reply) => {
     }
 
     // Sobreescribir con datos REALES de la BD — nunca confiar en el payload del JWT
+    const sede = sesion.usuario.sede ?? null;
+    let sedesOperativas = [sesion.usuario.sedeId];
+    if (sede) {
+      if (sede.tipo === "Bodega") {
+        sedesOperativas = [sede.id, ...(sede.oficinas ?? []).map((o) => o.id)];
+      } else if (sede.tipo === "Oficina" && sede.bodegaId) {
+        sedesOperativas = [sede.id, sede.bodegaId];
+      }
+    }
+
     request.user = {
-      id:       sesion.usuario.id,
-      usuario:  sesion.usuario.usuario,
-      rol:      sesion.usuario.rol,
-      sedeId:   sesion.usuario.sedeId,
-      sesionId: sesion.id,
+      id:             sesion.usuario.id,
+      usuario:        sesion.usuario.usuario,
+      rol:            sesion.usuario.rol,
+      sedeId:         sesion.usuario.sedeId,
+      sedeTipo:       sede?.tipo ?? null,
+      bodegaId:       sede?.bodegaId ?? null,
+      sedesOperativas,
+      sesionId:       sesion.id,
     };
   } catch (error) {
     if (error instanceof AppError) {
@@ -112,16 +125,19 @@ module.exports = {
     ],
   },
 
-  // Consulta de información para Bodega (solo lectura) — + Admin/AdminBogota
+  // Consulta de información para Bodega/Oficinista (solo lectura) — + Admin/AdminBogota
   consultaBodega: {
-    preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Bodega"])],
+    preValidation: [
+      verifyToken,
+      requireRole(["Admin", "AdminBogota", "Bodega", "Oficinista"]),
+    ],
   },
 
-  // Consulta con filtro de sede — Admin + AdminBogota + Bodega
+  // Consulta con filtro de sede — Admin + AdminBogota + Bodega + Oficinista
   consultaBodegaConSede: {
     preValidation: [
       verifyToken,
-      requireRole(["Admin", "AdminBogota", "Bodega"]),
+      requireRole(["Admin", "AdminBogota", "Bodega", "Oficinista"]),
       injectSedeFilter,
     ],
   },
@@ -134,16 +150,19 @@ module.exports = {
     ],
   },
 
-  // Admin + Bodega + AdminBogota
+  // Admin + Bodega + AdminBogota + Oficinista
   adminOBodega: {
-    preValidation: [verifyToken, requireRole(["Admin", "Bodega", "AdminBogota"])],
+    preValidation: [
+      verifyToken,
+      requireRole(["Admin", "Bodega", "AdminBogota", "Oficinista"]),
+    ],
   },
 
-  // Admin + Bodega + AdminBogota — con sedeFilter inyectado
+  // Admin + Bodega + AdminBogota + Oficinista — con sedeFilter inyectado
   adminOBodegaConSede: {
     preValidation: [
       verifyToken,
-      requireRole(["Admin", "Bodega", "AdminBogota"]),
+      requireRole(["Admin", "Bodega", "AdminBogota", "Oficinista"]),
       injectSedeFilter,
     ],
   },

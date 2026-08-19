@@ -15,6 +15,11 @@ const ROL_CONFIG = {
     bg: "rgba(233,195,73,0.12)",
   },
   Bodega: { label: "Bodega", color: "#e9c349", bg: "rgba(233,195,73,0.12)" },
+  Oficinista: {
+    label: "Oficinista",
+    color: "#60a5fa",
+    bg: "rgba(96,165,250,0.12)",
+  },
   Entregador: {
     label: "Entregador",
     color: "#4ade80",

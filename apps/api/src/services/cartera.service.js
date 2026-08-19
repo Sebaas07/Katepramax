@@ -4,7 +4,7 @@ const { calcularVariacion, fechaValida, numeroPositivo, semanaValida } = require
 const { registrarAccion } = require("../utils/logger");
 
 function sedeEsPermitida(usuario) {
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota";
+  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota" || usuario.rol === "Oficinista";
 }
 
 function sedeWhere(usuario) {

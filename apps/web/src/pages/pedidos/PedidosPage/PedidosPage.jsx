@@ -39,6 +39,7 @@ const crearFormInicial = () => ({
   clienteId: "",
   direccion: "",
   observaciones: "",
+  valorDomicilio: "",
   sedeId: "",
   items: [crearItemVacio()],
 });
@@ -380,6 +381,9 @@ const PedidosPage = () => {
           : (sedeIdUsuario ?? undefined),
         direccion: formPedido.direccion,
         observaciones: formPedido.observaciones,
+        valorDomicilio: formPedido.valorDomicilio
+          ? parseFloat(formPedido.valorDomicilio)
+          : undefined,
         items: itemsValidos,
       });
       toast.success("Pedido creado correctamente.");
@@ -756,6 +760,24 @@ const PedidosPage = () => {
               className="form-control"
               placeholder="Calle, número, barrio, referencia..."
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="ped-valor-domicilio">Valor del domicilio</label>
+            <input
+              id="ped-valor-domicilio"
+              type="number"
+              name="valorDomicilio"
+              min="0"
+              step="0.01"
+              value={formPedido.valorDomicilio}
+              onChange={handleCambioFormPedido}
+              className="form-control"
+              placeholder="0"
+            />
+            <span className="form-hint">
+              Lo que se pagará al entregador por este despacho.
+            </span>
           </div>
 
           {esAdmin && (

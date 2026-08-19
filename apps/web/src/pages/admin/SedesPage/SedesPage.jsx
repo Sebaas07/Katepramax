@@ -26,6 +26,17 @@ const EstadoBadge = ({ activo }) => (
   </span>
 );
 
+const TipoBadge = ({ tipo }) => (
+  <span
+    className={`sed-tipo-badge ${tipo === "Oficina" ? "sed-tipo-badge--oficina" : "sed-tipo-badge--bodega"}`}
+  >
+    <span className="material-symbols-outlined" aria-hidden="true">
+      {tipo === "Oficina" ? "storefront" : "warehouse"}
+    </span>
+    {tipo === "Oficina" ? "Oficina" : "Bodega"}
+  </span>
+);
+
 const SedesPage = () => {
   const { esAdmin, isAuthenticated, isSessionChecked } = useAuth();
 
@@ -37,6 +48,8 @@ const SedesPage = () => {
   const [sedeSel, setSedeSel] = useState(null);
   const [sedeAToggle, setSedeAToggle] = useState(null);
   const [nombre, setNombre] = useState("");
+  const [tipo, setTipo] = useState("Bodega");
+  const [bodegaId, setBodegaId] = useState("");
   const [errorNombre, setErrorNombre] = useState("");
 
   const cargarSedes = useCallback(async () => {
@@ -66,6 +79,8 @@ const SedesPage = () => {
   const abrirCrear = useCallback(() => {
     setSedeSel(null);
     setNombre("");
+    setTipo("Bodega");
+    setBodegaId("");
     setErrorNombre("");
     setModalAbierto(true);
   }, []);
@@ -73,6 +88,8 @@ const SedesPage = () => {
   const abrirEditar = useCallback((sede) => {
     setSedeSel(sede);
     setNombre(sede.nombre ?? "");
+    setTipo(sede.tipo ?? "Bodega");
+    setBodegaId(sede.bodegaId != null ? String(sede.bodegaId) : "");
     setErrorNombre("");
     setModalAbierto(true);
   }, []);
@@ -81,6 +98,8 @@ const SedesPage = () => {
     setModalAbierto(false);
     setSedeSel(null);
     setNombre("");
+    setTipo("Bodega");
+    setBodegaId("");
     setErrorNombre("");
   }, []);
 
@@ -92,13 +111,18 @@ const SedesPage = () => {
       return;
     }
 
+    const payload = { nombre: nombreFinal, tipo };
+    if (tipo === "Oficina" && bodegaId) {
+      payload.bodegaId = Number(bodegaId);
+    }
+
     setGuardando(true);
     try {
       if (sedeSel) {
-        await sedesService.actualizarSede(sedeSel.id, { nombre: nombreFinal });
+        await sedesService.actualizarSede(sedeSel.id, payload);
         toast.success("Sede actualizada correctamente.");
       } else {
-        await sedesService.crearSede({ nombre: nombreFinal });
+        await sedesService.crearSede(payload);
         toast.success("Sede creada correctamente.");
       }
       cerrarModal();
@@ -108,7 +132,7 @@ const SedesPage = () => {
     } finally {
       setGuardando(false);
     }
-  }, [esAdmin, nombre, sedeSel, cerrarModal, cargarSedes]);
+  }, [esAdmin, nombre, tipo, bodegaId, sedeSel, cerrarModal, cargarSedes]);
 
   const abrirModalConfirmToggle = useCallback((sede) => {
     setSedeAToggle(sede);
@@ -145,6 +169,8 @@ const SedesPage = () => {
     () => [
       { campo: "id", label: "ID", tipo: "texto" },
       { campo: "nombre", label: "Nombre", tipo: "texto" },
+      { campo: "tipo", label: "Tipo", tipo: "texto" },
+      { campo: "bodega", label: "Bodega", tipo: "texto" },
       { campo: "activo", label: "Estado", tipo: "booleano" },
       { campo: "creadoEn", label: "Fecha de creación", tipo: "fecha" },
     ],
@@ -171,6 +197,14 @@ const SedesPage = () => {
   const renderCeldaCustom = useCallback((fila, columna) => {
     if (columna.campo === "activo") {
       return <EstadoBadge activo={fila.activo} />;
+    }
+    if (columna.campo === "tipo") {
+      return <TipoBadge tipo={fila.tipo} />;
+    }
+    if (columna.campo === "bodega") {
+      return fila.bodegaId
+        ? <span className="sed-bodega-celda">{fila.bodega?.nombre ?? `#${fila.bodegaId}`}</span>
+        : <span className="sed-bodega-celda sed-bodega-celda--vacio">—</span>;
     }
     if (columna.campo === "creadoEn") {
       return formatFecha(fila.creadoEn);
@@ -273,11 +307,53 @@ const SedesPage = () => {
                 setErrorNombre("");
               }}
               className="form-control"
-              placeholder="Ej: Medellín, Cali, Barranquilla..."
+              placeholder="Ej: Villavicencio Centro, Medellín..."
               autoComplete="off"
             />
             {errorNombre && <span className="form-error">{errorNombre}</span>}
           </div>
+
+          <div className="form-group">
+            <label htmlFor="sed-tipo">Tipo de sede *</label>
+            <select
+              id="sed-tipo"
+              name="tipo"
+              value={tipo}
+              onChange={(e) => {
+                setTipo(e.target.value);
+                if (e.target.value !== "Oficina") setBodegaId("");
+              }}
+              className="form-control"
+            >
+              <option value="Bodega">Bodega</option>
+              <option value="Oficina">Oficina</option>
+            </select>
+          </div>
+
+          {tipo === "Oficina" && (
+            <div className="form-group">
+              <label htmlFor="sed-bodega">Bodega de la oficina</label>
+              <select
+                id="sed-bodega"
+                name="bodegaId"
+                value={bodegaId}
+                onChange={(e) => setBodegaId(e.target.value)}
+                className="form-control"
+              >
+                <option value="">Seleccione una bodega...</option>
+                {sedes
+                  .filter((s) => s.tipo === "Bodega" && s.activo && s.id !== sedeSel?.id)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nombre}
+                    </option>
+                  ))}
+              </select>
+              <span className="form-hint">
+                La oficina verá y despachará los envíos de esta bodega.
+              </span>
+            </div>
+          )}
         </div>
       </Modal>
 

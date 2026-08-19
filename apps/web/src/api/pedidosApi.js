@@ -43,10 +43,15 @@ const pedidosApi = {
      return response.data;
    },
 
-   obtenerHistorial: async (pedidoId) => {
-     const response = await clienteApi.get(`/pedidos/${pedidoId}/historial`);
-     return response.data;
-   },
+  obtenerHistorial: async (pedidoId) => {
+    const response = await clienteApi.get(`/pedidos/${pedidoId}/historial`);
+    return response.data;
+  },
+
+  obtenerPendientesCount: async () => {
+    const response = await clienteApi.get("/pedidos/pendientes-count");
+    return response.data;
+  },
 
    // Endpoint público (QR de validación de la factura)
    obtenerFactura: async (pedidoId) => {

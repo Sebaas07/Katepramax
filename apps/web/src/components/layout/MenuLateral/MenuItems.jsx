@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import envioService from "@/services/envio.service";
+import pedidosService from "@/services/pedidos.service";
 import SidebarLink from "./SidebarLink";
 import "./MenuItems.css";
 
@@ -33,44 +34,39 @@ const MENU = [
     path:  "/inventario",
     label: "Inventario",
     icon:  "inventory_2",
-    roles: ["Admin", "AdminBogota", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
   },
   {
     path:  "/productos",
     label: "Productos",
     icon:  "category",
-    roles: ["Admin", "AdminBogota"],
+    roles: ["Admin", "AdminBogota", "Oficinista"],
   },
   {
     path:  "/distribucion",
     label: "Distribución y Entregas",
     icon:  "sync_alt",
     roles: ["Admin", "AdminBogota", "Oficinista", "Bodega"],
+    notificablePedidos: true,
   },
   {
     path:  "/envios",
     label: "Envíos entre Sedes",
     icon:  "local_shipping",
-    roles: ["Admin", "AdminBogota"],
+    roles: ["Admin", "AdminBogota", "Oficinista"],
     notificable: true,
-  },
-  {
-    path:  "/proveedores",
-    label: "Proveedores",
-    icon:  "conveyor_belt",
-    roles: ["Admin", "AdminBogota"],
   },
   {
     path:  "/clientes",
     label: "Clientes",
     icon:  "people",
-    roles: ["Admin", "AdminBogota"],
+    roles: ["Admin", "AdminBogota", "Oficinista"],
   },
   {
     path:  "/contabilidad",
     label: "Contabilidad",
     icon:  "account_balance",
-    roles: ["Admin", "AdminBogota"],
+    roles: ["Admin", "AdminBogota", "Oficinista"],
   },
   // Sección Admin
   {
@@ -101,10 +97,11 @@ export default function MenuItems({ cerrar }) {
   const { usuario, esAdminBogota, isAuthenticated, isSessionChecked } = useAuth();
   const rol = usuario?.rol ?? "";
   const [enviosPendientes, setEnviosPendientes] = useState(0);
+  const [pedidosPendientes, setPedidosPendientes] = useState(0);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    if (!["Admin", "AdminBogota"].includes(rol)) return;
+    if (!["Admin", "AdminBogota", "Oficinista"].includes(rol)) return;
 
     let activo = true;
     const cargar = () => {
@@ -121,11 +118,37 @@ export default function MenuItems({ cerrar }) {
     };
   }, [isSessionChecked, isAuthenticated, rol]);
 
+  // Notificación de pedidos pendientes por asignar: cuando una oficina crea
+  // un pedido, la Bodega/Oficinista ve el contador aquí para asignar entregador.
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+    if (!["Admin", "AdminBogota", "Oficinista", "Bodega"].includes(rol)) return;
+
+    let activo = true;
+    const cargar = () => {
+      pedidosService.obtenerPendientesCount().then((n) => {
+        if (activo) setPedidosPendientes(n);
+      });
+    };
+    cargar();
+    const id = window.setInterval(cargar, 60000);
+    return () => {
+      activo = false;
+      window.clearInterval(id);
+    };
+  }, [isSessionChecked, isAuthenticated, rol]);
+
   const menuFiltrado = MENU.filter((item) => item.roles.includes(rol));
 
   // Separar sección admin del resto para mostrar un divisor
   const menuGeneral = menuFiltrado.filter((i) => i.seccion !== "admin");
   const menuAdmin   = menuFiltrado.filter((i) => i.seccion === "admin");
+
+  const badgeDe = (item) => {
+    if (item.notificable) return enviosPendientes;
+    if (item.notificablePedidos) return pedidosPendientes;
+    return 0;
+  };
 
   return (
     <>
@@ -137,7 +160,7 @@ export default function MenuItems({ cerrar }) {
           to={item.path}
           activo={location.pathname === item.path}
           onClick={cerrar}
-          badge={item.notificable ? enviosPendientes : 0}
+          badge={badgeDe(item)}
         />
       ))}
 

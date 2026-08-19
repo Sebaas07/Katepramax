@@ -47,11 +47,13 @@ const ROLES = {
   // Pedidos + asignaciones (Oficinista gestiona)
   PEDIDOS: ["Admin", "AdminBogota", "Oficinista"],
   // Solo lectura para Bodega: inventario + reportes + entrega (distribución)
-  CONSULTA: ["Admin", "AdminBogota", "Bodega"],
+  CONSULTA: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
   // Distribución/entregas: incluye a Oficinista que sigue el flujo
   ENTREGAS: ["Admin", "AdminBogota", "Oficinista", "Bodega"],
   // Módulos de gestión solo Admin/AdminBogota
   GESTION: ["Admin", "AdminBogota"],
+  // Gestión de oficina: catálogo, clientes, envíos y contabilidad
+  OFICINA: ["Admin", "AdminBogota", "Oficinista"],
   ENTREGADOR: ["Entregador"],
 };
 
@@ -101,7 +103,7 @@ const AppRouter = () => (
           <Route path="/pedidos" element={<PedidosPage />} />
         </Route>
 
-        {/* Consulta sin escritura (Bodega lee inventario y reportes) */}
+        {/* Consulta sin escritura (Bodega/Oficinista lee inventario y reportes) */}
         <Route element={<RequireRole roles={ROLES.CONSULTA} />}>
           <Route path="/inventario" element={<InventarioPage />} />{" "}
         </Route>
@@ -113,6 +115,11 @@ const AppRouter = () => (
 
         {/* Módulos de gestión: Admin + AdminBogota */}
         <Route element={<RequireRole roles={ROLES.GESTION} />}>
+          <Route path="/proveedores" element={<ProveedoresPage />} />
+        </Route>
+
+        {/* Gestión de oficina: catálogo, clientes, envíos y contabilidad */}
+        <Route element={<RequireRole roles={ROLES.OFICINA} />}>
           <Route path="/productos" element={<ProductosPage />} />
           <Route
             path="/envios"
@@ -123,9 +130,12 @@ const AppRouter = () => (
             }
           />
           <Route path="/clientes" element={<ClientesPage />} />
-          <Route path="/clientes/cartera" element={<CarteraClientesPage />} />
-          <Route path="/proveedores" element={<ProveedoresPage />} />
           <Route path="/contabilidad" element={<ContabilidadPage />} />
+        </Route>
+
+        {/* Cartera: solo Admin + AdminBogota */}
+        <Route element={<RequireRole roles={ROLES.GESTION} />}>
+          <Route path="/clientes/cartera" element={<CarteraClientesPage />} />
         </Route>
 
         {/* Solo Admin */}

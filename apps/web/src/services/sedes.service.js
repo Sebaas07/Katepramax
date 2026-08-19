@@ -18,7 +18,12 @@ const sedesService = {
     try {
       const nombre = limpiarTexto(datos.nombre);
       if (!nombre) throw new Error("El nombre de la sede es obligatorio.");
-      return await sedesApi.crearSede({ nombre });
+
+      const payload = { nombre, tipo: datos.tipo === "Oficina" ? "Oficina" : "Bodega" };
+      if (datos.bodegaId != null && datos.bodegaId !== "") {
+        payload.bodegaId = Number(datos.bodegaId);
+      }
+      return await sedesApi.crearSede(payload);
     } catch (error) {
       console.error("sedesService.crearSede:", error);
       throw error;
@@ -36,6 +41,14 @@ const sedesService = {
         payload.nombre = nombre;
       }
       if (datos.activo !== undefined) payload.activo = Boolean(datos.activo);
+      if (datos.tipo !== undefined) {
+        payload.tipo = datos.tipo === "Oficina" ? "Oficina" : "Bodega";
+      }
+      if (datos.bodegaId !== undefined) {
+        payload.bodegaId = datos.bodegaId === null || datos.bodegaId === ""
+          ? null
+          : Number(datos.bodegaId);
+      }
 
       return await sedesApi.actualizarSede(id, payload);
     } catch (error) {

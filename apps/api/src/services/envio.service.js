@@ -32,13 +32,28 @@ function puedeGestionar(usuario) {
   return (
     usuario?.rol === "Admin" ||
     usuario?.rol === "Bodega" ||
-    usuario?.rol === "AdminBogota"
+    usuario?.rol === "AdminBogota" ||
+    usuario?.rol === "Oficinista"
   );
 }
 
 const envioService = (app) => ({
   repo: envioRepo(app.prisma),
   prisma: app.prisma,
+
+  /**
+   * Sede "operativa" de un usuario para el módulo de envíos.
+   * Las oficinas (tipo Oficina) pertenecen a una bodega (bodegaId), así que
+   * su sede operativa es la bodega: ven y confirman los envíos de su bodega.
+   * Se resuelve en el auth middleware y viaja en `usuario.sedesOperativas`;
+   * aquí solo se toma la primera sede cuando aplica.
+   */
+  sedeOperativa(usuario) {
+    const sedes = usuario?.sedesOperativas;
+    if (Array.isArray(sedes) && sedes.length === 1) return sedes[0];
+    if (usuario?.sedeTipo === "Oficina" && usuario?.bodegaId) return usuario.bodegaId;
+    return usuario?.sedeId ?? null;
+  },
 
   /**
    * Crea una guía de envío hacia una o varias sedes destino.
@@ -224,10 +239,11 @@ const envioService = (app) => ({
     if (query.estado) where.estado = query.estado;
 
     if (usuario.rol !== "Admin") {
-      if (query.direccion === "enviados") where.sedeOrigenId = usuario.sedeId;
-      else if (query.direccion === "recibidos") where.sedeDestinoId = usuario.sedeId;
+      const sedeId = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
+      if (query.direccion === "enviados") where.sedeOrigenId = sedeId;
+      else if (query.direccion === "recibidos") where.sedeDestinoId = sedeId;
       else {
-        where.OR = [{ sedeOrigenId: usuario.sedeId }, { sedeDestinoId: usuario.sedeId }];
+        where.OR = [{ sedeOrigenId: sedeId }, { sedeDestinoId: sedeId }];
       }
     } else {
       if (query.direccion === "enviados" && query.sedeId) where.sedeOrigenId = Number(query.sedeId);
@@ -250,7 +266,9 @@ const envioService = (app) => ({
       throw new AppError("No tienes permiso para ver envíos.", 403);
     }
     const where = { estado: "Pendiente" };
-    if (usuario.rol !== "Admin") where.sedeDestinoId = usuario.sedeId;
+    if (usuario.rol !== "Admin") {
+      where.sedeDestinoId = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
+    }
     return this.repo.contar(where);
   },
 
@@ -261,10 +279,11 @@ const envioService = (app) => ({
     const envio = await this.repo.buscarPorId(id);
     if (!envio) throw new AppError(`Envío ${id} no encontrado.`, 404);
 
+    const sedeOperativa = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
     if (
       usuario.rol !== "Admin" &&
-      envio.sedeOrigenId !== usuario.sedeId &&
-      envio.sedeDestinoId !== usuario.sedeId
+      envio.sedeOrigenId !== sedeOperativa &&
+      envio.sedeDestinoId !== sedeOperativa
     ) {
       throw new AppError("No tienes permiso para ver este envío.", 403);
     }
@@ -286,7 +305,8 @@ const envioService = (app) => ({
     const envio = await this.repo.buscarPorId(id);
     if (!envio) throw new AppError(`Envío ${id} no encontrado.`, 404);
 
-    if (envio.sedeDestinoId !== usuario.sedeId) {
+    const sedeDestino = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
+    if (envio.sedeDestinoId !== sedeDestino) {
       throw new AppError("Solo la sede destino puede confirmar la recepción de este envío.", 403);
     }
     if (envio.estado !== "Pendiente") {
@@ -417,7 +437,8 @@ const envioService = (app) => ({
     const envio = await this.repo.buscarPorId(id);
     if (!envio) throw new AppError(`Envío ${id} no encontrado.`, 404);
 
-    if (envio.sedeOrigenId !== usuario.sedeId) {
+    const sedeOrigen = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
+    if (envio.sedeOrigenId !== sedeOrigen) {
       throw new AppError("Solo la sede que originó el envío puede cancelarlo.", 403);
     }
     if (envio.estado !== "Pendiente") {

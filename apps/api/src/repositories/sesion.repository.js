@@ -60,6 +60,14 @@ const sesionRepository = (prisma) => {
               activo: true,
               sedeId: true,
               usuario: true,
+              sede: {
+                select: {
+                  id: true,
+                  tipo: true,
+                  bodegaId: true,
+                  oficinas: { select: { id: true } },
+                },
+              },
             },
           },
         },

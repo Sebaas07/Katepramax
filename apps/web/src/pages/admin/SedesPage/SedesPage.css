@@ -112,6 +112,48 @@
   border: 1px solid rgba(255, 120, 110, 0.3);
 }
 
+/* ─── Tipo badge ─────────────────────────────────────────────*/
+.sed-tipo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sed-tipo-badge .material-symbols-outlined { font-size: 15px; }
+
+.sed-tipo-badge--bodega {
+  color: var(--aged-gold);
+  background: rgba(197, 179, 88, 0.12);
+  border: 1px solid rgba(197, 179, 88, 0.35);
+}
+
+.sed-tipo-badge--oficina {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.12);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+}
+
+.sed-bodega-celda {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface);
+}
+
+.sed-bodega-celda--vacio { color: var(--on-surface-variant); opacity: 0.6; }
+
+.form-hint {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  line-height: 1.4;
+}
+
 /* ─── Tabla ──────────────────────────────────────────────────*/
 .tab-content {
   background: var(--surface-container);

@@ -6,13 +6,23 @@ function toNum(v) { return Number(v ?? 0); }
 // Reglas de acceso (coherentes con injectSedeFilter en auth.middleware.js):
 //   Admin               → ve todas las sedes, o puede filtrar por una en particular
 //   Bodega / AdminBogota → solo su propia sede, sin excepción
+/**
+ * Sedes visibles para un usuario. Las oficinas (tipo Oficina) pertenecen a
+ * una bodega (bodegaId); el set se resuelve en el auth middleware
+ * (`usuario.sedesOperativas`) para que un Oficinista vea los datos de su
+ * oficina y de la bodega que la alimenta, y una Bodega vea sus oficinas.
+ */
 async function getSedes(prisma, usuario, sedeIdFiltro) {
   if (usuario && usuario.rol !== "Admin") {
-    const sede = await prisma.sede.findUnique({
-      where:  { id: usuario.sedeId },
+    const sedesIds = Array.isArray(usuario.sedesOperativas)
+      ? usuario.sedesOperativas
+      : [usuario.sedeId];
+    const sedes = await prisma.sede.findMany({
+      where: { id: { in: sedesIds } },
       select: { id: true, nombre: true },
     });
-    return sede ? [sede] : [{ id: usuario.sedeId, nombre: `Sede ${usuario.sedeId}` }];
+    if (sedes.length > 0) return sedes;
+    return sedesIds.map((id) => ({ id, nombre: `Sede ${id}` }));
   }
 
   if (sedeIdFiltro) {
@@ -28,7 +38,14 @@ async function getSedes(prisma, usuario, sedeIdFiltro) {
 
 function sedeWhere(usuario, sedeIdFiltro) {
   if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
-    return { sedeId: usuario.sedeId };
+    const sedesIds = Array.isArray(usuario.sedesOperativas)
+      ? usuario.sedesOperativas
+      : [usuario.sedeId];
+    // Con una sola sede queda `{ sedeId }` (compatible con el flujo previo);
+    // con varias (bodega + oficinas) se usa `{ sedeId: { in } }`.
+    return sedesIds.length === 1
+      ? { sedeId: sedesIds[0] }
+      : { sedeId: { in: sedesIds } };
   }
   // Admin: acceso total, con filtro opcional de una sede específica.
   if (sedeIdFiltro) {
@@ -213,19 +230,20 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
   hasta.setUTCHours(23, 59, 59, 999);
 
   const whereSede = sedeWhere(usuario);
-  const sedeFiltro = sedeId ? Number(sedeId) : whereSede.sedeId;
+  const sedeFiltro = sedeId ? { sedeId: Number(sedeId) } : whereSede.sedeId ? { sedeId: whereSede.sedeId } : undefined;
 
   const asignaciones = await prisma.asignacionEntrega.findMany({
     where: {
       estado: "Entregado",
       fechaConfirmada: { gte: desde, lte: hasta },
-      pedido: sedeFiltro ? { sedeId: sedeFiltro } : undefined,
+      pedido: sedeFiltro,
     },
     select: {
       montoCobrado: true,
       metodoPago: true,
       entregadorId: true,
       entregador: { select: { id: true, nombreCompleto: true } },
+      pedido: { select: { valorDomicilio: true } },
     },
   });
 
@@ -240,12 +258,14 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
         total: 0,
         efectivo: 0,
         cuentas: 0,
+        valorDomicilio: 0,
       });
     }
     const fila = porEntregador.get(key);
     const monto = toNum(a.montoCobrado);
     fila.pedidos += 1;
     fila.total += monto;
+    fila.valorDomicilio += toNum(a.pedido?.valorDomicilio);
     if (a.metodoPago === "Efectivo") fila.efectivo += monto;
     if (a.metodoPago === "Transferencia") fila.cuentas += monto;
   }
@@ -257,6 +277,7 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
     fechaFin,
     detalle,
     total: detalle.reduce((acc, f) => acc + f.total, 0),
+    totalDomicilios: detalle.reduce((acc, f) => acc + f.valorDomicilio, 0),
     pedidos: detalle.reduce((acc, f) => acc + f.pedidos, 0),
   };
 }
