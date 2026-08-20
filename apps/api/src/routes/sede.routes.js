@@ -1,4 +1,4 @@
-const { verifyToken, requireRole, soloAdmin } = require("../middlewares/auth.middleware");
+const { verifyToken, requireRole, adminGestion } = require("../middlewares/auth.middleware");
 const ctrl = require("../controllers/sede.controller");
 const schemas = require("../schemas/sede.schema");
 
@@ -9,17 +9,17 @@ async function sedeRoutes(app) {
     preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Oficinista", "Bodega", "Entregador"])],
   }, ctrl.listar);
 
-  // Crear sede — solo Admin
+  // Crear sede — Admin + AdminBogota
   app.post("/sedes", {
     schema:        schemas.crear,
-    preValidation: soloAdmin.preValidation,
+    preValidation: adminGestion.preValidation,
     handler:       ctrl.crear,
   });
 
-  // Editar sede (renombrar / activar-desactivar) — solo Admin
+  // Editar sede (renombrar / activar-desactivar) — Admin + AdminBogota
   app.patch("/sedes/:id", {
     schema:        schemas.editar,
-    preValidation: soloAdmin.preValidation,
+    preValidation: adminGestion.preValidation,
     handler:       ctrl.editar,
   });
 }

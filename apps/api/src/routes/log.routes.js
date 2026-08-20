@@ -1,21 +1,21 @@
 const ctrl = require("../controllers/log.controller");
 const schemas = require("../schemas/log.schema");
-const { soloAdmin } = require("../middlewares/auth.middleware");
+const { adminGestion } = require("../middlewares/auth.middleware");
 
 /**
  * log.routes.js
  *
- * GET /logs          → solo Admin — historial de acciones de los usuarios
- * GET /logs/acciones → solo Admin — tipos de acción distintos (para el filtro)
+ * GET /logs          → Admin + AdminBogota — historial de acciones
+ * GET /logs/acciones → Admin + AdminBogota — tipos de acción (filtro)
  */
 async function logRoutes(app) {
   app.get("/logs",
-    { schema: schemas.listarLogsSchema, ...soloAdmin },
+    { schema: schemas.listarLogsSchema, ...adminGestion },
     ctrl.listar,
   );
 
   app.get("/logs/acciones",
-    { schema: schemas.listarAccionesSchema, ...soloAdmin },
+    { schema: schemas.listarAccionesSchema, ...adminGestion },
     ctrl.listarAcciones,
   );
 }

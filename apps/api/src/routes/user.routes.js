@@ -7,7 +7,7 @@ const {
   desactivar,
   activar,
 } = require("../controllers/user.controller");
-const { soloAdmin, asignarEntregador } = require("../middlewares/auth.middleware");
+const { adminGestion, asignarEntregador } = require("../middlewares/auth.middleware");
 const {
   createUsuarioBody,
   updateUsuarioBody,
@@ -16,7 +16,8 @@ const {
 } = require("../schemas/usuario.schema");
 
 async function userRoutes(app) {
-  const preValidation = soloAdmin.preValidation;
+  // Admin + AdminBogota pueden gestionar usuarios
+  const preValidation = adminGestion.preValidation;
 
   // GET /api/usuarios
   app.get("/usuarios", {

@@ -16,7 +16,7 @@ const MENU = [
     path:  "/dashboard",
     label: "Dashboard",
     icon:  "dashboard",
-    roles: ["Admin", "AdminBogota", "Bodega", "Entregador"],
+    roles: ["Admin", "AdminBogota", "Bodega", "Oficinista", "Entregador"],
   },
   {
     path:  "/entregas",
@@ -28,7 +28,7 @@ const MENU = [
     path:  "/pedidos",
     label: "Pedidos",
     icon:  "shopping_cart",
-    roles: ["Admin", "AdminBogota"],
+    roles: ["Admin", "AdminBogota", "Oficinista"],
   },
   {
     path:  "/inventario",
@@ -74,26 +74,26 @@ const MENU = [
     icon:  "account_balance",
     roles: ["Admin", "AdminBogota"],
   },
-  // Sección Admin
+  // Sección Admin — visible también para AdminBogota
   {
     path:  "/admin/usuarios",
     label: "Usuarios",
     icon:  "group",
-    roles: ["Admin"],
+    roles: ["Admin", "AdminBogota"],
     seccion: "admin",
   },
   {
     path:  "/admin/sedes",
     label: "Sedes",
     icon:  "location_city",
-    roles: ["Admin"],
+    roles: ["Admin", "AdminBogota"],
     seccion: "admin",
   },
   {
     path:  "/admin/logs",
     label: "Historial de Acciones",
     icon:  "history",
-    roles: ["Admin"],
+    roles: ["Admin", "AdminBogota"],
     seccion: "admin",
   }
 ];

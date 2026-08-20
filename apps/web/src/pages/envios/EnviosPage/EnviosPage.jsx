@@ -24,7 +24,11 @@ const EnviosPage = () => {
   const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
   const puedeCrear = esAdmin || esBodega;
 
-  const [tab, setTab] = useState("recibidos");
+  // Sede operativa: para Bodega (oficina) es la bodega padre; para el resto, sedeId
+  const sedeOperativaId = Number(usuario?.bodegaId ?? usuario?.sedeId ?? 0) || null;
+
+  // Admin general arranca en "todos"; el resto en "recibidos"
+  const [tab, setTab] = useState(esAdmin ? "todos" : "recibidos");
   const [envios, setEnvios] = useState([]);
   const [sedes, setSedes] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -54,7 +58,13 @@ const EnviosPage = () => {
   const cargarEnvios = useCallback(async () => {
     setCargando(true);
     try {
-      const data = await envioService.obtenerEnvios({ direccion: tab });
+      const filtros = {};
+      if (tab === "todos") {
+        // sin direccion → backend devuelve todos (solo Admin)
+      } else {
+        filtros.direccion = tab;
+      }
+      const data = await envioService.obtenerEnvios(filtros);
       setEnvios(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error("Error al cargar envíos: " + err.message);
@@ -76,7 +86,7 @@ const EnviosPage = () => {
   // ── Modal: nuevo envío ─────────────────────────────────────
   const abrirNuevo = () => {
     setFormNuevo({
-      sedeOrigenId: esBodega ? String(usuario.bodegaId ?? usuario.sedeId ?? "") : "",
+      sedeOrigenId: esBodega ? String(sedeOperativaId ?? usuario?.sedeId ?? "") : "",
       sedesDestinoIds: [],
       detalles: [lineaVacia()],
       observaciones: "",
@@ -188,13 +198,16 @@ const EnviosPage = () => {
     creadorNombre: e.creador?.nombreCompleto ?? "—",
   }));
 
+  // Compara contra la sede operativa (bodega), no la oficina del usuario
   const puedeConfirmar = (envio) =>
     envio.estado === "Pendiente" &&
-    Number(envio.sedeDestinoId) === Number(usuario?.sedeId);
+    sedeOperativaId != null &&
+    Number(envio.sedeDestinoId) === sedeOperativaId;
 
   const puedeCancelar = (envio) =>
     envio.estado === "Pendiente" &&
-    Number(envio.sedeOrigenId) === Number(usuario?.sedeId);
+    sedeOperativaId != null &&
+    Number(envio.sedeOrigenId) === sedeOperativaId;
 
   const handleCancelarEnvio = async (envio) => {
     const destino = envio.sedeDestino?.nombre ?? `sede ${envio.sedeDestinoId}`;
@@ -248,6 +261,16 @@ const EnviosPage = () => {
       </div>
 
       <div className="env-tabs">
+        {esAdmin && (
+          <button
+            type="button"
+            className={tab === "todos" ? "tab-active" : "tab-btn"}
+            onClick={() => setTab("todos")}
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">list_alt</span>
+            Todos los envíos
+          </button>
+        )}
         <button
           type="button"
           className={tab === "recibidos" ? "tab-active" : "tab-btn"}
@@ -275,7 +298,9 @@ const EnviosPage = () => {
             <p>
               {tab === "recibidos"
                 ? "No tienes envíos pendientes por confirmar."
-                : "No has creado envíos hacia otras sedes."}
+                : tab === "enviados"
+                  ? "No has creado envíos hacia otras sedes."
+                  : "No hay envíos registrados."}
             </p>
           </div>
         ) : (

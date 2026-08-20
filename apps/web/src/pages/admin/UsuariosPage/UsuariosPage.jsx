@@ -166,10 +166,17 @@ const UsuariosPage = () => {
     void cargarSedes();
   }, [isSessionChecked, isAuthenticated]);
 
-  // Sedes permitidas según el rol seleccionado en el formulario
+  // Sedes permitidas según el rol seleccionado en el formulario.
+  // AdminBogota solo puede asignarse a sedes cuyo nombre contenga "Bogotá".
   const sedesPorRol = useMemo(() => {
     const tipos = SEDES_POR_ROL[form.rol] ?? ["Bodega"];
-    return sedes.filter((sede) => tipos.includes(sede.tipo));
+    let filtradas = sedes.filter((sede) => tipos.includes(sede.tipo));
+    if (form.rol === "AdminBogota") {
+      filtradas = filtradas.filter((sede) =>
+        (sede.nombre || "").toLowerCase().includes("bogot"),
+      );
+    }
+    return filtradas;
   }, [sedes, form.rol]);
 
   const usuariosFiltrados = useMemo(() => {

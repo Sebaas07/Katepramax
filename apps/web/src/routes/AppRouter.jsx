@@ -43,9 +43,10 @@ const EnviosPage = lazy(() => import("@/pages/envios/EnviosPage/EnviosPage"));
 
 // ── Roles ─────────────────────────────────────────────────────
 const ROLES = {
+  // AdminBogota también gestiona usuarios, sedes y logs
   ADMIN: ["Admin", "AdminBogota"],
-  // Pedidos: Admin + AdminBogota
-  PEDIDOS: ["Admin", "AdminBogota"],
+  // Pedidos: Admin + AdminBogota + Oficinista
+  PEDIDOS: ["Admin", "AdminBogota", "Oficinista"],
   // Consulta (inventario) para Bodega/Oficinista + Admin/AdminBogota
   CONSULTA: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
   // Catálogo de productos: todos leen, Bodega además crea/edita
@@ -64,12 +65,8 @@ const RootRedirect = () => {
   const { isAuthenticated, isSessionChecked, usuario } = useAuth();
   if (!isSessionChecked) return <AuthLoading />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  const dest =
-    usuario?.rol === "Entregador"
-      ? "/entregas"
-      : usuario?.rol === "Oficinista"
-        ? "/inventario"
-        : "/dashboard";
+  // Dashboard visible para todos; solo Entregador va directo a sus entregas
+  const dest = usuario?.rol === "Entregador" ? "/entregas" : "/dashboard";
   return <Navigate to={dest} replace />;
 };
 

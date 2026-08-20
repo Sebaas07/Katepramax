@@ -238,10 +238,10 @@ const envioService = (app) => ({
 
   /**
    * Lista envíos visibles para el usuario.
-   * query: { direccion?: "enviados"|"recibidos", estado?, skip?, take? }
-   *  - "enviados"  → envíos que salieron de mi sede
-   *  - "recibidos" → envíos que llegan a mi sede
-   *  - sin indicar → ambos (para Admin: todos)
+   * query: { direccion?: "enviados"|"recibidos"|"todos", estado?, sedeId?, skip?, take? }
+   *  - "enviados"  → envíos que salieron de mi sede (o sede indicada)
+   *  - "recibidos" → envíos que llegan a mi sede (o sede indicada)
+   *  - "todos" / sin indicar → para Admin: todos; para otros: origen o destino = mi sede
    */
   async listar(query, usuario) {
     if (!puedeGestionar(usuario)) {
@@ -251,18 +251,41 @@ const envioService = (app) => ({
     const where = {};
     if (query.estado) where.estado = query.estado;
 
-    if (usuario.rol !== "Admin") {
-      const sedeId = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
-      if (query.direccion === "enviados") where.sedeOrigenId = sedeId;
-      else if (query.direccion === "recibidos") where.sedeDestinoId = sedeId;
-      else {
-        where.OR = [{ sedeOrigenId: sedeId }, { sedeDestinoId: sedeId }];
+    const sedeOperativa = this.sedeOperativa(usuario) ?? usuario.sedeId;
+
+    if (usuario.rol === "Admin") {
+      // Admin general: puede ver todos, o filtrar por dirección/sede
+      if (query.direccion === "enviados") {
+        // Solo los que él originó (por creador) o, si se pasa sedeId, de esa sede
+        if (query.sedeId) {
+          where.sedeOrigenId = Number(query.sedeId);
+        } else if (sedeOperativa) {
+          where.sedeOrigenId = sedeOperativa;
+        } else {
+          // Sin sede propia: "enviados por mí" = creados por este usuario
+          where.creadoPorId = usuario.id;
+        }
+      } else if (query.direccion === "recibidos") {
+        if (query.sedeId) {
+          where.sedeDestinoId = Number(query.sedeId);
+        } else if (sedeOperativa) {
+          where.sedeDestinoId = sedeOperativa;
+        } else {
+          // Admin sin sede no tiene envíos "por confirmar" propios
+          where.sedeDestinoId = -1;
+        }
+      } else if (query.sedeId) {
+        where.OR = [
+          { sedeOrigenId: Number(query.sedeId) },
+          { sedeDestinoId: Number(query.sedeId) },
+        ];
       }
+      // direccion === "todos" o sin direccion → sin filtro extra (ve todo)
     } else {
-      if (query.direccion === "enviados" && query.sedeId) where.sedeOrigenId = Number(query.sedeId);
-      else if (query.direccion === "recibidos" && query.sedeId) where.sedeDestinoId = Number(query.sedeId);
-      else if (query.sedeId) {
-        where.OR = [{ sedeOrigenId: Number(query.sedeId) }, { sedeDestinoId: Number(query.sedeId) }];
+      if (query.direccion === "enviados") where.sedeOrigenId = sedeOperativa;
+      else if (query.direccion === "recibidos") where.sedeDestinoId = sedeOperativa;
+      else {
+        where.OR = [{ sedeOrigenId: sedeOperativa }, { sedeDestinoId: sedeOperativa }];
       }
     }
 
@@ -279,8 +302,14 @@ const envioService = (app) => ({
       throw new AppError("No tienes permiso para ver envíos.", 403);
     }
     const where = { estado: "Pendiente" };
-    if (usuario.rol !== "Admin") {
-      where.sedeDestinoId = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
+    const sedeOperativa = this.sedeOperativa(usuario) ?? usuario.sedeId;
+
+    if (usuario.rol === "Admin") {
+      // Admin general solo ve pendientes de SU sede (si tiene); si no, 0
+      if (!sedeOperativa) return 0;
+      where.sedeDestinoId = sedeOperativa;
+    } else {
+      where.sedeDestinoId = sedeOperativa;
     }
     return this.repo.contar(where);
   },
