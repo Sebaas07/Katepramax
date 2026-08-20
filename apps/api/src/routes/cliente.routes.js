@@ -1,6 +1,6 @@
 const ctrl    = require("../controllers/cliente.controller");
 const schemas = require("../schemas/cliente.schema");
-const { adminOBodega, soloAdmin } = require("../middlewares/auth.middleware");
+const { adminOBodega, adminGestion } = require("../middlewares/auth.middleware");
 
 async function clienteRoutes(app) {
   // Admin, AdminBogota y Bodega (Bodega solo su propia sede — filtro en cliente.service.js)
@@ -10,8 +10,8 @@ async function clienteRoutes(app) {
   app.post("/clientes",         { schema: schemas.crearCliente,    ...adminOBodega }, ctrl.crear);
   app.patch("/clientes/:id",    { schema: schemas.editarCliente,   ...adminOBodega }, ctrl.actualizar);
 
-  // Desactivar: solo Admin
-  app.delete("/clientes/:id",   { schema: schemas.desactivarCliente, ...soloAdmin  }, ctrl.desactivar);
+  // Desactivar: Admin y AdminBogota
+  app.delete("/clientes/:id",   { schema: schemas.desactivarCliente, ...adminGestion  }, ctrl.desactivar);
 
   // Abonar a deuda: Admin, AdminBogota y Bodega
   app.post("/clientes/:id/abonar", { schema: schemas.abonarCliente, ...adminOBodega }, ctrl.abonar);

@@ -45,11 +45,18 @@ const sesionBodegaMock = {
   usuario: { ...sesionAdminMock.usuario, rol: "Bodega" },
 };
 
+const sesionAdminBogotaMock = {
+  ...sesionAdminMock,
+  id: 12,
+  usuario: { ...sesionAdminMock.usuario, rol: "AdminBogota" },
+};
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
 let app;
 let tokenAdmin;
 let tokenBodega;
+let tokenAdminBogota;
 
 beforeAll(async () => {
   app = await buildApp();
@@ -58,6 +65,7 @@ beforeAll(async () => {
 
   tokenAdmin = app.jwt.sign({ sesionId: 10 }, { expiresIn: "15m" });
   tokenBodega = app.jwt.sign({ sesionId: 11 }, { expiresIn: "15m" });
+  tokenAdminBogota = app.jwt.sign({ sesionId: 12 }, { expiresIn: "15m" });
 });
 
 afterAll(async () => {
@@ -194,6 +202,37 @@ describe("POST /api/v1/productos", () => {
     });
 
     expect(res.statusCode).toBe(403);
+  });
+
+  it("debería retornar 201 al crear un producto con rol AdminBogota", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminBogotaMock);
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.skuContador.upsert.mockResolvedValue({ prefijo: "NUE", ultimoNumero: 2 });
+    prisma.producto.create.mockResolvedValue({
+      ...productoMock,
+      codigo: 2,
+      sku: "NUE-002",
+    });
+    prisma.producto.findUnique.mockResolvedValue({
+      ...productoMock,
+      codigo: 2,
+      sku: "NUE-002",
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/productos",
+      headers: { authorization: `Bearer ${tokenAdminBogota}` },
+      payload: {
+        descripcion: "Nuevo",
+        precioCosto: 1000,
+        precioVenta: 1500,
+        proveedorId: 1,
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json().sku).toBe("NUE-002");
   });
 
   it("debería retornar 404 si el proveedorId no existe", async () => {

@@ -45,10 +45,26 @@ async function userRoutes(app) {
               id: { type: "integer" },
               nombreCompleto: { type: "string" },
               telefono: { type: "string" },
+              sedeId: { type: "integer" },
               sede: {
                 type: "object",
                 nullable: true,
                 properties: { nombre: { type: "string" } },
+              },
+              entregadorSedes: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    sede: {
+                      type: "object",
+                      properties: {
+                        id: { type: "integer" },
+                        nombre: { type: "string" },
+                      },
+                    },
+                  },
+                },
               },
             },
           },

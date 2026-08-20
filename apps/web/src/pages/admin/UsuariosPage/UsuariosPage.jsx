@@ -28,7 +28,20 @@ const FORM_INICIAL = {
   confirmarContrasena: "",
   rol: "Bodega",
   sedeId: "",
+  sedesIds: [],
   activo: true,
+};
+
+// Tipos de sede permitidos al crear/editar un usuario según su rol.
+//   Admin / AdminBogota → bodegas y oficinas
+//   Bodega / Entregador → solo bodegas
+//   Oficinista          → solo oficinas
+const SEDES_POR_ROL = {
+  Admin:       ["Bodega", "Oficina"],
+  AdminBogota: ["Bodega", "Oficina"],
+  Bodega:      ["Bodega"],
+  Entregador:  ["Bodega"],
+  Oficinista:  ["Oficina"],
 };
 
 const Spinner = () => (
@@ -86,6 +99,7 @@ const normalizeUsuario = (usuario) => ({
   rol: usuario.rol || "—",
   sede: usuario.sede?.nombre || `Sede ${usuario.sedeId || ""}`.trim() || "—",
   sedeId: usuario.sedeId || "",
+  entregadorSedes: Array.isArray(usuario.entregadorSedes) ? usuario.entregadorSedes : [],
   activo: usuario.activo ?? false,
   creadoEn: usuario.creadoEn || usuario.createdAt || null,
 });
@@ -150,6 +164,12 @@ const UsuariosPage = () => {
     void cargarSedes();
   }, [isSessionChecked, isAuthenticated]);
 
+  // Sedes permitidas según el rol seleccionado en el formulario
+  const sedesPorRol = useMemo(() => {
+    const tipos = SEDES_POR_ROL[form.rol] ?? ["Bodega"];
+    return sedes.filter((sede) => tipos.includes(sede.tipo));
+  }, [sedes, form.rol]);
+
   const usuariosFiltrados = useMemo(() => {
     const termino = busqueda.trim().toLowerCase();
 
@@ -189,6 +209,9 @@ const UsuariosPage = () => {
       confirmarContrasena: "",
       rol: seleccionado.rol,
       sedeId: String(seleccionado.sedeId || ""),
+      sedesIds: seleccionado.entregadorSedes
+        .map((item) => item.sedeId)
+        .filter((id) => id != null),
       activo: seleccionado.activo,
     });
     setErrores({});
@@ -247,10 +270,35 @@ const UsuariosPage = () => {
 
   const handleCambioForm = useCallback((event) => {
     const { name, type, value, checked } = event.target;
+
+    if (name === "rol") {
+      // Al cambiar el rol se limpian las sedes (los tipos permitidos cambian)
+      setForm((prev) => ({ ...prev, rol: value, sedeId: "", sedesIds: [] }));
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+  }, []);
+
+  const handleToggleSedeEntregador = useCallback((sedeId) => {
+    const id = Number(sedeId);
+    setForm((prev) => {
+      const yaEsta = prev.sedesIds.includes(id);
+      const sedesIds = yaEsta
+        ? prev.sedesIds.filter((item) => item !== id)
+        : [...prev.sedesIds, id];
+
+      // La bodega principal (sedeId) debe estar dentro de las seleccionadas.
+      let sedeIdForm = prev.sedeId;
+      const sedeActual = Number(prev.sedeId);
+      if (!sedeIdForm || (sedeActual && !sedesIds.includes(sedeActual))) {
+        sedeIdForm = sedesIds.length > 0 ? String(sedesIds[0]) : "";
+      }
+      return { ...prev, sedesIds, sedeId: sedeIdForm };
+    });
   }, []);
 
   const validarFormulario = useCallback(() => {
@@ -275,6 +323,11 @@ const UsuariosPage = () => {
 
     if (!form.sedeId) {
       nuevosErrores.sedeId = "Selecciona una sede.";
+    }
+
+    if (form.rol === "Entregador" && form.sedesIds.length === 0) {
+      nuevosErrores.sedesIds =
+        "Asigna al menos una bodega al entregador.";
     }
 
     if (!usuarioSel && !form.contrasena) {
@@ -319,6 +372,7 @@ const UsuariosPage = () => {
           rol: form.rol,
           sedeId: form.sedeId,
           activo: form.activo,
+          ...(form.rol === "Entregador" ? { sedesIds: form.sedesIds } : {}),
           ...(form.contrasena
             ? {
                 contrasena: form.contrasena,
@@ -336,6 +390,7 @@ const UsuariosPage = () => {
           rol: form.rol,
           sedeId: form.sedeId,
           activo: form.activo,
+          ...(form.rol === "Entregador" ? { sedesIds: form.sedesIds } : {}),
         });
         toast.success("Usuario creado correctamente.");
       }
@@ -619,7 +674,9 @@ const UsuariosPage = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="usr-sede">Sede *</label>
+              <label htmlFor="usr-sede">
+                {form.rol === "Oficinista" ? "Oficina *" : "Bodega *"}
+              </label>
               <select
                 id="usr-sede"
                 name="sedeId"
@@ -627,8 +684,14 @@ const UsuariosPage = () => {
                 onChange={handleCambioForm}
                 className="form-control"
               >
-                <option value="">Selecciona una sede</option>
-                {sedes.map((sede) => (
+                <option value="">
+                  {cargandoSedes
+                    ? "Cargando sedes..."
+                    : form.rol === "Oficinista"
+                      ? "Selecciona una oficina"
+                      : "Selecciona una bodega"}
+                </option>
+                {sedesPorRol.map((sede) => (
                   <option key={sede.id} value={sede.id}>
                     {sede.nombre}
                   </option>
@@ -639,6 +702,42 @@ const UsuariosPage = () => {
               )}
             </div>
           </div>
+
+          {form.rol === "Entregador" && (
+            <div className="form-group">
+              <label>Bodegas asignadas al entregador *</label>
+              <div className="usr-bodegas-grid">
+                {sedesPorRol.map((sede) => {
+                  const idNum = Number(sede.id);
+                  const marcada = form.sedesIds.includes(idNum);
+                  return (
+                    <label
+                      key={sede.id}
+                      className={`usr-bodega-item ${marcada ? "usr-bodega-item--marcada" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={marcada}
+                        onChange={() => handleToggleSedeEntregador(sede.id)}
+                      />
+                      <span>{sede.nombre}</span>
+                      {form.sedeId === String(sede.id) && (
+                        <span className="usr-bodega-principal">
+                          Principal
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+              {errores.sedesIds && (
+                <span className="form-error">{errores.sedesIds}</span>
+              )}
+              <span className="form-hint">
+                La bodega principal es la que el entregador usa por defecto.
+              </span>
+            </div>
+          )}
 
           {!usuarioSel && (
             <div className="form-row">

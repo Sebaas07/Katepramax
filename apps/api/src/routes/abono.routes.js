@@ -1,6 +1,6 @@
 const ctrl    = require("../controllers/abono.controller");
 const schemas = require("../schemas/abono.schema");
-const { adminGestion, adminOBodega, soloAdmin } = require("../middlewares/auth.middleware");
+const { adminGestion, adminOBodega } = require("../middlewares/auth.middleware");
 
 async function abonoRoutes(app) {
   // Estáticas primero
@@ -13,7 +13,7 @@ async function abonoRoutes(app) {
   app.get(   "/abonos",     { schema: schemas.listarAbonos,  ...adminOBodega }, ctrl.listar);
   app.get(   "/abonos/:id", { schema: schemas.obtenerAbono,  ...adminOBodega }, ctrl.obtenerPorId);
   app.patch( "/abonos/:id", { schema: schemas.editarAbono,   ...adminOBodega }, ctrl.editar);
-  app.delete("/abonos/:id", { schema: schemas.eliminarAbono, ...soloAdmin    }, ctrl.eliminar);
+  app.delete("/abonos/:id", { schema: schemas.eliminarAbono, ...adminGestion  }, ctrl.eliminar);
 }
 
 module.exports = abonoRoutes;

@@ -64,6 +64,12 @@ const createUsuarioBody = {
       pattern: "^[0-9+\\-\\s]*$",
     },
     sedeId: { type: "integer", minimum: 1 },
+    sedesIds: {
+      type: "array",
+      items: { type: "integer", minimum: 1 },
+      minItems: 1,
+      description: "Bodegas del entregador (se usa cuando el rol es Entregador).",
+    },
     activo: { type: "boolean" },
   },
 };
@@ -91,6 +97,12 @@ const updateUsuarioBody = {
     },
     rol: rolEnum,
     sedeId: { type: "integer", minimum: 1 },
+    sedesIds: {
+      type: "array",
+      items: { type: "integer", minimum: 1 },
+      minItems: 1,
+      description: "Bodegas del entregador (se usa cuando el rol es Entregador).",
+    },
     activo: { type: "boolean" },
     contrasena,
   },

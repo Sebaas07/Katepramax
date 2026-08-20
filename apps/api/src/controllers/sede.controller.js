@@ -3,9 +3,16 @@ const { registrarAccion } = require("../utils/logger");
 const sedeController = {
   listar: async (request, reply) => {
     const { activo } = request.query ?? {};
+    // Por defecto solo se listan sedes ACTIVAS (para los selectores). El
+    // módulo de administración de sedes pide ?activo=todas para ver todas.
     const where = {};
-    if (activo === "true") where.activo = true;
-    if (activo === "false") where.activo = false;
+    if (activo === "todas") {
+      // sin filtro: todas
+    } else if (activo === "false") {
+      where.activo = false;
+    } else {
+      where.activo = true;
+    }
 
     const sedes = await request.server.prisma.sede.findMany({
       where,

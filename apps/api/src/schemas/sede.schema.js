@@ -4,7 +4,7 @@ const listar = {
   querystring: {
     type: "object",
     properties: {
-      activo: { type: "string", enum: ["true", "false"] },
+      activo: { type: "string", enum: ["true", "false", "todas"] },
     },
     additionalProperties: false,
   },

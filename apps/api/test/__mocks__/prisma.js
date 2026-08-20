@@ -10,6 +10,13 @@ const prisma = {
     update:      vi.fn(),
     updateMany:  vi.fn(),
   },
+  entregadorSede: {
+    findMany:    vi.fn(),
+    create:      vi.fn(),
+    createMany:  vi.fn(),
+    deleteMany:  vi.fn(),
+    delete:      vi.fn(),
+  },
   sesion: {
     findFirst:   vi.fn(),
     create:      vi.fn(),

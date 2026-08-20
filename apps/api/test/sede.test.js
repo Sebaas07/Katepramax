@@ -80,4 +80,36 @@ describe("GET /api/v1/sedes", () => {
       expect.objectContaining({ where: { activo: false } }),
     );
   });
+
+  it("por defecto solo trae sedes ACTIVAS (no envía filtro de inactivas)", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.sede.findMany.mockResolvedValue([sedeMock]);
+
+    const res = await app.inject({
+      method:  "GET",
+      url:     "/api/v1/sedes",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(prisma.sede.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { activo: true } }),
+    );
+  });
+
+  it("con activo=todas trae TODAS las sedes (sin filtro)", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.sede.findMany.mockResolvedValue([sedeMock]);
+
+    const res = await app.inject({
+      method:  "GET",
+      url:     "/api/v1/sedes?activo=todas",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(prisma.sede.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: {} }),
+    );
+  });
 });

@@ -9,8 +9,8 @@ import { clienteApi } from "./axiosConfig";
  */
 
 const sedesApi = {
-  obtenerSedes: async () => {
-    const response = await clienteApi.get("/sedes");
+  obtenerSedes: async (params = {}) => {
+    const response = await clienteApi.get("/sedes", { params });
     return response.data;
   },
 

@@ -4,9 +4,15 @@ import { getApiErrorMessage, normalizeArrayResponse } from "@/utils/apiHelpers";
 const limpiarTexto = (valor) => String(valor ?? "").trim();
 
 const sedesService = {
-  obtenerSedes: async () => {
+  // Por defecto el backend solo devuelve sedes ACTIVAS. Pasar
+  // { activo: "todas" } (módulo de administración) para ver también inactivas.
+  obtenerSedes: async ({ activo } = {}) => {
     try {
-      const data = await sedesApi.obtenerSedes();
+      const params = {};
+      if (activo !== undefined && activo !== null && activo !== "") {
+        params.activo = activo;
+      }
+      const data = await sedesApi.obtenerSedes(params);
       return normalizeArrayResponse(data);
     } catch (error) {
       console.error("sedesService.obtenerSedes:", error);

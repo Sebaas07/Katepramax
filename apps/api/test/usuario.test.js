@@ -40,6 +40,9 @@ const sesionBodegaMock = {
   usuario: { ...sesionAdminMock.usuario, rol: "Bodega" },
 };
 
+// Sede tipo Bodega activa — exigida por validarSede al crear/editar usuarios
+const sedeBodegaMock = { id: 1, nombre: "Bodega Principal", tipo: "Bodega", activo: true };
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
 let app;
@@ -105,6 +108,64 @@ describe("GET /api/v1/usuarios", () => {
     });
 
     expect(res.json()[0]).not.toHaveProperty("clave");
+  });
+});
+
+// ── GET /api/v1/usuarios/entregadores ─────────────────────────────────────────
+
+describe("GET /api/v1/usuarios/entregadores", () => {
+  it("debería retornar 403 si el rol es Oficinista (no asigna)", async () => {
+    const sesionOficinistaMock = {
+      ...sesionAdminMock,
+      id: 13,
+      usuario: { ...sesionAdminMock.usuario, rol: "Oficinista", bodegaId: 5 },
+    };
+    prisma.sesion.findFirst.mockResolvedValue(sesionOficinistaMock);
+
+    const tokenOficinista = app.jwt.sign({ sesionId: 13 }, { expiresIn: "15m" });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/usuarios/entregadores",
+      headers: { authorization: `Bearer ${tokenOficinista}` },
+    });
+
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("debería filtrar entregadores por la bodega del usuario Bodega", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionBodegaMock);
+    prisma.usuario.findMany.mockResolvedValue([
+      { id: 20, nombreCompleto: "Repartidor", telefono: "", sedeId: 1 },
+    ]);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/usuarios/entregadores",
+      headers: { authorization: `Bearer ${tokenBodega}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const arg = prisma.usuario.findMany.mock.calls[0][0];
+    expect(arg.where.rol).toBe("Entregador");
+    expect(arg.where.OR).toEqual([
+      { sedeId: 1 },
+      { entregadorSedes: { some: { sedeId: 1 } } },
+    ]);
+  });
+
+  it("Admin ve todos los entregadores (sin filtro)", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.usuario.findMany.mockResolvedValue([]);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/usuarios/entregadores",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const arg = prisma.usuario.findMany.mock.calls[0][0];
+    expect(arg.where.OR).toBeUndefined();
   });
 });
 
@@ -229,6 +290,7 @@ describe("POST /api/v1/usuarios", () => {
     prisma.usuario.findUnique
       .mockResolvedValueOnce(null) // usuario libre
       .mockResolvedValueOnce(null); // correo libre
+    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
     prisma.usuario.create.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
 
@@ -298,6 +360,8 @@ describe("PUT /api/v1/usuarios/:id", () => {
   it("debería retornar 200 al actualizar correctamente", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.usuario.findUnique.mockResolvedValue(usuarioMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.entregadorSede.deleteMany.mockResolvedValue({ count: 0 });
     prisma.usuario.update.mockResolvedValue({
       ...usuarioMock,
       nombreCompleto: "Carlos Editado",

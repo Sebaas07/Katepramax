@@ -71,6 +71,9 @@ const usuarioService = {
         sedeId: validarSedeId(datos.sedeId),
         activo: datos.activo ?? true,
         telefono: "",
+        ...(datos.rol === "Entregador" && Array.isArray(datos.sedesIds) && datos.sedesIds.length > 0
+          ? { sedesIds: datos.sedesIds.map(Number) }
+          : {}),
       });
     } catch (error) {
       console.error("usuarioService.crearUsuario:", error);
@@ -102,6 +105,14 @@ const usuarioService = {
       }
       if (datos.activo !== undefined) {
         payload.activo = Boolean(datos.activo);
+      }
+      if (datos.rol !== undefined && datos.rol === "Entregador") {
+        if (Array.isArray(datos.sedesIds)) {
+          payload.sedesIds = datos.sedesIds.map(Number);
+        }
+      } else if (datos.sedesIds !== undefined) {
+        // Si deja de ser Entregador, se limpian las bodegas extra.
+        payload.sedesIds = [];
       }
       if (datos.contrasena) {
         validarContrasena(datos.contrasena);

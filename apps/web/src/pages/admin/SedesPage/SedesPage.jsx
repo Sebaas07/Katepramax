@@ -55,7 +55,8 @@ const SedesPage = () => {
   const cargarSedes = useCallback(async () => {
     setCargando(true);
     try {
-      const data = await sedesService.obtenerSedes();
+      // En el módulo de administración se ven TODAS (incluidas inactivas).
+      const data = await sedesService.obtenerSedes({ activo: "todas" });
       setSedes(Array.isArray(data) ? data : []);
     } catch (error) {
       toast.error(`Error al cargar sedes: ${error.message}`);

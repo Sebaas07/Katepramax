@@ -1,6 +1,6 @@
 const ctrl    = require("../controllers/inventario.controller");
 const schemas = require("../schemas/inventario.schema");
-const { consultaBodega, adminOBodega, soloAdmin } = require("../middlewares/auth.middleware");
+const { consultaBodega, adminOBodega, adminGestion } = require("../middlewares/auth.middleware");
 
 async function inventarioRoutes(app) {
   // Estáticas PRIMERO para que Fastify no las interprete como :id
@@ -16,7 +16,7 @@ async function inventarioRoutes(app) {
   // Escritura — Admin, AdminBogota y Bodega (Bodega solo su propia sede)
   app.post(  "/inventario",     { schema: schemas.crearInventario,    ...adminOBodega  }, ctrl.crear);
   app.patch( "/inventario/:id", { schema: schemas.editarInventario,   ...adminOBodega  }, ctrl.editar);
-  app.delete("/inventario/:id", { schema: schemas.eliminarInventario, ...soloAdmin     }, ctrl.eliminar);
+  app.delete("/inventario/:id", { schema: schemas.eliminarInventario, ...adminGestion  }, ctrl.eliminar);
 }
 
 module.exports = inventarioRoutes;

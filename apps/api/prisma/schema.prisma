@@ -59,6 +59,7 @@ model Sede {
   enviosDestino Envio[] @relation("EnvioDestino")
   bodega        Sede?   @relation("SedeBodega", fields: [bodegaId], references: [id])
   oficinas      Sede[]  @relation("SedeBodega")
+  entregadores  EntregadorSede[] @relation("SedeEntregadores")
 
   @@map("sedes")
 }
@@ -99,8 +100,26 @@ model Usuario {
   enviosCreados          Envio[]                 @relation("EnvioCreador")
   enviosConfirmados      Envio[]                 @relation("EnvioConfirmador")
   enviosCancelados       Envio[]                 @relation("EnvioCancelador")
+  // Un entregador puede estar asignado a varias bodegas (muchos a muchos).
+  entregadorSedes        EntregadorSede[]        @relation("EntregadorSedes")
 
   @@map("usuarios")
+}
+
+// Asignación de un entregador a una bodega. Un entregador puede pertenecer a
+// varias bodegas, y cada bodega tiene varios entregadores. Se usa además para
+// filtrar la lista de entregadores según la bodega/oficina del usuario.
+model EntregadorSede {
+  id           Int     @id @default(autoincrement())
+  entregadorId Int     @map("entregador_id")
+  sedeId       Int     @map("sede_id")
+
+  entregador Usuario @relation("EntregadorSedes", fields: [entregadorId], references: [id], onDelete: Cascade)
+  sede       Sede    @relation("SedeEntregadores", fields: [sedeId], references: [id], onDelete: Cascade)
+
+  @@unique([entregadorId, sedeId])
+  @@index([sedeId])
+  @@map("entregador_sedes")
 }
 
 model Sesion {

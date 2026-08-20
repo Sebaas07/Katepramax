@@ -1,19 +1,19 @@
 const ctrl    = require("../controllers/reporte.controller");
 const schemas = require("../schemas/reporte.schema");
-const { soloAdmin, consultaBodega } = require("../middlewares/auth.middleware");
+const { adminGestion, consultaBodega } = require("../middlewares/auth.middleware");
 
 /**
  * reporte.routes.js
  *
- * GET /reportes/arqueo-semanal    → solo Admin
+ * GET /reportes/arqueo-semanal    → Admin + AdminBogota
  * GET /reportes/panel-general     → Admin + AdminBogota + Bodega (con filtro de sede automático)
- * GET /reportes/historial-semanal → solo Admin
+ * GET /reportes/historial-semanal → Admin + AdminBogota
  * GET /reportes/cobros-entregador → Admin + AdminBogota + Bodega (reporte de entregas)
  * GET /reportes/corte-caja        → Admin + AdminBogota + Bodega
  */
 async function reporteRoutes(app) {
   app.get("/reportes/arqueo-semanal",
-    { schema: schemas.arqueoSemanalSchema, ...soloAdmin },
+    { schema: schemas.arqueoSemanalSchema, ...adminGestion },
     ctrl.arqueoSemanal,
   );
 
@@ -24,7 +24,7 @@ async function reporteRoutes(app) {
   );
 
   app.get("/reportes/historial-semanal",
-    { schema: schemas.historialSemanalSchema, ...soloAdmin },
+    { schema: schemas.historialSemanalSchema, ...adminGestion },
     ctrl.historialSemanal,
   );
 
