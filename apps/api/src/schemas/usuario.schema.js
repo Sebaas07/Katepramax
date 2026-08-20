@@ -59,9 +59,9 @@ const createUsuarioBody = {
     rol: rolEnum,
     telefono: {
       type: "string",
-      minLength: 0,
-      maxLength: 20,
-      pattern: "^[0-9+\\-\\s]*$",
+      maxLength: 10,
+      pattern: "^$|^[0-9]{10}$",
+      description: "Vacío o exactamente 10 dígitos",
     },
     sedeId: { type: "integer", minimum: 1 },
     sedesIds: {
@@ -91,9 +91,9 @@ const updateUsuarioBody = {
     correo: { type: "string", format: "email", maxLength: 150 },
     telefono: {
       type: "string",
-      minLength: 0,
-      maxLength: 20,
-      pattern: "^[0-9+\\-\\s]*$",
+      maxLength: 10,
+      pattern: "^$|^[0-9]{10}$",
+      description: "Vacío o exactamente 10 dígitos",
     },
     rol: rolEnum,
     sedeId: { type: "integer", minimum: 1 },

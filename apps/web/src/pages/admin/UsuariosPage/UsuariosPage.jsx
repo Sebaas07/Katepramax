@@ -29,6 +29,7 @@ const FORM_INICIAL = {
   rol: "Bodega",
   sedeId: "",
   sedesIds: [],
+  telefono: "",
   activo: true,
 };
 
@@ -212,6 +213,7 @@ const UsuariosPage = () => {
       sedesIds: seleccionado.entregadorSedes
         .map((item) => item.sedeId)
         .filter((id) => id != null),
+      telefono: seleccionado.telefono ?? "",
       activo: seleccionado.activo,
     });
     setErrores({});
@@ -277,6 +279,13 @@ const UsuariosPage = () => {
       return;
     }
 
+    if (name === "telefono") {
+      // Solo dígitos y máximo 10 caracteres
+      const soloDigitos = String(value).replace(/\D/g, "").slice(0, 10);
+      setForm((prev) => ({ ...prev, telefono: soloDigitos }));
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -315,6 +324,11 @@ const UsuariosPage = () => {
     } else if (!/^[a-zA-Z0-9_]{5,10}$/.test(usuario)) {
       nuevosErrores.usuario =
         "Usa de 5 a 10 caracteres: letras, números y guión bajo.";
+    }
+
+    if (form.telefono && !/^\d{10}$/.test(form.telefono)) {
+      nuevosErrores.telefono =
+        "El teléfono debe tener exactamente 10 dígitos.";
     }
 
     if (!form.rol) {
@@ -372,6 +386,7 @@ const UsuariosPage = () => {
           rol: form.rol,
           sedeId: form.sedeId,
           activo: form.activo,
+          telefono: form.telefono,
           ...(form.rol === "Entregador" ? { sedesIds: form.sedesIds } : {}),
           ...(form.contrasena
             ? {
@@ -390,6 +405,7 @@ const UsuariosPage = () => {
           rol: form.rol,
           sedeId: form.sedeId,
           activo: form.activo,
+          telefono: form.telefono,
           ...(form.rol === "Entregador" ? { sedesIds: form.sedesIds } : {}),
         });
         toast.success("Usuario creado correctamente.");
@@ -617,7 +633,7 @@ const UsuariosPage = () => {
         className="modal-content--usuario"
         maxWidth="680px"
       >
-        <div className="modal-form modal-form--usuario">
+<div className="modal-form modal-form--usuario">
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="usr-nombre-completo">Nombre completo *</label>
@@ -673,6 +689,27 @@ const UsuariosPage = () => {
               )}
             </div>
 
+            <div className="form-group">
+              <label htmlFor="usr-telefono">Teléfono (10 dígitos)</label>
+              <input
+                id="usr-telefono"
+                name="telefono"
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                value={form.telefono}
+                onChange={handleCambioForm}
+                className="form-control"
+                placeholder="3101234567"
+                autoComplete="off"
+              />
+{errores.telefono && (
+                <span className="form-error">{errores.telefono}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row">
             <div className="form-group">
               <label htmlFor="usr-sede">
                 {form.rol === "Oficinista" ? "Oficina *" : "Bodega *"}

@@ -1,6 +1,6 @@
 const ctrl = require("../controllers/envio.controller");
 const schemas = require("../schemas/envio.schema");
-const { adminGestion, adminOBodega } = require("../middlewares/auth.middleware");
+const { adminGestionBodega, adminOBodega } = require("../middlewares/auth.middleware");
 
 async function envioRoutes(app) {
   // Estáticas PRIMERO para que Fastify no las interprete como :id
@@ -9,8 +9,8 @@ async function envioRoutes(app) {
     ctrl.contarPendientes,
   );
 
-  // Crear guía de envío — solo Admin / AdminBogota (la sede que despacha)
-  app.post(  "/envios",     { schema: schemas.crearEnvio,     ...adminGestion } , ctrl.crear);
+  // Crear guía de envío — Admin / AdminBogota / Bodega (la sede que despacha)
+  app.post(  "/envios",     { schema: schemas.crearEnvio,     ...adminGestionBodega }, ctrl.crear);
 
   // Consultar y confirmar recepción — Admin, AdminBogota y Bodega (Bodega solo su sede,
   // filtro aplicado en envio.service.js)

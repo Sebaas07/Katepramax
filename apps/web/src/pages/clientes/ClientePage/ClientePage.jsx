@@ -348,11 +348,13 @@ const ClientePage = () => {
                 disabled={cargandoSedes}
               >
                 <option value="">— Selecciona —</option>
-                {sedes.map((sede) => (
-                  <option key={sede.id} value={sede.id}>
-                    {sede.nombre}
-                  </option>
-                ))}
+                {sedes
+                  .filter((s) => s.tipo === "Oficina")
+                  .map((sede) => (
+                    <option key={sede.id} value={sede.id}>
+                      {sede.nombre}
+                    </option>
+                  ))}
               </select>
             </div>
           )}

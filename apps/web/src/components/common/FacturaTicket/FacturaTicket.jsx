@@ -7,7 +7,8 @@ const fmtMoneda = (n) =>
 
 /**
  * FacturaTicket — Katepramax
- * Ticket de factura de venta en formato 80mm (impresora térmica POS).
+ * Ticket de factura de venta en formato 58mm (impresora térmica POS de punto
+ * de venta, papel 58mm — ancho imprimible 48mm).
  *
  * Props:
  *  factura   — datos del comprobante devueltos por GET /pedidos/:id/factura
@@ -106,7 +107,7 @@ const FacturaTicket = ({ factura, mostrarQR = true, url }) => {
 
       {mostrarQR && (
         <div className="factura-ticket__qr">
-          <QRCodeCanvas value={link} size={120} level="M" includeMargin />
+          <QRCodeCanvas value={link} size={80} level="M" includeMargin />
           <span className="factura-ticket__qr-texto">
             Valide este documento escaneando el código
           </span>

@@ -70,7 +70,7 @@ const usuarioService = {
         rol: datos.rol,
         sedeId: validarSedeId(datos.sedeId),
         activo: datos.activo ?? true,
-        telefono: "",
+        telefono: datos.telefono ?? "",
         ...(datos.rol === "Entregador" && Array.isArray(datos.sedesIds) && datos.sedesIds.length > 0
           ? { sedesIds: datos.sedesIds.map(Number) }
           : {}),
@@ -105,6 +105,13 @@ const usuarioService = {
       }
       if (datos.activo !== undefined) {
         payload.activo = Boolean(datos.activo);
+      }
+      if (datos.telefono !== undefined) {
+        const telefono = String(datos.telefono ?? "").replace(/\D/g, "").slice(0, 10);
+        if (telefono && !/^\d{10}$/.test(telefono)) {
+          throw new Error("El teléfono debe tener exactamente 10 dígitos.");
+        }
+        payload.telefono = telefono;
       }
       if (datos.rol !== undefined && datos.rol === "Entregador") {
         if (Array.isArray(datos.sedesIds)) {

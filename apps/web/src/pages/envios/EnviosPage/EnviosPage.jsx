@@ -21,8 +21,8 @@ const lineaVacia = () => ({
 });
 
 const EnviosPage = () => {
-  const { usuario, esAdmin, esAdminBogota, isAuthenticated, isSessionChecked } = useAuth();
-  const puedeCrear = esAdmin || esAdminBogota;
+  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
+  const puedeCrear = esAdmin || esBodega;
 
   const [tab, setTab] = useState("recibidos");
   const [envios, setEnvios] = useState([]);
@@ -70,10 +70,13 @@ const EnviosPage = () => {
 
   const mapaSedes = useMemo(() => Object.fromEntries(sedes.map((s) => [s.id, s.nombre])), [sedes]);
 
+  // Los envíos entre sedes solo operan entre bodegas
+  const bodegas = useMemo(() => sedes.filter((s) => s.tipo === "Bodega"), [sedes]);
+
   // ── Modal: nuevo envío ─────────────────────────────────────
   const abrirNuevo = () => {
     setFormNuevo({
-      sedeOrigenId: esAdminBogota ? String(usuario.sedeId) : "",
+      sedeOrigenId: esBodega ? String(usuario.sedeId) : "",
       sedesDestinoIds: [],
       detalles: [lineaVacia()],
       observaciones: "",
@@ -309,7 +312,7 @@ const EnviosPage = () => {
                 onChange={(e) => setFormNuevo((p) => ({ ...p, sedeOrigenId: e.target.value }))}
               >
                 <option value="">— Selecciona —</option>
-                {sedes.map((s) => (
+                {bodegas.map((s) => (
                   <option key={s.id} value={s.id}>{s.nombre}</option>
                 ))}
               </select>
@@ -319,7 +322,7 @@ const EnviosPage = () => {
           <div className="form-group">
             <span className="form-label-standalone">Sede(s) destino *</span>
             <div className="env-sedes-checks">
-              {sedes
+              {bodegas
                 .filter((s) => String(s.id) !== String(formNuevo.sedeOrigenId))
                 .map((s) => (
                   <label key={s.id} className="env-sede-check">

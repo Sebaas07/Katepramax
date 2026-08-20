@@ -29,9 +29,9 @@ const TABS = [
 const TAB_TIPO = { entradas: "entrada", salidas: "salida", ajustes: "ajuste" };
 
 const InventarioPage = () => {
-  const { usuario, esAdmin, esAdminBogota, isAuthenticated, isSessionChecked } =
+  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } =
     useAuth();
-  const puedeRegistrar = esAdmin || esAdminBogota;
+  const puedeRegistrar = esAdmin || esBodega;
   const sedeIdUsuario = usuario?.sedeId ?? null;
 
   const [activeTab, setActiveTab] = useState("entradas");

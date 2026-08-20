@@ -6,9 +6,9 @@ const { prisma } = require("./__mocks__/prisma");
 
 // ── Datos de prueba ────────────────────────────────────────────────────────
 
-const sedeBogotaMock = { id: 1, nombre: "Bogotá", activo: true };
-const sedeCartagenaMock = { id: 2, nombre: "Cartagena", activo: true };
-const sedeVillavoMock = { id: 3, nombre: "Villavicencio", activo: true };
+const sedeBogotaMock = { id: 1, nombre: "Bogotá", tipo: "Bodega", activo: true };
+const sedeCartagenaMock = { id: 2, nombre: "Cartagena", tipo: "Bodega", activo: true };
+const sedeVillavoMock = { id: 3, nombre: "Villavicencio", tipo: "Bodega", activo: true };
 
 const productoMock = {
   codigo: 1,
@@ -116,17 +116,22 @@ function mockSesion(mock) {
 // ── POST /api/v1/envios ──────────────────────────────────────────────────────
 
 describe("POST /api/v1/envios", () => {
-  it("debería retornar 403 si el rol es Bodega", async () => {
+  it("debería retornar 201 al crear un envío desde la bodega de origen", async () => {
     mockSesion(sesionBodegaCartagenaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeCartagenaMock);
+    prisma.sede.findMany.mockResolvedValue([sedeVillavoMock]);
+    prisma.producto.findMany.mockResolvedValue([productoMock]);
+    prisma.stockSede.findMany.mockResolvedValue([{ productoId: 1, stockActual: 50 }]);
+    prisma.envio.create.mockResolvedValue(envioBase({ id: 1, sedeDestinoId: 3, sedeDestino: { id: 3, nombre: "Villavicencio" } }));
 
     const res = await app.inject({
       method: "POST",
       url: "/api/v1/envios",
       headers: authBodegaCartagena(),
-      payload: { sedesDestinoIds: [2], detalles: [{ productoId: 1, cantidad: 5 }] },
+      payload: { sedesDestinoIds: [3], detalles: [{ productoId: 1, cantidad: 5 }] },
     });
 
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(201);
   });
 
   it("debería retornar 400 si no se selecciona ninguna sede destino", async () => {

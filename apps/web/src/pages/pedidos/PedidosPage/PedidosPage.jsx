@@ -743,7 +743,7 @@ const PedidosPage = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="ped-valor-domicilio">Valor del domicilio</label>
+            <label htmlFor="ped-valor-domicilio">Valor a pagar al entregador</label>
             <input
               id="ped-valor-domicilio"
               type="number"

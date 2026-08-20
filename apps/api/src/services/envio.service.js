@@ -25,7 +25,11 @@ const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
 
 function puedeCrear(usuario) {
-  return usuario?.rol === "Admin" || usuario?.rol === "AdminBogota";
+  return (
+    usuario?.rol === "Admin" ||
+    usuario?.rol === "AdminBogota" ||
+    usuario?.rol === "Bodega"
+  );
 }
 
 function puedeGestionar(usuario) {
@@ -65,7 +69,9 @@ const envioService = (app) => ({
     }
 
     const sedeOrigenId =
-      usuario.rol === "AdminBogota" ? usuario.sedeId : Number(body.sedeOrigenId);
+      usuario.rol === "AdminBogota" || usuario.rol === "Bodega"
+        ? usuario.sedeId
+        : Number(body.sedeOrigenId);
 
     if (!sedeOrigenId) {
       throw new AppError("Se requiere la sede de origen.", 400);
@@ -99,6 +105,9 @@ const envioService = (app) => ({
     if (!sedeOrigen || !sedeOrigen.activo) {
       throw new AppError(`Sede origen ${sedeOrigenId} no encontrada o inactiva.`, 404);
     }
+    if (sedeOrigen.tipo !== "Bodega") {
+      throw new AppError("El origen de un envío debe ser una bodega.", 422);
+    }
 
     const sedesDestino = await prisma.sede.findMany({
       where: { id: { in: sedesDestinoIds } },
@@ -109,6 +118,10 @@ const envioService = (app) => ({
     const sedeInactiva = sedesDestino.find((s) => !s.activo);
     if (sedeInactiva) {
       throw new AppError(`La sede "${sedeInactiva.nombre}" está inactiva.`, 422);
+    }
+    const sedeNoBodega = sedesDestino.find((s) => s.tipo !== "Bodega");
+    if (sedeNoBodega) {
+      throw new AppError("Los envíos solo pueden ir a bodegas.", 422);
     }
 
     const productos = await prisma.producto.findMany({

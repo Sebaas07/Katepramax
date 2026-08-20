@@ -44,16 +44,18 @@ const EnviosPage = lazy(() => import("@/pages/envios/EnviosPage/EnviosPage"));
 // ── Roles ─────────────────────────────────────────────────────
 const ROLES = {
   ADMIN: ["Admin"],
-  // Pedidos + asignaciones (Oficinista gestiona)
-  PEDIDOS: ["Admin", "AdminBogota", "Oficinista"],
-  // Solo lectura para Bodega: inventario + reportes + entrega (distribución)
+  // Pedidos: Admin + AdminBogota
+  PEDIDOS: ["Admin", "AdminBogota"],
+  // Consulta (inventario) para Bodega/Oficinista + Admin/AdminBogota
   CONSULTA: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
-  // Distribución/entregas: incluye a Oficinista que sigue el flujo
-  ENTREGAS: ["Admin", "AdminBogota", "Oficinista", "Bodega"],
+  // Catálogo de productos: todos leen, Bodega además crea/edita
+  CATALOGO: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
+  // Distribución/entregas: Admin + AdminBogota + Bodega
+  ENTREGAS: ["Admin", "AdminBogota", "Bodega"],
+  // Envíos entre sedes: Admin + AdminBogota + Bodega
+  ENVIOS: ["Admin", "AdminBogota", "Bodega"],
   // Módulos de gestión solo Admin/AdminBogota
-  GESTION: ["Admin", "AdminBogota", "Oficinista"],
-  // Gestión de oficina: catálogo, clientes, envíos y contabilidad
-  OFICINA: ["Admin", "AdminBogota", "Oficinista"],
+  GESTION: ["Admin", "AdminBogota"],
   ENTREGADOR: ["Entregador"],
 };
 
@@ -62,7 +64,12 @@ const RootRedirect = () => {
   const { isAuthenticated, isSessionChecked, usuario } = useAuth();
   if (!isSessionChecked) return <AuthLoading />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  const dest = usuario?.rol === "Entregador" ? "/entregas" : "/dashboard";
+  const dest =
+    usuario?.rol === "Entregador"
+      ? "/entregas"
+      : usuario?.rol === "Oficinista"
+        ? "/inventario"
+        : "/dashboard";
   return <Navigate to={dest} replace />;
 };
 
@@ -119,8 +126,11 @@ const AppRouter = () => (
         </Route>
 
         {/* Gestión de oficina: catálogo, clientes, envíos y contabilidad */}
-        <Route element={<RequireRole roles={ROLES.OFICINA} />}>
+        <Route element={<RequireRole roles={ROLES.CATALOGO} />}>
           <Route path="/productos" element={<ProductosPage />} />
+        </Route>
+
+        <Route element={<RequireRole roles={ROLES.ENVIOS} />}>
           <Route
             path="/envios"
             element={
@@ -129,6 +139,9 @@ const AppRouter = () => (
               </Suspense>
             }
           />
+        </Route>
+
+        <Route element={<RequireRole roles={ROLES.GESTION} />}>
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/contabilidad" element={<ContabilidadPage />} />
         </Route>

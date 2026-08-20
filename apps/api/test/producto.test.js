@@ -187,8 +187,20 @@ describe("POST /api/v1/productos", () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it("debería retornar 403 si el rol es Bodega", async () => {
+  it("debería retornar 201 al crear un producto con rol Bodega", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionBodegaMock);
+    prisma.skuContador.upsert.mockResolvedValue({ prefijo: "NUE", ultimoNumero: 2 });
+    prisma.producto.create.mockResolvedValue({
+      ...productoMock,
+      codigo: 2,
+      sku: "NUE-002",
+    });
+    prisma.producto.findUnique.mockResolvedValue({
+      ...productoMock,
+      codigo: 2,
+      sku: "NUE-002",
+    });
+    prisma.stockSede.upsert.mockResolvedValue({});
 
     const res = await app.inject({
       method: "POST",
@@ -201,7 +213,8 @@ describe("POST /api/v1/productos", () => {
       },
     });
 
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(201);
+    expect(res.json().sku).toBe("NUE-002");
   });
 
   it("debería retornar 201 al crear un producto con rol AdminBogota", async () => {

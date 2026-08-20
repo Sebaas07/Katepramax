@@ -16,7 +16,7 @@ const MENU = [
     path:  "/dashboard",
     label: "Dashboard",
     icon:  "dashboard",
-    roles: ["Admin", "AdminBogota", "Bodega", "Oficinista", "Entregador"],
+    roles: ["Admin", "AdminBogota", "Bodega", "Entregador"],
   },
   {
     path:  "/entregas",
@@ -28,7 +28,7 @@ const MENU = [
     path:  "/pedidos",
     label: "Pedidos",
     icon:  "shopping_cart",
-    roles: ["Admin", "AdminBogota", "Oficinista"],
+    roles: ["Admin", "AdminBogota"],
   },
   {
     path:  "/inventario",
@@ -40,39 +40,39 @@ const MENU = [
     path:  "/productos",
     label: "Productos",
     icon:  "category",
-    roles: ["Admin", "AdminBogota", "Oficinista"],
+    roles: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
   },
   {
     path:  "/distribucion",
     label: "Distribución y Entregas",
     icon:  "sync_alt",
-    roles: ["Admin", "AdminBogota", "Oficinista", "Bodega"],
+    roles: ["Admin", "AdminBogota", "Bodega"],
     notificablePedidos: true,
   },
   {
     path:  "/envios",
     label: "Envíos entre Sedes",
     icon:  "local_shipping",
-    roles: ["Admin", "AdminBogota", "Oficinista"],
+    roles: ["Admin", "AdminBogota", "Bodega"],
     notificable: true,
   },
   {
     path:  "/clientes",
     label: "Clientes",
     icon:  "people",
-    roles: ["Admin", "AdminBogota", "Oficinista"],
+    roles: ["Admin", "AdminBogota"],
   },
   {
     path:  "/proveedores",
     label: "Proveedores",
     icon:  "factory",
-    roles: ["Admin", "AdminBogota", "Oficinista"],
+    roles: ["Admin", "AdminBogota"],
   },
   {
     path:  "/contabilidad",
     label: "Contabilidad",
     icon:  "account_balance",
-    roles: ["Admin", "AdminBogota", "Oficinista"],
+    roles: ["Admin", "AdminBogota"],
   },
   // Sección Admin
   {
@@ -107,7 +107,7 @@ export default function MenuItems({ cerrar }) {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    if (!["Admin", "AdminBogota", "Oficinista"].includes(rol)) return;
+    if (!["Admin", "AdminBogota", "Bodega"].includes(rol)) return;
 
     let activo = true;
     const cargar = () => {
@@ -192,7 +192,7 @@ export default function MenuItems({ cerrar }) {
       {esAdminBogota && (
         <div className="menu-items__bogota-badge">
           <span className="material-symbols-outlined">verified</span>
-          <span>Bodega Principal · Bogotá</span>
+          <span>AdminBogota · Bodega Principal (Bogotá)</span>
         </div>
       )}
     </>

@@ -111,6 +111,14 @@ module.exports = {
     preValidation: [verifyToken, requireRole(["Admin", "AdminBogota"])],
   },
 
+  // Gestión de catálogo/inventario/envíos — Admin + AdminBogota + Bodega (NO Oficinista)
+  adminGestionBodega: {
+    preValidation: [
+      verifyToken,
+      requireRole(["Admin", "AdminBogota", "Bodega"]),
+    ],
+  },
+
   // Gestión de pedidos y asignaciones — Admin + AdminBogota + Oficinista
   gestion: {
     preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Oficinista"])],

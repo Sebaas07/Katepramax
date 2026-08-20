@@ -139,6 +139,7 @@ const Spinner = () => (
 const ProductosPage = () => {
   const {
     esAdmin,
+    esAdminBogota,
     esBodega,
     usuario,
     isAuthenticated,
@@ -146,6 +147,7 @@ const ProductosPage = () => {
     isLoading: authLoading,
   } = useAuth();
   const puedeEditar = esAdmin || esBodega;
+  const puedeGestionarEstado = esAdmin || esAdminBogota;
   const sedeIdUsuario = usuario?.sedeId ?? null;
 
   const [productos, setProductos] = useState([]);
@@ -542,13 +544,15 @@ const ProductosPage = () => {
 
   const acciones = useCallback(
     (prod) => [
-      { label: "Editar", icon: "edit", onClick: () => abrirModalEditar(prod) },
+      ...(puedeEditar
+        ? [{ label: "Editar", icon: "edit", onClick: () => abrirModalEditar(prod) }]
+        : []),
       {
         label: "Código QR",
         icon: "qr_code_2",
         onClick: () => abrirModalQR(prod),
       },
-      ...(puedeEditar
+      ...(puedeGestionarEstado
         ? [
             {
               label: prod.activo ? "Desactivar" : "Activar",
@@ -559,7 +563,7 @@ const ProductosPage = () => {
           ]
         : []),
     ],
-    [puedeEditar, abrirModalEditar, abrirModalQR, abrirConfirmToggle],
+    [puedeEditar, puedeGestionarEstado, abrirModalEditar, abrirModalQR, abrirConfirmToggle],
   );
 
   return (
