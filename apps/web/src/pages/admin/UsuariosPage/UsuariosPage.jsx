@@ -107,7 +107,7 @@ const normalizeUsuario = (usuario) => ({
 });
 
 const UsuariosPage = () => {
-  const { esAdmin, isAuthenticated, isSessionChecked } = useAuth();
+  const { esAdminGestion, isAuthenticated, isSessionChecked } = useAuth();
 
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -540,7 +540,7 @@ const UsuariosPage = () => {
             </div>
           </div>
 
-          {esAdmin && (
+          {esAdminGestion && (
             <button className="btn-primary" onClick={abrirCrear} type="button">
               <span className="material-symbols-outlined">person_add</span>
               Nuevo Usuario
@@ -582,7 +582,7 @@ const UsuariosPage = () => {
             titulo="No hay usuarios registrados"
             detalle="Crea el primer usuario para comenzar a administrar accesos."
           >
-            {esAdmin && (
+            {esAdminGestion && (
               <button
                 className="btn-primary"
                 onClick={abrirCrear}

@@ -26,7 +26,7 @@ const sedeController = {
         bodega: { select: { id: true, nombre: true } },
         oficinas: { select: { id: true, nombre: true } },
       },
-      orderBy: { nombre: "asc" },
+      orderBy: { id: "asc" },
     });
     return reply.send(sedes);
   },

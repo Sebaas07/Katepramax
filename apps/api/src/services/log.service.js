@@ -1,8 +1,8 @@
 const logRepository = require("../repositories/log.repository");
 const AppError = require("../errors/AppError");
 
-function esAdmin(usuario) {
-  return usuario && usuario.rol === "Admin";
+function puedeVerLogs(usuario) {
+  return usuario && (usuario.rol === "Admin" || usuario.rol === "AdminBogota");
 }
 
 const logService = (app) => {
@@ -10,7 +10,7 @@ const logService = (app) => {
 
   return {
     listar: async (query, usuario) => {
-      if (!esAdmin(usuario)) {
+      if (!puedeVerLogs(usuario)) {
         throw new AppError("No tienes permiso para ver el historial de acciones.", 403);
       }
 
@@ -28,7 +28,7 @@ const logService = (app) => {
     },
 
     listarAcciones: async (usuario) => {
-      if (!esAdmin(usuario)) {
+      if (!puedeVerLogs(usuario)) {
         throw new AppError("No tienes permiso para ver el historial de acciones.", 403);
       }
       return repo.listarAcciones();

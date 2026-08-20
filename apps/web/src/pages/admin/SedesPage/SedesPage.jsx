@@ -38,7 +38,7 @@ const TipoBadge = ({ tipo }) => (
 );
 
 const SedesPage = () => {
-  const { esAdmin, isAuthenticated, isSessionChecked } = useAuth();
+  const { esAdminGestion, isAuthenticated, isSessionChecked } = useAuth();
 
   const [sedes, setSedes] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -105,7 +105,7 @@ const SedesPage = () => {
   }, []);
 
   const handleGuardar = useCallback(async () => {
-    if (!esAdmin) return;
+    if (!esAdminGestion) return;
     const nombreFinal = nombre.trim();
     if (!nombreFinal) {
       setErrorNombre("El nombre de la sede es obligatorio.");
@@ -147,7 +147,7 @@ const SedesPage = () => {
     } finally {
       setGuardando(false);
     }
-  }, [esAdmin, nombre, tipo, bodegaId, sedeSel, cerrarModal, cargarSedes, sedes]);
+  }, [esAdminGestion, nombre, tipo, bodegaId, sedeSel, cerrarModal, cargarSedes, sedes]);
 
   const abrirModalConfirmToggle = useCallback((sede) => {
     setSedeAToggle(sede);
