@@ -57,6 +57,7 @@ const authService = (app) => {
           usuario: user.usuario,
           rol: user.rol,
           sedeId: user.sedeId,
+          bodegaId: user.sede?.bodegaId ?? null,
           sede: user.sede?.nombre ?? null,
         },
       };
@@ -97,6 +98,7 @@ const authService = (app) => {
           usuario: usuario.usuario,
           rol: usuario.rol,
           sedeId: usuario.sedeId,
+          bodegaId: usuario.sede?.bodegaId ?? null,
           sede: usuario.sede?.nombre ?? null,
         },
       };
@@ -115,7 +117,7 @@ const authService = (app) => {
     me: async (id) => {
       const user = await usuRepo.findById(id);
       if (!user) throw new AppError("Usuario no encontrado", 404);
-      return user;
+      return { ...user, bodegaId: user.sede?.bodegaId ?? null };
     },
 
     /**

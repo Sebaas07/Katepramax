@@ -28,8 +28,11 @@ const usuarioMock = {
   creadoEn: new Date(),
 };
 
-// Sede tipo Bodega y activa (validarSede la exige para crear/editar usuarios)
+// Sede tipo Bodega y activa (el rol Oficinista la exige)
 const sedeBodegaMock = { id: 1, nombre: "Bodega Principal", tipo: "Bodega", activo: true };
+
+// Sede tipo Oficina y activa (el rol Bodega la exige; opera sobre su bodega)
+const sedeOficinaMock = { id: 6, nombre: "Oficina Central", tipo: "Oficina", activo: true };
 
 // ── getAll ────────────────────────────────────────────────────────────────────
 
@@ -118,7 +121,7 @@ describe("usuarioService.create", () => {
     prisma.usuario.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null);
-    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
     prisma.usuario.create.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
 
@@ -129,7 +132,7 @@ describe("usuarioService.create", () => {
         correo: "nuevo@test.com",
         contrasena: "pass123",
         rol: "Bodega",
-        sedeId: 1,
+        sedeId: 6,
       },
       1,
     );
@@ -145,7 +148,7 @@ describe("usuarioService.create", () => {
     prisma.usuario.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null);
-    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
     prisma.usuario.create.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
 
@@ -156,7 +159,7 @@ describe("usuarioService.create", () => {
         correo: "nuevo@test.com",
         contrasena: "pass123",
         rol: "Bodega",
-        sedeId: 1,
+        sedeId: 6,
       },
       1,
     );
@@ -169,7 +172,7 @@ describe("usuarioService.create", () => {
     prisma.usuario.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null);
-    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
     prisma.usuario.create.mockResolvedValue({
       ...usuarioMock,
       clave: "$2b$10$hash...",
@@ -183,7 +186,7 @@ describe("usuarioService.create", () => {
         correo: "carlos@test.com",
         contrasena: "pass123",
         rol: "Bodega",
-        sedeId: 1,
+        sedeId: 6,
       },
       1,
     );
@@ -198,7 +201,7 @@ describe("usuarioService.create", () => {
     prisma.usuario.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null);
-    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
     prisma.usuario.create.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
 
@@ -209,14 +212,14 @@ describe("usuarioService.create", () => {
         correo: "nuevo@test.com",
         contrasena: "pass123",
         rol: "Bodega",
-        sedeId: "1",
+        sedeId: "6",
       },
       1,
     );
 
     const callData = prisma.usuario.create.mock.calls[0][0].data;
     expect(typeof callData.sedeId).toBe("number");
-    expect(callData.sedeId).toBe(1);
+    expect(callData.sedeId).toBe(6);
   });
 });
 
@@ -233,7 +236,7 @@ describe("usuarioService.update", () => {
 
   it("debería actualizar solo campos permitidos", async () => {
     prisma.usuario.findUnique.mockResolvedValue(usuarioMock);
-    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
     prisma.entregadorSede.deleteMany.mockResolvedValue({ count: 0 });
     prisma.usuario.update.mockResolvedValue({
       ...usuarioMock,
@@ -255,7 +258,7 @@ describe("usuarioService.update", () => {
 
   it("debería hashear la nueva contraseña si se pasa contrasena", async () => {
     prisma.usuario.findUnique.mockResolvedValue(usuarioMock);
-    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
     prisma.entregadorSede.deleteMany.mockResolvedValue({ count: 0 });
     prisma.usuario.update.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
@@ -270,7 +273,7 @@ describe("usuarioService.update", () => {
 
   it("no debería incluir clave si no se pasa contrasena", async () => {
     prisma.usuario.findUnique.mockResolvedValue(usuarioMock);
-    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
     prisma.entregadorSede.deleteMany.mockResolvedValue({ count: 0 });
     prisma.usuario.update.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
@@ -338,10 +341,10 @@ describe("usuarioService.getEntregadores", () => {
     expect(arg.where.OR).toBeUndefined();
   });
 
-  it("Bodega filtra entregadores por su bodega (sedeId + tabla puente)", async () => {
+  it("Bodega filtra entregadores por su bodega (bodegaId + tabla puente)", async () => {
     prisma.usuario.findMany.mockResolvedValue([]);
 
-    await svc.getEntregadores({ rol: "Bodega", sedeId: 5 });
+    await svc.getEntregadores({ rol: "Bodega", sedeId: 7, bodegaId: 5 });
 
     const arg = prisma.usuario.findMany.mock.calls[0][0];
     expect(arg.where.OR).toEqual([
@@ -350,10 +353,10 @@ describe("usuarioService.getEntregadores", () => {
     ]);
   });
 
-  it("Oficinista filtra por la bodega de su oficina (bodegaId)", async () => {
+  it("Oficinista filtra por su bodega (sedeId)", async () => {
     prisma.usuario.findMany.mockResolvedValue([]);
 
-    await svc.getEntregadores({ rol: "Oficinista", sedeId: 7, bodegaId: 5 });
+    await svc.getEntregadores({ rol: "Oficinista", sedeId: 5, bodegaId: 7 });
 
     const arg = prisma.usuario.findMany.mock.calls[0][0];
     expect(arg.where.OR).toEqual([
@@ -472,7 +475,31 @@ describe("usuarioService con Entregador multi-bodega", () => {
     );
   });
 
-  it("create de Bodega rechaza una sede de tipo Oficina", async () => {
+  it("create de Bodega rechaza una sede de tipo Bodega (debe ser oficina)", async () => {
+    prisma.usuario.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+
+    await expect(
+      svc.create(
+        {
+          nombreCompleto: "Nuevo",
+          usuario: "bodegabodega",
+          correo: "bodegabodega@test.com",
+          contrasena: "pass123",
+          rol: "Bodega",
+          sedeId: 1,
+        },
+        1,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringMatching(/oficina/i),
+    });
+  });
+
+  it("create de Oficinista rechaza una sede de tipo Oficina (debe ser bodega)", async () => {
     prisma.usuario.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null);
@@ -486,10 +513,10 @@ describe("usuarioService con Entregador multi-bodega", () => {
       svc.create(
         {
           nombreCompleto: "Nuevo",
-          usuario: "bodegaoficina",
-          correo: "bodegaoficina@test.com",
+          usuario: "oficinistaficina",
+          correo: "oficinistaficina@test.com",
           contrasena: "pass123",
-          rol: "Bodega",
+          rol: "Oficinista",
           sedeId: 8,
         },
         1,
@@ -497,30 +524,6 @@ describe("usuarioService con Entregador multi-bodega", () => {
     ).rejects.toMatchObject({
       statusCode: 400,
       message: expect.stringMatching(/bodega/i),
-    });
-  });
-
-  it("create de Oficinista rechaza una sede de tipo Bodega", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
-    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
-
-    await expect(
-      svc.create(
-        {
-          nombreCompleto: "Nuevo",
-          usuario: "oficinistabodega",
-          correo: "oficinistabodega@test.com",
-          contrasena: "pass123",
-          rol: "Oficinista",
-          sedeId: 1,
-        },
-        1,
-      ),
-    ).rejects.toMatchObject({
-      statusCode: 400,
-      message: expect.stringMatching(/oficina/i),
     });
   });
 

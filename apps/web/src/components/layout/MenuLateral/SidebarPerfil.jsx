@@ -10,7 +10,7 @@ const ROL_CONFIG = {
     bg: "rgba(221,183,255,0.12)",
   },
   AdminBogota: {
-    label: "Bodega Bogotá",
+    label: "Admin Bogotá",
     color: "#e9c349",
     bg: "rgba(233,195,73,0.12)",
   },

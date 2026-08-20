@@ -70,7 +70,7 @@ const envioService = (app) => ({
 
     const sedeOrigenId =
       usuario.rol === "AdminBogota" || usuario.rol === "Bodega"
-        ? usuario.sedeId
+        ? (this.sedeOperativa(usuario) ?? usuario.sedeId)
         : Number(body.sedeOrigenId);
 
     if (!sedeOrigenId) {

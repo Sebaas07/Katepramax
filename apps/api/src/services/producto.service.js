@@ -41,10 +41,17 @@ function sedeEsPermitida(usuario) {
 }
 
 function sedeWhere(usuario) {
-  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
-    return { sedeId: usuario.sedeId };
+  const sedeId = usuario?.sedeOperativa ?? usuario?.sedeId ?? null;
+  if (usuario && usuario.rol !== "Admin" && sedeId != null) {
+    return { sedeId };
   }
   return {};
+}
+
+// Sede de trabajo para el rol Bodega: la bodega de su oficina (resuelta en el
+// auth middleware como `sedeOperativa`). Los demás roles usan su propia sede.
+function sedeOperativa(usuario) {
+  return usuario?.sedeOperativa ?? usuario?.sedeId ?? null;
 }
 
 async function crear(app, body, usuario) {
@@ -56,7 +63,7 @@ async function crear(app, body, usuario) {
 
   let sedeId;
   if (usuario?.rol !== "Admin") {
-    sedeId = usuario.sedeId;
+    sedeId = sedeOperativa(usuario);
   } else if (_sedeId !== undefined && _sedeId !== null && _sedeId !== "") {
     sedeId = Number(_sedeId);
     if (Number.isNaN(sedeId)) {
@@ -143,7 +150,7 @@ async function obtenerPorCodigo(app, codigo, usuario) {
   if (!producto) throw new AppError(`Producto ${codigo} no encontrado`, 404);
 
   if (usuario?.rol !== "Admin") {
-    const sedeId = usuario.sedeId;
+    const sedeId = sedeOperativa(usuario);
     const tieneStock = producto.stockSedes?.some(
       (s) => Number(s.sedeId) === Number(sedeId),
     );
@@ -164,7 +171,7 @@ async function editar(app, codigo, body, usuario) {
   if (!producto) throw new AppError(`Producto ${codigo} no encontrado`, 404);
 
   if (usuario?.rol !== "Admin") {
-    const sedeId = usuario.sedeId;
+    const sedeId = sedeOperativa(usuario);
     const tieneStock = producto.stockSedes?.some(
       (s) => Number(s.sedeId) === Number(sedeId),
     );
@@ -197,7 +204,7 @@ async function desactivar(app, codigo, usuario) {
   if (!producto) throw new AppError(`Producto ${codigo} no encontrado`, 404);
 
   if (usuario?.rol !== "Admin") {
-    const sedeId = usuario.sedeId;
+    const sedeId = sedeOperativa(usuario);
     const tieneStock = producto.stockSedes?.some(
       (s) => Number(s.sedeId) === Number(sedeId),
     );

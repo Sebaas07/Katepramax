@@ -76,7 +76,7 @@ const EnviosPage = () => {
   // ── Modal: nuevo envío ─────────────────────────────────────
   const abrirNuevo = () => {
     setFormNuevo({
-      sedeOrigenId: esBodega ? String(usuario.sedeId) : "",
+      sedeOrigenId: esBodega ? String(usuario.bodegaId ?? usuario.sedeId ?? "") : "",
       sedesDestinoIds: [],
       detalles: [lineaVacia()],
       observaciones: "",

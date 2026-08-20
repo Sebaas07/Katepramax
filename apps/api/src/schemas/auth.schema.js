@@ -57,6 +57,7 @@ const tokenPair = {
         usuario: { type: "string", description: "Nombre de usuario" },
         rol: { type: "string", enum: ["Admin", "Bodega", "AdminBogota", "Oficinista", "Entregador"], description: "Rol del usuario" },
         sedeId: { type: "integer" },
+        bodegaId: { type: ["integer", "null"], description: "Bodega de la oficina del usuario (rol Bodega)" },
         sede: { type: "string", nullable: false, description: "Nombre de la sede" },
       },
     },

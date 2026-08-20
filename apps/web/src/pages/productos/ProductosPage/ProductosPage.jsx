@@ -148,7 +148,9 @@ const ProductosPage = () => {
   } = useAuth();
   const puedeEditar = esAdmin || esBodega;
   const puedeGestionarEstado = esAdmin || esAdminBogota;
-  const sedeIdUsuario = usuario?.sedeId ?? null;
+  const sedeIdUsuario = esBodega
+    ? (usuario?.bodegaId ?? usuario?.sedeId ?? null)
+    : (usuario?.sedeId ?? null);
 
   const [productos, setProductos] = useState([]);
   const [sedes, setSedes] = useState([]);

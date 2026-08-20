@@ -4,13 +4,20 @@ const { registrarAccion } = require("../utils/logger");
 const { AppError } = require("../errors/AppError");
 
 // Tipo de sede exigido por rol al crear/editar un usuario.
-//  - Bodega/Entregador → solo bodegas
-//  - Oficinista        → solo oficinas
+//  - Bodega          → solo oficinas (su bodega operativa es la de la oficina)
+//  - Entregador      → solo bodegas (multi-bodega vía checkboxes)
+//  - Oficinista      → solo bodegas
 //  - Admin/AdminBogota → cualquier sede (bodega u oficina)
 const TIPO_SEDE_POR_ROL = {
-  Bodega: "Bodega",
+  Bodega: "Oficina",
   Entregador: "Bodega",
-  Oficinista: "Oficina",
+  Oficinista: "Bodega",
+};
+
+const MENSAJES_TIPO_SEDE = {
+  Bodega: "El rol Bodega solo puede asignarse a oficinas.",
+  Entregador: "El rol Entregador solo puede asignarse a bodegas.",
+  Oficinista: "El rol Oficinista solo puede asignarse a bodegas.",
 };
 
 // Valida que una sede exista, esté activa y sea del tipo que exige el rol.
@@ -25,24 +32,31 @@ async function validarSede(app, sedeId, rol) {
   const tipoEsperado = TIPO_SEDE_POR_ROL[rol];
   if (tipoEsperado && sede.tipo !== tipoEsperado) {
     throw new AppError(
-      rol === "Oficinista"
-        ? "El rol Oficinista solo puede asignarse a oficinas."
-        : `El rol ${rol} solo puede asignarse a bodegas.`,
+      MENSAJES_TIPO_SEDE[rol] ?? "La sede seleccionada no corresponde al rol.",
       400,
     );
   }
   return id;
 }
 
-// Devuelve los ids de bodega de un entregador (su sede principal + las de la
-// tabla puente). Valida que todas existan, estén activas y sean bodegas.
+// Devuelve los ids de bodega de un entregador (todas sus bodegas). Valida que
+// todas existan, estén activas y sean bodegas. Si no se envía una sede
+// principal (sedeId), la primera bodega seleccionada actúa como principal.
 async function resolverBodegasEntregador(app, sedeId, sedesIds) {
   const ids = Array.isArray(sedesIds) && sedesIds.length > 0
     ? [...new Set(sedesIds.map((s) => parseInt(s, 10)))]
     : [];
   const primario = parseInt(sedeId, 10);
-  if (Number.isNaN(primario)) throw new AppError("Selecciona al menos una bodega.", 400);
-  if (!ids.includes(primario)) ids.unshift(primario);
+
+  if (ids.length === 0 && Number.isNaN(primario)) {
+    throw new AppError("Selecciona al menos una bodega.", 400);
+  }
+  if (!Number.isNaN(primario) && !ids.includes(primario)) {
+    ids.unshift(primario);
+  }
+  if (ids.length === 0) {
+    throw new AppError("Selecciona al menos una bodega.", 400);
+  }
 
   const bodegas = await app.prisma.sede.findMany({
     where: { id: { in: ids }, activo: true, tipo: "Bodega" },
@@ -65,17 +79,17 @@ const usuarioService = (app) => {
 
     // Usado por Bodega/Admin/AdminBogota/Oficinista para asignar pedidos a
     // entregadores. Solo se listan los entregadores de la bodega del usuario:
-    //  - Bodega         → entregadores de su bodega (sedeId)
-    //  - Oficinista     → entregadores de la bodega de su oficina (bodegaId)
+    //  - Bodega         → entregadores de la bodega de su oficina (bodegaId)
+    //  - Oficinista     → entregadores de su bodega (sedeId)
     //  - Admin/AdminBogota → todos los entregadores (gestionan toda la ciudad)
     getEntregadores: async (usuario) => {
       const where = { rol: "Entregador", activo: true };
 
       if (usuario?.rol === "Bodega" || usuario?.rol === "Oficinista") {
-        let bodegaId = usuario.sedeId;
-        if (usuario.rol === "Oficinista" && usuario.bodegaId) {
-          bodegaId = usuario.bodegaId;
-        }
+        const bodegaId =
+          usuario.rol === "Bodega"
+            ? (usuario.bodegaId ?? usuario.sedeId)
+            : usuario.sedeId;
         if (bodegaId != null) {
           where.OR = [
             { sedeId: bodegaId },
@@ -118,13 +132,15 @@ const usuarioService = (app) => {
       if (existeUsuario) throw new AppError("El nombre de usuario ya está en uso", 400);
       if (existeCorreo) throw new AppError("El correo ya está registrado", 400);
 
-      // Sede principal validada según el rol.
-      const sedeIdFinal = await validarSede(app, sedeId, rol);
-
-      // Para entregador: puede estar asignado a varias bodegas.
+      // Sede principal validada según el rol. El Entregador no elige una sede
+      // principal: la primera bodega seleccionada actúa como principal.
+      let sedeIdFinal;
       let bodegasEntregador = [];
       if (rol === "Entregador") {
-        bodegasEntregador = await resolverBodegasEntregador(app, sedeIdFinal, sedesIds);
+        bodegasEntregador = await resolverBodegasEntregador(app, sedeId, sedesIds);
+        sedeIdFinal = bodegasEntregador[0];
+      } else {
+        sedeIdFinal = await validarSede(app, sedeId, rol);
       }
 
       const clave = await bcrypt.hash(contrasena, 10);
@@ -188,22 +204,23 @@ const usuarioService = (app) => {
       const rolFinal = campos.rol ?? existe.rol;
       const sedeFinal = campos.sedeId !== undefined ? parseInt(campos.sedeId, 10) : existe.sedeId;
 
-      // Validar la sede principal según el rol final.
-      await validarSede(app, sedeFinal, rolFinal);
-
-      // Para entregador: validar sus bodegas antes de persistir.
-      // Si no se envían sedesIds (ej: solo se cambia el nombre), se conservan
-      // las bodegas actuales del entregador en lugar de resetearlas.
+      // Validar la sede principal según el rol final. Para el Entregador no
+      // hay sede principal en el formulario: la primera bodega actúa como tal.
       let bodegasEntregador = null;
       if (rolFinal === "Entregador") {
+        // Si no se envían sedesIds (ej: solo se cambia el nombre), se conservan
+        // las bodegas actuales del entregador en lugar de resetearlas.
         const sedesFuente =
           Array.isArray(data.sedesIds) && data.sedesIds.length > 0
             ? data.sedesIds
             : (existe.entregadorSedes ?? []).map((e) => e.sedeId);
         bodegasEntregador = await resolverBodegasEntregador(app, sedeFinal, sedesFuente);
+        campos.sedeId = bodegasEntregador[0];
+      } else {
+        await validarSede(app, sedeFinal, rolFinal);
+        if (campos.sedeId !== undefined) campos.sedeId = parseInt(campos.sedeId, 10);
       }
 
-      if (campos.sedeId !== undefined) campos.sedeId = parseInt(campos.sedeId, 10);
       if (campos.activo !== undefined) campos.activo = Boolean(campos.activo);
       if (campos.telefono !== undefined) campos.telefono = campos.telefono ?? "";
 

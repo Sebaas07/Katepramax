@@ -31,6 +31,20 @@ const usuarioResponse = {
     },
     activo: { type: "boolean" },
     creadoEn: { type: "string", format: "date-time" },
+    entregadorSedes: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          sedeId: { type: "integer" },
+          sede: {
+            type: "object",
+            nullable: true,
+            properties: { nombre: { type: "string" } },
+          },
+        },
+      },
+    },
   },
 };
 
@@ -42,7 +56,6 @@ const createUsuarioBody = {
     "usuario",
     "contrasena",
     "rol",
-    "sedeId",
   ],
   additionalProperties: false,
   properties: {

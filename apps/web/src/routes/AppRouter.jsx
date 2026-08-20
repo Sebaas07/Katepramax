@@ -43,7 +43,7 @@ const EnviosPage = lazy(() => import("@/pages/envios/EnviosPage/EnviosPage"));
 
 // ── Roles ─────────────────────────────────────────────────────
 const ROLES = {
-  ADMIN: ["Admin"],
+  ADMIN: ["Admin", "AdminBogota"],
   // Pedidos: Admin + AdminBogota
   PEDIDOS: ["Admin", "AdminBogota"],
   // Consulta (inventario) para Bodega/Oficinista + Admin/AdminBogota

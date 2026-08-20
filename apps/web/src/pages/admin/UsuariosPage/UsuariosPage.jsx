@@ -35,14 +35,15 @@ const FORM_INICIAL = {
 
 // Tipos de sede permitidos al crear/editar un usuario según su rol.
 //   Admin / AdminBogota → bodegas y oficinas
-//   Bodega / Entregador → solo bodegas
-//   Oficinista          → solo oficinas
+//   Bodega              → solo oficinas (opera sobre la bodega de la oficina)
+//   Entregador          → solo bodegas (multi-bodega, sin sede principal)
+//   Oficinista          → solo bodegas
 const SEDES_POR_ROL = {
   Admin:       ["Bodega", "Oficina"],
   AdminBogota: ["Bodega", "Oficina"],
-  Bodega:      ["Bodega"],
+  Bodega:      ["Oficina"],
   Entregador:  ["Bodega"],
-  Oficinista:  ["Oficina"],
+  Oficinista:  ["Bodega"],
 };
 
 const Spinner = () => (
@@ -299,14 +300,7 @@ const UsuariosPage = () => {
       const sedesIds = yaEsta
         ? prev.sedesIds.filter((item) => item !== id)
         : [...prev.sedesIds, id];
-
-      // La bodega principal (sedeId) debe estar dentro de las seleccionadas.
-      let sedeIdForm = prev.sedeId;
-      const sedeActual = Number(prev.sedeId);
-      if (!sedeIdForm || (sedeActual && !sedesIds.includes(sedeActual))) {
-        sedeIdForm = sedesIds.length > 0 ? String(sedesIds[0]) : "";
-      }
-      return { ...prev, sedesIds, sedeId: sedeIdForm };
+      return { ...prev, sedesIds };
     });
   }, []);
 
@@ -335,7 +329,7 @@ const UsuariosPage = () => {
       nuevosErrores.rol = "Selecciona un rol.";
     }
 
-    if (!form.sedeId) {
+    if (form.rol !== "Entregador" && !form.sedeId) {
       nuevosErrores.sedeId = "Selecciona una sede.";
     }
 
@@ -379,12 +373,19 @@ const UsuariosPage = () => {
 
     setGuardando(true);
     try {
+      const sedeEnvio =
+        form.rol === "Entregador"
+          ? form.sedesIds.length > 0
+            ? String(form.sedesIds[0])
+            : ""
+          : form.sedeId;
+
       if (usuarioSel) {
         await usuarioService.actualizarUsuario(usuarioSel.id, {
           nombreCompleto: form.nombreCompleto.trim(),
           usuario: form.usuario.trim(),
           rol: form.rol,
-          sedeId: form.sedeId,
+          sedeId: sedeEnvio,
           activo: form.activo,
           telefono: form.telefono,
           ...(form.rol === "Entregador" ? { sedesIds: form.sedesIds } : {}),
@@ -403,7 +404,7 @@ const UsuariosPage = () => {
           contrasena: form.contrasena,
           confirmarContrasena: form.confirmarContrasena,
           rol: form.rol,
-          sedeId: form.sedeId,
+          sedeId: sedeEnvio,
           activo: form.activo,
           telefono: form.telefono,
           ...(form.rol === "Entregador" ? { sedesIds: form.sedesIds } : {}),
@@ -709,36 +710,44 @@ const UsuariosPage = () => {
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="usr-sede">
-                {form.rol === "Oficinista" ? "Oficina *" : "Bodega *"}
-              </label>
-              <select
-                id="usr-sede"
-                name="sedeId"
-                value={form.sedeId}
-                onChange={handleCambioForm}
-                className="form-control"
-              >
-                <option value="">
-                  {cargandoSedes
-                    ? "Cargando sedes..."
-                    : form.rol === "Oficinista"
-                      ? "Selecciona una oficina"
-                      : "Selecciona una bodega"}
-                </option>
-                {sedesPorRol.map((sede) => (
-                  <option key={sede.id} value={sede.id}>
-                    {sede.nombre}
+          {form.rol !== "Entregador" && (
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="usr-sede">
+                  {form.rol === "Oficinista"
+                    ? "Bodega *"
+                    : form.rol === "Bodega"
+                      ? "Oficina *"
+                      : "Sede *"}
+                </label>
+                <select
+                  id="usr-sede"
+                  name="sedeId"
+                  value={form.sedeId}
+                  onChange={handleCambioForm}
+                  className="form-control"
+                >
+                  <option value="">
+                    {cargandoSedes
+                      ? "Cargando sedes..."
+                      : form.rol === "Oficinista"
+                        ? "Selecciona una bodega"
+                        : form.rol === "Bodega"
+                          ? "Selecciona una oficina"
+                          : "Selecciona una sede"}
                   </option>
-                ))}
-              </select>
-              {errores.sedeId && (
-                <span className="form-error">{errores.sedeId}</span>
-              )}
+                  {sedesPorRol.map((sede) => (
+                    <option key={sede.id} value={sede.id}>
+                      {sede.nombre}
+                    </option>
+                  ))}
+                </select>
+                {errores.sedeId && (
+                  <span className="form-error">{errores.sedeId}</span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {form.rol === "Entregador" && (
             <div className="form-group">
@@ -758,11 +767,6 @@ const UsuariosPage = () => {
                         onChange={() => handleToggleSedeEntregador(sede.id)}
                       />
                       <span>{sede.nombre}</span>
-                      {form.sedeId === String(sede.id) && (
-                        <span className="usr-bodega-principal">
-                          Principal
-                        </span>
-                      )}
                     </label>
                   );
                 })}
@@ -771,7 +775,7 @@ const UsuariosPage = () => {
                 <span className="form-error">{errores.sedesIds}</span>
               )}
               <span className="form-hint">
-                La bodega principal es la que el entregador usa por defecto.
+                El entregador puede estar asignado a una o varias bodegas.
               </span>
             </div>
           )}

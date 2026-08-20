@@ -47,6 +47,14 @@ const verifyToken = async (request, reply) => {
       }
     }
 
+    // Sede "operativa" del usuario para filtros de inventario/productos.
+    // El rol Bodega tiene asignada una oficina (su sede es de tipo Oficina),
+    // así que su bodega de trabajo es la bodega de esa oficina (bodegaId).
+    const sedeOperativa =
+      sesion.usuario.rol === "Bodega"
+        ? (sede?.bodegaId ?? sesion.usuario.sedeId)
+        : sesion.usuario.sedeId;
+
     request.user = {
       id:             sesion.usuario.id,
       usuario:        sesion.usuario.usuario,
@@ -54,6 +62,7 @@ const verifyToken = async (request, reply) => {
       sedeId:         sesion.usuario.sedeId,
       sedeTipo:       sede?.tipo ?? null,
       bodegaId:       sede?.bodegaId ?? null,
+      sedeOperativa,
       sedesOperativas,
       sesionId:       sesion.id,
     };
@@ -84,12 +93,15 @@ const requireRole = (roles) => {
  * Bodega/AdminBogota → { sedeId }        (solo su sede)
  */
 const injectSedeFilter = async (request) => {
-  const { rol, sedeId } = request.user ?? {};
+  const { rol, sedeId, bodegaId } = request.user ?? {};
   if (rol === "Admin") {
     request.sedeFilter = {};
-  } else if (rol === "AdminBogota" || rol === "Bodega" || rol === "Oficinista") {
+  } else if (rol === "AdminBogota" || rol === "Oficinista") {
     if (!sedeId) throw new AppError("El usuario no tiene sede asignada.", 403);
     request.sedeFilter = { sedeId };
+  } else if (rol === "Bodega") {
+    if (!sedeId) throw new AppError("El usuario no tiene sede asignada.", 403);
+    request.sedeFilter = { sedeId: bodegaId ?? sedeId };
   } else {
     throw new AppError("Rol no autorizado para este recurso.", 403);
   }

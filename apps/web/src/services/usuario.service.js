@@ -57,7 +57,13 @@ const usuarioService = {
       }
       if (!datos.rol) throw new Error("Selecciona un rol.");
       validarRol(datos.rol);
-      validarSedeId(datos.sedeId);
+      if (datos.rol === "Entregador") {
+        if (!Array.isArray(datos.sedesIds) || datos.sedesIds.length === 0) {
+          throw new Error("Asigna al menos una bodega al entregador.");
+        }
+      } else {
+        validarSedeId(datos.sedeId);
+      }
       validarContrasena(datos.contrasena);
       if (datos.contrasena !== datos.confirmarContrasena) {
         throw new Error("La confirmación de contraseña no coincide.");
@@ -68,7 +74,10 @@ const usuarioService = {
         usuario,
         contrasena: datos.contrasena,
         rol: datos.rol,
-        sedeId: validarSedeId(datos.sedeId),
+        sedeId:
+          datos.rol === "Entregador"
+            ? Number(datos.sedesIds[0])
+            : validarSedeId(datos.sedeId),
         activo: datos.activo ?? true,
         telefono: datos.telefono ?? "",
         ...(datos.rol === "Entregador" && Array.isArray(datos.sedesIds) && datos.sedesIds.length > 0
@@ -101,7 +110,11 @@ const usuarioService = {
         payload.rol = datos.rol;
       }
       if (datos.sedeId !== undefined) {
-        payload.sedeId = validarSedeId(datos.sedeId);
+        if (datos.rol === "Entregador" && (datos.sedeId === "" || datos.sedeId == null)) {
+          // El backend deriva la sede principal desde las bodegas seleccionadas.
+        } else {
+          payload.sedeId = validarSedeId(datos.sedeId);
+        }
       }
       if (datos.activo !== undefined) {
         payload.activo = Boolean(datos.activo);

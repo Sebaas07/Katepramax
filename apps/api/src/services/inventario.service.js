@@ -23,13 +23,19 @@ function calcularDelta(tipo, cantidad) {
   return Math.abs(cantidad); // entrada por defecto
 }
 
+// Sede de trabajo para el rol Bodega: la bodega de su oficina (resuelta en el
+// auth middleware como `sedeOperativa`). Los demás roles usan su propia sede.
+function sedeOperativa(usuario) {
+  return usuario?.sedeOperativa ?? usuario?.sedeId ?? null;
+}
+
 async function registrar(app, body, usuario) {
   if (!sedeEsPermitida(usuario)) {
     throw new AppError("No tienes permiso para registrar inventario.", 403);
   }
 
   const sedeId = Number(body.sedeId);
-  if (usuario.rol !== "Admin" && sedeId !== usuario.sedeId) {
+  if (usuario.rol !== "Admin" && sedeId !== sedeOperativa(usuario)) {
     throw new AppError("No puedes registrar inventario en otra sede.", 403);
   }
 
@@ -126,7 +132,7 @@ async function obtenerLista(app, query, usuario) {
   if (query.tipo) filtros.tipo = query.tipo;
 
   if (usuario.rol !== "Admin") {
-    filtros.sedeId = usuario.sedeId;
+    filtros.sedeId = sedeOperativa(usuario);
   } else if (query.sedeId) {
     filtros.sedeId = Number(query.sedeId);
   }
@@ -143,7 +149,7 @@ async function obtenerPorId(app, id, usuario) {
   if (!registro)
     throw new AppError(`Registro de inventario ${id} no encontrado`, 404);
 
-  if (usuario.rol !== "Admin" && registro.sedeId !== usuario.sedeId) {
+  if (usuario.rol !== "Admin" && registro.sedeId !== sedeOperativa(usuario)) {
     throw new AppError("No tienes permiso para ver este registro.", 403);
   }
 
@@ -160,7 +166,7 @@ async function editar(app, id, body, usuario) {
     throw new AppError(`Registro de inventario ${id} no encontrado`, 404);
   }
 
-  if (usuario.rol !== "Admin" && anterior.sedeId !== usuario.sedeId) {
+  if (usuario.rol !== "Admin" && anterior.sedeId !== sedeOperativa(usuario)) {
     throw new AppError("No tienes permiso para editar este registro.", 403);
   }
 
@@ -228,7 +234,7 @@ async function borrar(app, id, usuario) {
     throw new AppError(`Registro de inventario ${id} no encontrado`, 404);
   }
 
-  if (usuario.rol !== "Admin" && registro.sedeId !== usuario.sedeId) {
+  if (usuario.rol !== "Admin" && registro.sedeId !== sedeOperativa(usuario)) {
     throw new AppError("No tienes permiso para eliminar este registro.", 403);
   }
 
@@ -287,7 +293,7 @@ async function resumenSemanal(app, semana, usuario) {
     select: { id: true, nombre: true },
   });
 
-  const where = usuario.rol !== "Admin" ? { sedeId: usuario.sedeId } : {};
+  const where = usuario.rol !== "Admin" ? { sedeId: sedeOperativa(usuario) } : {};
 
   const filas = await prisma.inventario.groupBy({
     by: ["sedeId", "productoId"],
@@ -306,7 +312,7 @@ async function resumenSemanal(app, semana, usuario) {
   const sedesFiltradas =
     usuario.rol === "Admin"
       ? sedes
-      : sedes.filter((s) => s.id === usuario.sedeId);
+      : sedes.filter((s) => s.id === sedeOperativa(usuario));
 
   const resultado = [];
   for (const sede of sedesFiltradas) {

@@ -11,6 +11,8 @@ async function truncarTablas() {
     "asignaciones_entrega",
     "pedido_detalles",
     "pedidos",
+    "envio_detalles",
+    "envios",
     "clientes",
     "stock_sedes",
     "inventarios",
@@ -34,7 +36,7 @@ async function truncarTablas() {
     try {
       await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tabla};`);
     } catch (e) {
-      console.warn(`⚠️  Tabla '${tabla}' no existe, se omite.`);
+      console.warn(`Tabla '${tabla}' no existe, se omite.`);
     }
   }
 
@@ -54,27 +56,26 @@ async function main() {
     prisma.sede.create({ data: { nombre: "Villavicencio", tipo: "Bodega" } }),
     prisma.sede.create({ data: { nombre: "Villavicencio Centro", tipo: "Oficina" } }),
     prisma.sede.create({ data: { nombre: "Villavicencio Norte", tipo: "Oficina" } }),
+    prisma.sede.create({ data: { nombre: "Bogotá Centro", tipo: "Oficina" } }),
+    prisma.sede.create({ data: { nombre: "Cartagena Centro", tipo: "Oficina" } }),
   ]);
 
-  // La bodega de Villavicencio alimenta sus dos oficinas.
-  await prisma.sede.update({
-    where: { id: sedes[3].id },
-    data: { bodegaId: sedes[2].id },
-  });
-  await prisma.sede.update({
-    where: { id: sedes[4].id },
-    data: { bodegaId: sedes[2].id },
-  });
+  // Cada oficina pertenece a una bodega.
+  await prisma.sede.update({ where: { id: sedes[3].id }, data: { bodegaId: sedes[2].id } });
+  await prisma.sede.update({ where: { id: sedes[4].id }, data: { bodegaId: sedes[2].id } });
+  await prisma.sede.update({ where: { id: sedes[5].id }, data: { bodegaId: sedes[0].id } });
+  await prisma.sede.update({ where: { id: sedes[6].id }, data: { bodegaId: sedes[1].id } });
 
   console.log("Creando usuarios de prueba (todos los roles)...");
   // Una sola contraseña para probar todos los perfiles.
-  const PASSWORD_PRUEBA = "Admin1234.";
+  const PASSWORD_PRUEBA = "Sergiogeien4.";
   const hashedPassword = await bcrypt.hash(PASSWORD_PRUEBA, 10);
 
   // Índices de `sedes` según el tipo exigido por cada rol:
   //   Admin/AdminBogota → cualquier sede
-  //   Bodega/Entregador → bodega (tipo Bodega)
-  //   Oficinista        → oficina (tipo Oficina)
+  //   Bodega            → oficina (tipo Oficina); opera sobre su bodega (bodegaId)
+  //   Oficinista        → bodega (tipo Bodega)
+  //   Entregador        → bodegas (multi-bodega)
   const usuarios = await Promise.all([
     usuRepo.create({
       correo: "admin@example.com",
@@ -101,7 +102,7 @@ async function main() {
       usuario: "bodega",
       rol: "Bodega",
       telefono: "3000000003",
-      sedeId: sedes[1].id, // Cartagena (bodega)
+      sedeId: sedes[6].id, // Cartagena Centro (oficina) → bodega Cartagena
     }),
     usuRepo.create({
       correo: "oficinista@example.com",
@@ -110,7 +111,7 @@ async function main() {
       usuario: "oficinista",
       rol: "Oficinista",
       telefono: "3000000004",
-      sedeId: sedes[3].id, // Villavicencio Centro (oficina)
+      sedeId: sedes[2].id, // Villavicencio (bodega)
     }),
     usuRepo.create({
       correo: "entregador@example.com",
