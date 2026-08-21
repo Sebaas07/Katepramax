@@ -48,8 +48,8 @@ const verifyToken = async (request, reply) => {
     }
 
     // Sede "operativa" del usuario para filtros de inventario/productos.
-    // El rol Bodega tiene asignada una oficina (su sede es de tipo Oficina),
-    // así que su bodega de trabajo es la bodega de esa oficina (bodegaId).
+    // Si el rol Bodega está en una oficina, usa la bodega padre (bodegaId);
+    // si está asignado directamente a una bodega, usa su sedeId.
     const sedeOperativa =
       sesion.usuario.rol === "Bodega"
         ? (sede?.bodegaId ?? sesion.usuario.sedeId)
