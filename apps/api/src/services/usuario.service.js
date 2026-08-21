@@ -4,18 +4,18 @@ const { registrarAccion } = require("../utils/logger");
 const { AppError } = require("../errors/AppError");
 
 // Tipo de sede exigido por rol al crear/editar un usuario.
-//  - Bodega          → solo oficinas (su bodega operativa es la de la oficina)
+//  - Bodega          → solo bodegas (identifica a qué bodega pertenece)
 //  - Entregador      → solo bodegas (multi-bodega vía checkboxes)
 //  - Oficinista      → solo bodegas
 //  - Admin/AdminBogota → cualquier sede (bodega u oficina)
 const TIPO_SEDE_POR_ROL = {
-  Bodega: "Oficina",
+  Bodega: "Bodega",
   Entregador: "Bodega",
   Oficinista: "Bodega",
 };
 
 const MENSAJES_TIPO_SEDE = {
-  Bodega: "El rol Bodega solo puede asignarse a oficinas.",
+  Bodega: "El rol Bodega solo puede asignarse a bodegas.",
   Entregador: "El rol Entregador solo puede asignarse a bodegas.",
   Oficinista: "El rol Oficinista solo puede asignarse a bodegas.",
 };
@@ -79,7 +79,7 @@ const usuarioService = (app) => {
 
     // Usado por Bodega/Admin/AdminBogota/Oficinista para asignar pedidos a
     // entregadores. Solo se listan los entregadores de la bodega del usuario:
-    //  - Bodega         → entregadores de la bodega de su oficina (bodegaId)
+    //  - Bodega         → su bodega (sedeId o bodegaId si viene de una oficina)
     //  - Oficinista     → entregadores de su bodega (sedeId)
     //  - Admin/AdminBogota → todos los entregadores (gestionan toda la ciudad)
     getEntregadores: async (usuario) => {
