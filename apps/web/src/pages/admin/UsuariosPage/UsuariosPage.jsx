@@ -45,3 +45,839 @@ const SEDES_POR_ROL = {
   Entregador:  ["Bodega"],
   Oficinista:  ["Bodega"],
 };
+
+const Spinner = () => (
+  <div className="usr-spinner-wrap">
+    <div className="usr-spinner" />
+    <span>Cargando usuarios...</span>
+  </div>
+);
+
+const RoleBadge = ({ rol }) => {
+  const config = {
+    Admin: {
+      color: "#d8b4fe",
+      bg: "rgba(216,180,254,0.14)",
+      border: "rgba(216,180,254,0.35)",
+    },
+    AdminBogota: {
+      color: "#fde68a",
+      bg: "rgba(253,230,138,0.14)",
+      border: "rgba(253,230,138,0.35)",
+    },
+    Oficinista: {
+      color: "#f0abfc",
+      bg: "rgba(240,171,252,0.14)",
+      border: "rgba(240,171,252,0.35)",
+    },
+    Bodega: {
+      color: "#93c5fd",
+      bg: "rgba(147,197,253,0.14)",
+      border: "rgba(147,197,253,0.35)",
+    },
+    Entregador: {
+      color: "#86efac",
+      bg: "rgba(134,239,172,0.14)",
+      border: "rgba(134,239,172,0.35)",
+    },
+  }[rol] ?? {
+    color: "var(--on-surface-variant)",
+    bg: "rgba(255,255,255,0.06)",
+    border: "var(--outline-variant)",
+  };
+
+  return (
+    <span className="usr-role-badge" style={config}>
+      {rol || "—"}
+    </span>
+  );
+};
+
+/** Texto de sedes: para entregadores muestra TODAS las bodegas asignadas. */
+const etiquetaSedes = (usuario) => {
+  const entregadorSedes = Array.isArray(usuario.entregadorSedes)
+    ? usuario.entregadorSedes
+    : [];
+  if (usuario.rol === "Entregador" && entregadorSedes.length > 0) {
+    const nombres = [
+      ...new Set(
+        entregadorSedes
+          .map((es) => es.sede?.nombre)
+          .filter(Boolean),
+      ),
+    ];
+    if (nombres.length > 0) return nombres.join(", ");
+  }
+  return (
+    usuario.sede?.nombre ||
+    `Sede ${usuario.sedeId || ""}`.trim() ||
+    "—"
+  );
+};
+
+const normalizeUsuario = (usuario) => ({
+  ...usuario,
+  id: usuario.id,
+  nombreCompleto: usuario.nombreCompleto || "Sin nombre",
+  usuario: usuario.usuario || "—",
+  rol: usuario.rol || "—",
+  sede: etiquetaSedes(usuario),
+  sedeId: usuario.sedeId || "",
+  entregadorSedes: Array.isArray(usuario.entregadorSedes)
+    ? usuario.entregadorSedes
+    : [],
+  activo: usuario.activo ?? false,
+  creadoEn: usuario.creadoEn || usuario.createdAt || null,
+});
+
+const UsuariosPage = () => {
+  const { esAdmin, isAuthenticated, isSessionChecked } = useAuth();
+
+  const [usuarios, setUsuarios] = useState([]);
+  const [cargando, setCargando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [modalConfirmAbierto, setModalConfirmAbierto] = useState(false);
+  const [usuarioSel, setUsuarioSel] = useState(null);
+  const [usuarioAEliminar, setUsuarioAEliminar] = useState(null);
+  const [form, setForm] = useState(FORM_INICIAL);
+  const [errores, setErrores] = useState({});
+  const [filtroRol, setFiltroRol] = useState("");
+  const [filtroSedeId, setFiltroSedeId] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [sedes, setSedes] = useState([]);
+  const [cargandoSedes, setCargandoSedes] = useState(false);
+
+  const cargarUsuarios = useCallback(async () => {
+    setCargando(true);
+    try {
+      const data = await usuarioService.obtenerUsuarios();
+      setUsuarios(Array.isArray(data) ? data.map(normalizeUsuario) : []);
+    } catch (error) {
+      toast.error(`Error al cargar usuarios: ${error.message}`);
+      setUsuarios([]);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+
+    const id = window.setTimeout(() => {
+      void cargarUsuarios();
+    }, 0);
+
+    return () => window.clearTimeout(id);
+  }, [cargarUsuarios, isSessionChecked, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isSessionChecked || !isAuthenticated) return;
+
+    const cargarSedes = async () => {
+      setCargandoSedes(true);
+      try {
+        const data = await inventarioService.obtenerSedes();
+        setSedes(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Error al cargar sedes:", err);
+        setSedes([]);
+      } finally {
+        setCargandoSedes(false);
+      }
+    };
+
+    void cargarSedes();
+  }, [isSessionChecked, isAuthenticated]);
+
+  const sedesPorRol = useMemo(() => {
+    const tipos = SEDES_POR_ROL[form.rol] ?? ["Bodega"];
+    return sedes.filter((sede) => tipos.includes(sede.tipo));
+  }, [sedes, form.rol]);
+
+  const usuariosFiltrados = useMemo(() => {
+    const termino = busqueda.trim().toLowerCase();
+
+    return usuarios.filter((usuario) => {
+      const pasaRol = !filtroRol || usuario.rol === filtroRol;
+      // Filtro de sede: sede principal O alguna de las bodegas del entregador
+      const pasaSede =
+        !filtroSedeId ||
+        String(usuario.sedeId) === String(filtroSedeId) ||
+        (Array.isArray(usuario.entregadorSedes) &&
+          usuario.entregadorSedes.some(
+            (es) => String(es.sedeId) === String(filtroSedeId),
+          ));
+      const texto =
+        `${usuario.nombreCompleto} ${usuario.usuario}`.toLowerCase();
+      const pasaBusqueda = !termino || texto.includes(termino);
+
+      return pasaRol && pasaSede && pasaBusqueda;
+    });
+  }, [usuarios, filtroRol, filtroSedeId, busqueda]);
+
+  const totalActivos = usuarios.filter((usuario) => usuario.activo).length;
+  const totalInactivos = usuarios.length - totalActivos;
+
+  const resetForm = useCallback(() => {
+    setForm(FORM_INICIAL);
+    setErrores({});
+  }, []);
+
+  const abrirCrear = useCallback(() => {
+    resetForm();
+    setUsuarioSel(null);
+    setModalAbierto(true);
+  }, [resetForm]);
+
+  const abrirEditar = useCallback((usuario) => {
+    const seleccionado = normalizeUsuario(usuario);
+    setUsuarioSel(seleccionado);
+    setForm({
+      nombreCompleto: seleccionado.nombreCompleto,
+      usuario: seleccionado.usuario,
+      contrasena: "",
+      confirmarContrasena: "",
+      rol: seleccionado.rol,
+      sedeId: String(seleccionado.sedeId || ""),
+      sedesIds: seleccionado.entregadorSedes
+        .map((item) => item.sedeId)
+        .filter((id) => id != null),
+      telefono: seleccionado.telefono ?? "",
+      activo: seleccionado.activo,
+    });
+    setErrores({});
+    setModalAbierto(true);
+  }, []);
+
+  const abrirModalConfirmDesactivar = useCallback((usuario) => {
+    setUsuarioAEliminar(normalizeUsuario(usuario));
+    setModalConfirmAbierto(true);
+  }, []);
+
+  const cerrarModalConfirm = useCallback(() => {
+    setModalConfirmAbierto(false);
+    setUsuarioAEliminar(null);
+  }, []);
+
+  const handleDesactivarUsuario = useCallback(async () => {
+    if (!usuarioAEliminar) return;
+    setGuardando(true);
+    try {
+      await usuarioService.desactivarUsuario(usuarioAEliminar.id);
+      toast.success(
+        `${usuarioAEliminar.nombreCompleto} desactivado correctamente.`,
+      );
+      cerrarModalConfirm();
+      await cargarUsuarios();
+    } catch (error) {
+      toast.error(`Error al desactivar: ${error.message}`);
+    } finally {
+      setGuardando(false);
+    }
+  }, [usuarioAEliminar, cargarUsuarios, cerrarModalConfirm]);
+
+  const handleActivarUsuario = useCallback(
+    async (usuario) => {
+      const seleccionado = normalizeUsuario(usuario);
+      setGuardando(true);
+      try {
+        await usuarioService.activarUsuario(seleccionado.id);
+        toast.success(`${seleccionado.nombreCompleto} activado correctamente.`);
+        await cargarUsuarios();
+      } catch (error) {
+        toast.error(`Error al activar: ${error.message}`);
+      } finally {
+        setGuardando(false);
+      }
+    },
+    [cargarUsuarios],
+  );
+
+  const cerrarModal = useCallback(() => {
+    setModalAbierto(false);
+    setUsuarioSel(null);
+    resetForm();
+  }, [resetForm]);
+
+  const handleCambioForm = useCallback((event) => {
+    const { name, type, value, checked } = event.target;
+
+    if (name === "rol") {
+      setForm((prev) => ({ ...prev, rol: value, sedeId: "", sedesIds: [] }));
+      return;
+    }
+
+    if (name === "telefono") {
+      const soloDigitos = String(value).replace(/\D/g, "").slice(0, 10);
+      setForm((prev) => ({ ...prev, telefono: soloDigitos }));
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  }, []);
+
+  const handleToggleSedeEntregador = useCallback((sedeId) => {
+    const id = Number(sedeId);
+    setForm((prev) => {
+      const yaEsta = prev.sedesIds.includes(id);
+      const sedesIds = yaEsta
+        ? prev.sedesIds.filter((item) => item !== id)
+        : [...prev.sedesIds, id];
+
+      let sedeIdForm = prev.sedeId;
+      const sedeActual = Number(prev.sedeId);
+      if (!sedeIdForm || (sedeActual && !sedesIds.includes(sedeActual))) {
+        sedeIdForm = sedesIds.length > 0 ? String(sedesIds[0]) : "";
+      }
+      return { ...prev, sedesIds, sedeId: sedeIdForm };
+    });
+  }, []);
+
+  const validarFormulario = useCallback(() => {
+    const nuevosErrores = {};
+    const nombreCompleto = form.nombreCompleto.trim();
+    const usuario = form.usuario.trim();
+
+    if (!nombreCompleto) {
+      nuevosErrores.nombreCompleto = "El nombre completo es obligatorio.";
+    }
+
+    if (!usuario) {
+      nuevosErrores.usuario = "El nombre de usuario es obligatorio.";
+    } else if (!/^[a-zA-Z0-9_]{5,10}$/.test(usuario)) {
+      nuevosErrores.usuario =
+        "Usa de 5 a 10 caracteres: letras, números y guión bajo.";
+    }
+
+    if (form.telefono && !/^\d{10}$/.test(form.telefono)) {
+      nuevosErrores.telefono =
+        "El teléfono debe tener exactamente 10 dígitos.";
+    }
+
+    if (!form.rol) {
+      nuevosErrores.rol = "Selecciona un rol.";
+    }
+
+    if (form.rol === "Entregador") {
+      if (form.sedesIds.length === 0) {
+        nuevosErrores.sedesIds =
+          "Asigna al menos una bodega al entregador.";
+      }
+    } else if (!form.sedeId) {
+      nuevosErrores.sedeId = "Selecciona una sede.";
+    }
+
+    if (!usuarioSel && !form.contrasena) {
+      nuevosErrores.contrasena = "La contraseña es obligatoria.";
+    } else if (form.contrasena) {
+      if (form.contrasena.length < 5) {
+        nuevosErrores.contrasena =
+          "La contraseña debe tener al menos 5 caracteres.";
+      } else if (!REGEX_CONTRASENA.test(form.contrasena)) {
+        nuevosErrores.contrasena =
+          "Debe incluir al menos un número y un símbolo.";
+      }
+    }
+
+    if (form.contrasena !== form.confirmarContrasena) {
+      nuevosErrores.confirmarContrasena = "Las contraseñas no coinciden.";
+    }
+
+    const usuarioDuplicado = usuarios.some(
+      (item) =>
+        item.id !== usuarioSel?.id &&
+        String(item.usuario).toLowerCase() === usuario.toLowerCase(),
+    );
+
+    if (usuarioDuplicado) {
+      nuevosErrores.usuario = "Este nombre de usuario ya está registrado.";
+    }
+
+    setErrores(nuevosErrores);
+    return Object.keys(nuevosErrores).length === 0;
+  }, [form, usuarios, usuarioSel]);
+
+  const handleGuardar = useCallback(async () => {
+    if (!validarFormulario()) return;
+
+    setGuardando(true);
+    try {
+      if (usuarioSel) {
+        await usuarioService.actualizarUsuario(usuarioSel.id, {
+          nombreCompleto: form.nombreCompleto.trim(),
+          usuario: form.usuario.trim(),
+          rol: form.rol,
+          sedeId: form.sedeId,
+          activo: form.activo,
+          telefono: form.telefono,
+          ...(form.rol === "Entregador" ? { sedesIds: form.sedesIds } : {}),
+          ...(form.contrasena
+            ? {
+                contrasena: form.contrasena,
+                confirmarContrasena: form.confirmarContrasena,
+              }
+            : {}),
+        });
+        toast.success("Usuario actualizado correctamente.");
+      } else {
+        await usuarioService.crearUsuario({
+          nombreCompleto: form.nombreCompleto.trim(),
+          usuario: form.usuario.trim(),
+          contrasena: form.contrasena,
+          confirmarContrasena: form.confirmarContrasena,
+          rol: form.rol,
+          sedeId: form.sedeId,
+          activo: form.activo,
+          telefono: form.telefono,
+          ...(form.rol === "Entregador" ? { sedesIds: form.sedesIds } : {}),
+        });
+        toast.success("Usuario creado correctamente.");
+      }
+
+      cerrarModal();
+      await cargarUsuarios();
+    } catch (error) {
+      toast.error(`Error al guardar usuario: ${error.message}`);
+    } finally {
+      setGuardando(false);
+    }
+  }, [validarFormulario, usuarioSel, form, cerrarModal, cargarUsuarios]);
+
+  const columnas = useMemo(
+    () => [
+      { campo: "nombreCompleto", label: "Nombre Completo", tipo: "texto" },
+      { campo: "usuario", label: "Usuario", tipo: "texto" },
+      { campo: "rol", label: "Rol", tipo: "texto" },
+      { campo: "sede", label: "Sede(s)", tipo: "texto" },
+      { campo: "activo", label: "Estado", tipo: "booleano" },
+      { campo: "creadoEn", label: "Fecha de creación", tipo: "fecha" },
+    ],
+    [],
+  );
+
+  const renderAcciones = useCallback(
+    (usuario) => {
+      const seleccionado = normalizeUsuario(usuario);
+      const puedeCambiarEstado = seleccionado.id !== undefined;
+
+      return [
+        {
+          label: "Editar",
+          icon: "edit",
+          onClick: () => abrirEditar(seleccionado),
+        },
+        ...(puedeCambiarEstado
+          ? [
+              {
+                label: seleccionado.activo ? "Desactivar" : "Activar",
+                icon: seleccionado.activo ? "person_off" : "person",
+                onClick: seleccionado.activo
+                  ? () => abrirModalConfirmDesactivar(seleccionado)
+                  : () => handleActivarUsuario(seleccionado),
+                variante: seleccionado.activo ? "danger" : "success",
+              },
+            ]
+          : []),
+      ];
+    },
+    [abrirEditar, abrirModalConfirmDesactivar, handleActivarUsuario],
+  );
+
+  const renderCeldaCustom = useCallback((fila, columna) => {
+    if (columna.campo === "rol") {
+      return <RoleBadge rol={fila.rol} />;
+    }
+
+    if (columna.campo === "creadoEn") {
+      return formatFecha(fila.creadoEn);
+    }
+
+    return null;
+  }, []);
+
+  return (
+    <div className="usuarios-page">
+      <div className="page-header">
+        <div>
+          <h1>Gestión de Usuarios</h1>
+          <p className="usr-subtitulo">CRUD exclusivo para administradores</p>
+        </div>
+
+        <div className="filters">
+          <div className="filter-group">
+            <label htmlFor="usr-filtro-rol">Rol</label>
+            <select
+              id="usr-filtro-rol"
+              value={filtroRol}
+              onChange={(event) => setFiltroRol(event.target.value)}
+              className="filter-select"
+            >
+              <option value="">Todos los roles</option>
+              {ROLES.map((rol) => (
+                <option key={rol.value} value={rol.value}>
+                  {rol.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="usr-filtro-sede">Sede</label>
+            <select
+              id="usr-filtro-sede"
+              value={filtroSedeId}
+              onChange={(event) => setFiltroSedeId(event.target.value)}
+              className="filter-select"
+              disabled={cargandoSedes}
+            >
+              <option value="">
+                {cargandoSedes ? "Cargando sedes..." : "Todas las sedes"}
+              </option>
+              {sedes.map((sede) => (
+                <option key={sede.id} value={sede.id}>
+                  {sede.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group filter-group--search">
+            <label htmlFor="usr-busqueda">Búsqueda</label>
+            <div className="search-box">
+              <span className="material-symbols-outlined">search</span>
+              <input
+                id="usr-busqueda"
+                type="search"
+                value={busqueda}
+                onChange={(event) => setBusqueda(event.target.value)}
+                placeholder="Nombre o usuario"
+              />
+            </div>
+          </div>
+
+          {esAdmin && (
+            <button className="btn-primary" onClick={abrirCrear} type="button">
+              <span className="material-symbols-outlined">person_add</span>
+              Nuevo Usuario
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="usr-stats">
+        <div className="usr-stat-card">
+          <span className="material-symbols-outlined">group</span>
+          <div>
+            <span className="usr-stat-valor">{usuarios.length}</span>
+            <span className="usr-stat-label">Total usuarios</span>
+          </div>
+        </div>
+        <div className="usr-stat-card usr-stat-card--activo">
+          <span className="material-symbols-outlined">person</span>
+          <div>
+            <span className="usr-stat-valor">{totalActivos}</span>
+            <span className="usr-stat-label">Activos</span>
+          </div>
+        </div>
+        <div className="usr-stat-card usr-stat-card--inactivo">
+          <span className="material-symbols-outlined">person_off</span>
+          <div>
+            <span className="usr-stat-valor">{totalInactivos}</span>
+            <span className="usr-stat-label">Inactivos</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="tab-content">
+        {cargando ? (
+          <Spinner />
+        ) : usuarios.length === 0 ? (
+          <EmptyState
+            icono="group_add"
+            titulo="No hay usuarios registrados"
+            detalle="Crea el primer usuario para comenzar a administrar accesos."
+          >
+            {esAdmin && (
+              <button
+                className="btn-primary"
+                onClick={abrirCrear}
+                type="button"
+              >
+                <span className="material-symbols-outlined">person_add</span>
+                Nuevo Usuario
+              </button>
+            )}
+          </EmptyState>
+        ) : usuariosFiltrados.length === 0 ? (
+          <EmptyState
+            icono="search_off"
+            titulo="Sin resultados"
+            detalle="Ajusta los filtros para encontrar usuarios."
+          >
+            <button
+              className="btn-outline-gold"
+              onClick={() => {
+                setFiltroRol("");
+                setFiltroSedeId("");
+                setBusqueda("");
+              }}
+              type="button"
+            >
+              Limpiar filtros
+            </button>
+          </EmptyState>
+        ) : (
+          <TablaGenerica
+            columnas={columnas}
+            datos={usuariosFiltrados}
+            filasPorPagina={10}
+            mostrarBuscador={false}
+            paginacion
+            renderAcciones={renderAcciones}
+            renderCeldaCustom={renderCeldaCustom}
+          />
+        )}
+      </div>
+
+      <Modal
+        isOpen={modalAbierto}
+        onClose={cerrarModal}
+        titulo={usuarioSel ? "Editar Usuario" : "Nuevo Usuario"}
+        textoBotonConfirmar={
+          guardando
+            ? "Guardando..."
+            : usuarioSel
+              ? "Actualizar"
+              : "Crear Usuario"
+        }
+        onConfirmar={handleGuardar}
+        mostrarCancelar
+        disabled={guardando}
+        className="modal-content--usuario"
+        maxWidth="680px"
+      >
+        <div className="modal-form modal-form--usuario">
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="usr-nombre-completo">Nombre completo *</label>
+              <input
+                id="usr-nombre-completo"
+                name="nombreCompleto"
+                type="text"
+                value={form.nombreCompleto}
+                onChange={handleCambioForm}
+                className="form-control"
+                placeholder="Nombre completo del usuario"
+                autoComplete="off"
+              />
+              {errores.nombreCompleto && (
+                <span className="form-error">{errores.nombreCompleto}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="usr-rol">Rol *</label>
+              <select
+                id="usr-rol"
+                name="rol"
+                value={form.rol}
+                onChange={handleCambioForm}
+                className="form-control"
+              >
+                {ROLES.map((rol) => (
+                  <option key={rol.value} value={rol.value}>
+                    {rol.label}
+                  </option>
+                ))}
+              </select>
+              {errores.rol && <span className="form-error">{errores.rol}</span>}
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="usr-usuario">Nombre de usuario *</label>
+              <input
+                id="usr-usuario"
+                name="usuario"
+                type="text"
+                value={form.usuario}
+                onChange={handleCambioForm}
+                className="form-control"
+                placeholder="usuario_sistema"
+                autoComplete="off"
+              />
+              {errores.usuario && (
+                <span className="form-error">{errores.usuario}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="usr-telefono">Teléfono (10 dígitos)</label>
+              <input
+                id="usr-telefono"
+                name="telefono"
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                value={form.telefono}
+                onChange={handleCambioForm}
+                className="form-control"
+                placeholder="3101234567"
+                autoComplete="off"
+              />
+              {errores.telefono && (
+                <span className="form-error">{errores.telefono}</span>
+              )}
+            </div>
+          </div>
+
+          {form.rol !== "Entregador" && (
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="usr-sede">Bodega *</label>
+                <select
+                  id="usr-sede"
+                  name="sedeId"
+                  value={form.sedeId}
+                  onChange={handleCambioForm}
+                  className="form-control"
+                >
+                  <option value="">
+                    {cargandoSedes
+                      ? "Cargando sedes..."
+                      : "Selecciona una bodega"}
+                  </option>
+                  {sedesPorRol.map((sede) => (
+                    <option key={sede.id} value={sede.id}>
+                      {sede.nombre}
+                    </option>
+                  ))}
+                </select>
+                {errores.sedeId && (
+                  <span className="form-error">{errores.sedeId}</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {form.rol === "Entregador" && (
+            <div className="form-group">
+              <label>Bodegas asignadas al entregador *</label>
+              <div className="usr-bodegas-grid">
+                {sedesPorRol.map((sede) => {
+                  const idNum = Number(sede.id);
+                  const marcada = form.sedesIds.includes(idNum);
+                  return (
+                    <label
+                      key={sede.id}
+                      className={`usr-bodega-item ${marcada ? "usr-bodega-item--marcada" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={marcada}
+                        onChange={() => handleToggleSedeEntregador(sede.id)}
+                      />
+                      <span>{sede.nombre}</span>
+                      {form.sedeId === String(sede.id) && (
+                        <span className="usr-bodega-principal">
+                          Principal
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+              {errores.sedesIds && (
+                <span className="form-error">{errores.sedesIds}</span>
+              )}
+              <span className="form-hint">
+                La primera bodega marcada actúa como principal por defecto.
+              </span>
+            </div>
+          )}
+
+          {!usuarioSel && (
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="usr-contrasena">Contraseña *</label>
+                <CampoPassword
+                  id="usr-contrasena"
+                  name="contrasena"
+                  value={form.contrasena}
+                  onChange={handleCambioForm}
+                  placeholder="Mínimo 5, con número y símbolo"
+                  autoComplete="new-password"
+                />
+                {errores.contrasena && (
+                  <span className="form-error">{errores.contrasena}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="usr-confirmar-contrasena">
+                  Confirmar contraseña *
+                </label>
+                <CampoPassword
+                  id="usr-confirmar-contrasena"
+                  name="confirmarContrasena"
+                  value={form.confirmarContrasena}
+                  onChange={handleCambioForm}
+                  placeholder="Repite la contraseña"
+                  autoComplete="new-password"
+                />
+                {errores.confirmarContrasena && (
+                  <span className="form-error">
+                    {errores.confirmarContrasena}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="form-row form-row--checkbox">
+            <label className="checkbox-label" htmlFor="usr-activo">
+              <input
+                id="usr-activo"
+                name="activo"
+                type="checkbox"
+                checked={form.activo}
+                onChange={handleCambioForm}
+              />
+              <span className="checkbox-text">Usuario activo</span>
+            </label>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={modalConfirmAbierto}
+        onClose={cerrarModalConfirm}
+        titulo="Desactivar Usuario"
+        textoBotonConfirmar={guardando ? "Desactivando..." : "Sí, desactivar"}
+        onConfirmar={handleDesactivarUsuario}
+        mostrarCancelar
+      >
+        <div className="usr-confirm-body">
+          <span className="material-symbols-outlined usr-confirm-icon">
+            warning
+          </span>
+          <p>
+            ¿Está seguro de que desea desactivar a{" "}
+            <strong>{usuarioAEliminar?.nombreCompleto}</strong>?
+          </p>
+          <p className="usr-confirm-sub">
+            El usuario no podrá iniciar sesión hasta que sea activado
+            nuevamente.
+          </p>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+export default UsuariosPage;
