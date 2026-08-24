@@ -6,18 +6,18 @@ const { AppError } = require("../errors/AppError");
 // Tipo de sede exigido por rol al crear/editar un usuario.
 //  - Bodega          → solo bodegas (identifica a qué bodega pertenece)
 //  - Entregador      → solo bodegas (multi-bodega vía checkboxes)
-//  - Oficinista      → solo bodegas
+//  - Oficinista      → solo oficinas
 //  - Admin/AdminBogota → cualquier sede (bodega u oficina)
 const TIPO_SEDE_POR_ROL = {
   Bodega: "Bodega",
   Entregador: "Bodega",
-  Oficinista: "Bodega",
+  Oficinista: "Oficina",
 };
 
 const MENSAJES_TIPO_SEDE = {
   Bodega: "El rol Bodega solo puede asignarse a bodegas.",
   Entregador: "El rol Entregador solo puede asignarse a bodegas.",
-  Oficinista: "El rol Oficinista solo puede asignarse a bodegas.",
+  Oficinista: "El rol Oficinista solo puede asignarse a oficinas.",
 };
 
 // Valida que una sede exista, esté activa y sea del tipo que exige el rol.
@@ -80,16 +80,26 @@ const usuarioService = (app) => {
     // Usado por Bodega/Admin/AdminBogota/Oficinista para asignar pedidos a
     // entregadores. Solo se listan los entregadores de la bodega del usuario:
     //  - Bodega         → su bodega (sedeId o bodegaId si viene de una oficina)
-    //  - Oficinista     → entregadores de su bodega (sedeId)
+    //  - Oficinista     → entregadores de la bodega asociada a su oficina
     //  - Admin/AdminBogota → todos los entregadores (gestionan toda la ciudad)
     getEntregadores: async (usuario) => {
       const where = { rol: "Entregador", activo: true };
 
       if (usuario?.rol === "Bodega" || usuario?.rol === "Oficinista") {
-        const bodegaId =
+        let bodegaId =
           usuario.rol === "Bodega"
             ? (usuario.bodegaId ?? usuario.sedeId)
-            : usuario.sedeId;
+            : null;
+
+        // Oficinista está asignado a una oficina: la bodega operativa es sede.bodegaId
+        if (usuario.rol === "Oficinista" && usuario.sedeId != null) {
+          const oficina = await app.prisma.sede.findUnique({
+            where: { id: usuario.sedeId },
+            select: { id: true, tipo: true, bodegaId: true },
+          });
+          bodegaId = oficina?.bodegaId ?? oficina?.id ?? usuario.sedeId;
+        }
+
         if (bodegaId != null) {
           where.OR = [
             { sedeId: bodegaId },
