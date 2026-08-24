@@ -9,12 +9,8 @@ import { EmptyState, Spinner } from "./ContabilidadUI";
 /**
  * CierreCajaTab
  *
- * Consolida el cierre de caja del DÍA y de la SEMANA en una sola vista:
- * - Cierre diario  → GET /reportes/corte-caja?desde=hoy&hasta=hoy
- * - Cierre semanal → GET /reportes/corte-caja?desde=lunes&hasta=domingo
- *
- * Reutiliza el mismo "corte de caja" del backend (recaudo de entregadores
- * vs. egresos) para que se vea el acumulado del día y del total de la semana.
+ * modo = "diario"  → solo cierre del día (DatePicker de fecha)
+ * modo = "semanal" → solo cierre de la semana ISO (selector de semana)
  */
 const BloqueCierre = ({ titulo, subtitulo, icono, corte, cargando }) => {
   if (cargando) {
@@ -111,128 +107,155 @@ const BloqueCierre = ({ titulo, subtitulo, icono, corte, cargando }) => {
   );
 };
 
-const CierreCajaTab = ({ sedeId, esAdmin }) => {
+const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
   const HOY = new Date().toISOString().split("T")[0];
+  const SEM_ACTUAL = getSemanaISO(new Date());
 
   const [fechaDia, setFechaDia] = useState(HOY);
-  const [cierreDia, setCierreDia] = useState(null);
-  const [cierreSemana, setCierreSemana] = useState(null);
-  const [datosFecha, setDatosFecha] = useState(null);
+  const [semanaSel, setSemanaSel] = useState(String(SEM_ACTUAL));
+  const [corte, setCorte] = useState(null);
+  const [datosKey, setDatosKey] = useState(null);
   const [cargando, setCargando] = useState(true);
 
-  const semana = getSemanaISO(new Date(`${fechaDia}T00:00:00`));
-  const rangoSemana = getRangoSemana(semana);
+  const esDiario = modo !== "semanal";
+  const semanaNum = parseInt(semanaSel, 10) || SEM_ACTUAL;
+  const rangoSemana = getRangoSemana(semanaNum);
+  const semanaDesdeFecha = getSemanaISO(new Date(`${fechaDia}T00:00:00`));
+
+  const claveActual = esDiario ? fechaDia : `${rangoSemana.inicio}|${rangoSemana.fin}`;
 
   useEffect(() => {
     let activo = true;
     const sede = esAdmin ? sedeId || undefined : undefined;
 
-    const cargar = () => {
-      Promise.all([
-        reporteService.obtenerCorteCaja({
-          desde: fechaDia,
-          hasta: fechaDia,
-          sedeId: sede,
-        }),
-        reporteService.obtenerCorteCaja({
-          desde: rangoSemana.inicio,
-          hasta: rangoSemana.fin,
-          sedeId: sede,
-        }),
-      ])
-        .then(([dia, sem]) => {
-          if (!activo) return;
-          setCierreDia(dia);
-          setCierreSemana(sem);
-          setDatosFecha(fechaDia);
-        })
-        .catch((err) => {
-          if (!activo) return;
-          toast.error("Error al cargar el cierre de caja: " + (err?.message || "desconocido"));
-          setCierreDia(null);
-          setCierreSemana(null);
-          setDatosFecha(fechaDia);
-        })
-        .finally(() => {
-          if (activo) setCargando(false);
-        });
-    };
+    setCargando(true);
+    const params = esDiario
+      ? { desde: fechaDia, hasta: fechaDia, sedeId: sede }
+      : { desde: rangoSemana.inicio, hasta: rangoSemana.fin, sedeId: sede };
 
-    cargar();
+    reporteService
+      .obtenerCorteCaja(params)
+      .then((data) => {
+        if (!activo) return;
+        setCorte(data);
+        setDatosKey(claveActual);
+      })
+      .catch((err) => {
+        if (!activo) return;
+        toast.error("Error al cargar el cierre de caja: " + (err?.message || "desconocido"));
+        setCorte(null);
+        setDatosKey(claveActual);
+      })
+      .finally(() => {
+        if (activo) setCargando(false);
+      });
+
     return () => {
       activo = false;
     };
-  }, [fechaDia, rangoSemana.inicio, rangoSemana.fin, sedeId, esAdmin]);
+  }, [
+    esDiario,
+    fechaDia,
+    rangoSemana.inicio,
+    rangoSemana.fin,
+    sedeId,
+    esAdmin,
+    claveActual,
+  ]);
 
   const handleImprimir = () => window.print();
+
+  const tituloBloque = esDiario ? "Cierre diario" : "Cierre semanal";
+  const subtituloBloque = esDiario
+    ? formatFecha(fechaDia)
+    : `${formatFecha(rangoSemana.inicio)} — ${formatFecha(rangoSemana.fin)}`;
+  const iconoBloque = esDiario ? "today" : "date_range";
+  const tituloKpi = esDiario ? "Ganancia del día" : "Ganancia de la semana";
+  const colorKpi = corte?.ganancia >= 0 ? (esDiario ? "#4ade80" : "#60a5fa") : "#f87171";
+  const subtituloKpi = esDiario
+    ? corte
+      ? formatFecha(corte.desde)
+      : "Sin movimientos"
+    : corte
+      ? `Semana ${semanaNum}`
+      : "Sin movimientos";
 
   return (
     <div className="cont-cierre-caja">
       <div className="cont-cierre-caja__filtros">
-        <div className="filter-group">
-          <label htmlFor="cc-fecha">Día de referencia</label>
-          <DatePicker
-            id="cc-fecha"
-            value={fechaDia}
-            max={HOY}
-            onChange={(e) => setFechaDia(e.target.value)}
-            className="filter-select"
-          />
-        </div>
-        <span className="cont-cierre-caja__semana">
-          Semana ISO {semana}: {formatFecha(rangoSemana.inicio)} — {formatFecha(rangoSemana.fin)}
-        </span>
+        {esDiario ? (
+          <div className="filter-group">
+            <label htmlFor="cc-fecha">Día</label>
+            <DatePicker
+              id="cc-fecha"
+              value={fechaDia}
+              max={HOY}
+              onChange={(e) => setFechaDia(e.target.value)}
+              className="filter-select"
+            />
+          </div>
+        ) : (
+          <>
+            <div className="filter-group">
+              <label htmlFor="cc-semana">Semana ISO</label>
+              <input
+                id="cc-semana"
+                type="number"
+                min="1"
+                max="53"
+                value={semanaSel}
+                onChange={(e) => setSemanaSel(e.target.value)}
+                className="filter-select"
+                style={{ minWidth: 72 }}
+              />
+            </div>
+            <span className="cont-cierre-caja__semana">
+              {formatFecha(rangoSemana.inicio)} — {formatFecha(rangoSemana.fin)}
+            </span>
+          </>
+        )}
+        {esDiario && (
+          <span className="cont-cierre-caja__semana">
+            Semana ISO {semanaDesdeFecha}
+          </span>
+        )}
         <button
           type="button"
           className="cont-ganancia-gasto__imprimir"
           onClick={handleImprimir}
-          disabled={!cierreDia && !cierreSemana}
+          disabled={!corte}
         >
           <span className="material-symbols-outlined" aria-hidden="true">print</span>
           Imprimir cierre
         </button>
       </div>
 
-      {cargando || datosFecha !== fechaDia ? (
+      {cargando || datosKey !== claveActual ? (
         <Spinner texto="Calculando cierre de caja..." />
-      ) : (!cierreDia && !cierreSemana) ? (
+      ) : !corte ? (
         <EmptyState
           icono="point_of_sale"
-          titulo="No hay datos para el día seleccionado."
+          titulo={esDiario ? "No hay datos para el día seleccionado." : "No hay datos para la semana seleccionada."}
           detalle="Verifica que existan entregas confirmadas o egresos en este período."
         />
       ) : (
         <div id="cierre-caja-imprimible">
           <div className="panel-kpis">
             <TarjetaKpi
-              titulo="Ganancia del día"
-              icono="today"
-              color={cierreDia?.ganancia >= 0 ? "#4ade80" : "#f87171"}
-              valor={formatCOP(cierreDia?.ganancia ?? 0)}
-              subtitulo={cierreDia ? formatFecha(cierreDia.desde) : "Sin movimientos"}
-            />
-            <TarjetaKpi
-              titulo="Ganancia de la semana"
-              icono="date_range"
-              color={cierreSemana?.ganancia >= 0 ? "#60a5fa" : "#f87171"}
-              valor={formatCOP(cierreSemana?.ganancia ?? 0)}
-              subtitulo={cierreSemana ? `Semana ${semana}` : "Sin movimientos"}
+              titulo={tituloKpi}
+              icono={iconoBloque}
+              color={colorKpi}
+              valor={formatCOP(corte?.ganancia ?? 0)}
+              subtitulo={subtituloKpi}
             />
           </div>
 
           <div className="cont-cierre-caja__bloques">
             <BloqueCierre
-              titulo="Cierre diario"
-              subtitulo={formatFecha(fechaDia)}
-              icono="today"
-              corte={cierreDia}
-              cargando={false}
-            />
-            <BloqueCierre
-              titulo="Cierre semanal"
-              subtitulo={`${formatFecha(rangoSemana.inicio)} — ${formatFecha(rangoSemana.fin)}`}
-              icono="date_range"
-              corte={cierreSemana}
+              titulo={tituloBloque}
+              subtitulo={subtituloBloque}
+              icono={iconoBloque}
+              corte={corte}
               cargando={false}
             />
           </div>
