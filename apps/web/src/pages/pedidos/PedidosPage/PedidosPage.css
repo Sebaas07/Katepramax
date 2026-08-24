@@ -26,7 +26,6 @@
   margin: 0;
 }
 
-/* ─── Subtítulo ──────────────────────────────────────────────*/
 .ped-subtitulo {
   margin: 0.25rem 0 0;
   font-size: 13px;
@@ -34,7 +33,6 @@
   min-height: 20px;
 }
 
-/* ─── Filtros ────────────────────────────────────────────────*/
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -78,7 +76,6 @@
   color: var(--on-surface);
 }
 
-/* ─── Botones ────────────────────────────────────────────────*/
 .btn-primary {
   background: var(--secondary);
   color: var(--surface-container-lowest);
@@ -109,25 +106,6 @@
   transform: none;
 }
 
-.btn-outline {
-  background: transparent;
-  color: var(--on-surface-variant);
-  border: 1px solid var(--outline-variant);
-  padding: 0.5rem 1.125rem;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-label);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-outline:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--on-surface);
-}
-
-/* ─── Header Acciones ────────────────────────────────────────*/
 .ped-header-acciones {
   display: flex;
   align-items: flex-end;
@@ -135,7 +113,6 @@
   flex-wrap: wrap;
 }
 
-/* ─── Tabs ───────────────────────────────────────────────────*/
 .ped-tabs {
   display: flex;
   gap: 4px;
@@ -172,14 +149,6 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-.ped-tab--active:hover {
-  background: var(--surface-container-highest) !important;
-  color: var(--secondary);
-  font-weight: 700;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-/* ─── Tab content ────────────────────────────────────────────*/
 .tab-content {
   background: var(--surface-container);
   border: 1px solid rgba(233, 195, 73, 0.12);
@@ -188,7 +157,6 @@
   min-height: 200px;
 }
 
-/* ─── Búsqueda propia ────────────────────────────────────────*/
 .ped-search {
   display: flex;
   align-items: center;
@@ -212,29 +180,6 @@
   color: var(--on-surface);
 }
 
-.ped-search-input::placeholder {
-  color: rgba(151, 141, 157, 0.5);
-}
-
-/* ─── Estado vacío / error ───────────────────────────────────*/
-.ped-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 4rem 2rem;
-  color: var(--on-surface-variant);
-  font-family: var(--font-label);
-  font-size: 13px;
-}
-
-.ped-error .material-symbols-outlined {
-  font-size: 48px;
-  color: var(--error);
-}
-
-/* ─── Modal form ─────────────────────────────────────────────*/
 .modal-form {
   display: flex;
   flex-direction: column;
@@ -268,7 +213,6 @@
   width: 100%;
   box-sizing: border-box;
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .form-control:focus {
@@ -276,25 +220,6 @@
   box-shadow: 0 2px 0 0 rgba(233, 195, 73, 0.15);
 }
 
-.form-control::placeholder {
-  color: rgba(151, 141, 157, 0.4);
-}
-
-select.form-control {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23978d9d' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  padding-right: 2.5rem;
-}
-
-select.form-control option {
-  background: var(--surface-container-high);
-  color: var(--on-surface);
-}
-
-/* ─── Items del pedido ───────────────────────────────────────*/
 .item-group {
   background: var(--surface-container-high);
   border: 1px solid var(--outline-variant);
@@ -367,14 +292,9 @@ select.form-control option {
   font-family: var(--font-headline);
   font-size: 14px;
   font-weight: 600;
-  color: var(--on-surface);
-}
-
-.item-subtotal{
   color: white !important;
 }
 
-/* ─── Botón agregar item ─────────────────────────────────────*/
 .btn-add-item {
   display: inline-flex;
   align-items: center;
@@ -389,19 +309,8 @@ select.form-control option {
   cursor: pointer;
   padding: 0.5rem 0.875rem;
   margin-top: 0.5rem;
-  transition: all var(--transition-fast);
 }
 
-.btn-add-item:hover {
-  background: rgba(233, 195, 73, 0.1);
-  border-color: rgba(233, 195, 73, 0.5);
-}
-
-.btn-add-item .material-symbols-outlined {
-  font-size: 16px;
-}
-
-/* ─── Resumen pedido ─────────────────────────────────────────*/
 .ped-resumen {
   display: flex;
   justify-content: space-between;
@@ -420,7 +329,6 @@ select.form-control option {
   font-size: 16px;
 }
 
-/* ─── Info del pedido en modal asignar ───────────────────────*/
 .pedido-info {
   font-family: var(--font-label);
   font-size: 13px;
@@ -437,38 +345,6 @@ select.form-control option {
   font-style: italic;
 }
 
-/* ─── Confirmar cancelar ─────────────────────────────────────*/
-.ped-confirm-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0.875rem;
-  padding: 0.5rem 0;
-}
-
-.ped-confirm-icon {
-  font-size: 48px;
-  color: var(--error);
-}
-
-.ped-confirm-body p {
-  font-family: var(--font-label);
-  font-size: 14px;
-  color: var(--on-surface);
-  margin: 0;
-}
-
-.ped-confirm-body strong {
-  color: var(--secondary);
-}
-
-.ped-confirm-sub {
-  font-size: 12px !important;
-  color: var(--on-surface-variant) !important;
-}
-
-/* ─── Spinner ────────────────────────────────────────────────*/
 .ped-spinner-wrap {
   display: flex;
   flex-direction: column;
@@ -494,71 +370,7 @@ select.form-control option {
   to { transform: rotate(360deg); }
 }
 
-/* ─── Responsive ─────────────────────────────────────────────*/
-@media (max-width: 767.98px) {
-   .page-header {
-     flex-direction: column;
-     align-items: flex-start;
-   }
-   .ped-header-acciones {
-     width: 100%;
-     justify-content: space-between;
-   }
-   .ped-tabs {
-     width: 100%;
-     overflow-x: auto;
-   }
-   .ped-tab,
-   .ped-tab--active {
-     flex: 1;
-     white-space: nowrap;
-     text-align: center;
-   }
- }
-
- /* ─── Historial modal ─────────────────────────────────────────*/
- .historial-modal {
-   padding: 0.5rem;
- }
-
- .historial-pedido-info {
-   display: flex;
-   gap: 1rem;
-   margin-bottom: 1rem;
-   padding: 0.75rem 1rem;
-   background: var(--surface-container-high);
-   border-radius: var(--radius-md);
- }
-
- .historial-pedido-info strong {
-   color: var(--secondary);
- }
-
- .historial-pedido-cliente {
-   color: var(--on-surface);
- }
-
- .historial-table {
-   width: 100%;
-   border-collapse: collapse;
- }
-
- .historial-table th,
- .historial-table td {
-   padding: 0.75rem;
-   text-align: left;
-   border-bottom: 1px solid var(--outline-variant);
- }
-
- .historial-table th {
-   font-family: var(--font-label);
-   font-size: 11px;
-   font-weight: 600;
-   text-transform: uppercase;
-   color: var(--secondary);
- }
-
-/* ─── Combobox de producto (buscador + dropdown) ──────────────*/
+/* ─── Combobox de producto ───────────────────────────────────*/
 .ped-combobox__input-wrap {
   position: relative;
   display: flex;
@@ -635,10 +447,26 @@ select.form-control option {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.ped-combobox__opcion-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.ped-combobox__opcion-precio {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--secondary);
+  white-space: nowrap;
 }
 
 .ped-combobox__opcion-sede {
-  flex-shrink: 0;
   font-size: 11px;
   color: var(--on-surface-variant);
 }
@@ -651,10 +479,24 @@ select.form-control option {
   text-align: center;
 }
 
-/* ─── Factura (ticket POS) ───────────────────────────────────── */
 .ped-factura-carga {
   padding: 1.5rem;
   text-align: center;
   color: var(--on-surface-variant);
   font-family: var(--font-label);
+}
+
+@media (max-width: 767.98px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ped-header-acciones {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .ped-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
 }
