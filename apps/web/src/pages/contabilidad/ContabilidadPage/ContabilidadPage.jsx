@@ -45,7 +45,8 @@ const TABS = [
   //{ key: "cartera", label: "Cartera", icon: "account_balance" },
   { key: "proveedores", label: "Abonos a Proveedores", icon: "payments" },
   { key: "cobros", label: "Cobros por Entregador", icon: "delivery_dining" },
-  { key: "cierre", label: "Cierre de Caja", icon: "storefront" },
+  { key: "cierre-diario", label: "Cierre Diario", icon: "today" },
+  { key: "cierre-semanal", label: "Cierre Semanal", icon: "date_range" },
   { key: "panel", label: "Panel General", icon: "dashboard" },
   { key: "ganancia", label: "Ganancia / Gasto", icon: "point_of_sale" },
   { key: "arqueo", label: "Arqueo Semanal", icon: "summarize" },
@@ -145,10 +146,12 @@ const ContabilidadPage = () => {
     setFiltroSemana(normalizarSemana(valor));
   }, []);
 
+  const esTabCierre = tab === "cierre-diario" || tab === "cierre-semanal";
+
   // ── Carga de datos ────────────────────────────────────────
   const cargarDatos = useCallback(async () => {
-    if (tab === "ganancia" || tab === "cierre") {
-      setCargando(false); // estas pestañas usan su propio loader
+    if (tab === "ganancia" || esTabCierre) {
+      setCargando(false);
       return;
     }
     setCargando(true);
@@ -235,7 +238,7 @@ const ContabilidadPage = () => {
     } finally {
       setCargando(false);
     }
-  }, [tab, filtroSemana, filtroSedeId, filtroPanelF, fechaInicioCobros, fechaFinCobros]);
+  }, [tab, esTabCierre, filtroSemana, filtroSedeId, filtroPanelF, fechaInicioCobros, fechaFinCobros, esAdmin]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -250,8 +253,6 @@ const ContabilidadPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    // Catálogo de proveedores para el selector del modal de abonos
-    // (independiente de la tab activa y de los datos de la tabla de abonos).
     contabilidadService
       .obtenerProveedores()
       .then(setCatalogoProveedores)
@@ -279,7 +280,6 @@ const ContabilidadPage = () => {
         ? { desde: `${anio}-${pad(mes)}-01`, hasta: `${anio}-${pad(mes)}-15` }
         : { desde: `${anio}-${pad(mes)}-16`, hasta: `${anio}-${pad(mes)}-${pad(ultimoDiaMes)}` };
     }
-    // mes
     const ultimoDiaMes = new Date(anio, mes, 0).getDate();
     const pad = (n) => String(n).padStart(2, "0");
     return { desde: `${anio}-${pad(mes)}-01`, hasta: `${anio}-${pad(mes)}-${pad(ultimoDiaMes)}` };
@@ -299,7 +299,6 @@ const ContabilidadPage = () => {
       .finally(() => setCargandoCorte(false));
   }, [tab, rangoGanancia, filtroSedeId, isSessionChecked, isAuthenticated]);
 
-  // ── Datos mapeados (nombre de sede/proveedor inyectado) ───
   const mapSede = useCallback(
     (items) =>
       items.map((i) => ({
@@ -335,13 +334,11 @@ const ContabilidadPage = () => {
     [ingresos, mapSede],
   );
   const egresosMapeados = useMemo(() => mapSede(egresos), [egresos, mapSede]);
-  //const carteraMapeada = useMemo(() => mapSede(cartera), [cartera, mapSede]);
   const proveedoresMap = useMemo(
     () => mapProveedor(proveedores),
     [proveedores, mapProveedor],
   );
 
-  // ── Cálculo total del form ingreso ────────────────────────
   const totalIngresoForm = useMemo(
     () => (parseFloat(form.efectivo) || 0) + (parseFloat(form.cuentas) || 0),
     [form.efectivo, form.cuentas],
@@ -356,7 +353,6 @@ const ContabilidadPage = () => {
     [modalTipo, form],
   );
 
-  // ── Handlers de modales ───────────────────────────────────
   const resetForm = useCallback(
     () => ({
       ...FORM_VACIO,
@@ -365,7 +361,6 @@ const ContabilidadPage = () => {
     [sedeIdUsuario],
   );
 
-  // abrirEditarProv declarado primero — es referenciado en accsProveedores de ProveedoresTab
   const abrirEditarProv = useCallback(
     (item) => {
       setItemEditar(item);
@@ -446,7 +441,6 @@ const ContabilidadPage = () => {
     setItemEditar(null);
   }, []);
 
-  // ── Submit del modal ──────────────────────────────────────
   const handleSubmit = useCallback(async () => {
     setCargando(true);
     try {
@@ -541,7 +535,6 @@ const ContabilidadPage = () => {
     }
   }, [eliminarTipo, itemEliminar, cargarDatos]);
 
-  // ── UI derivada ───────────────────────────────────────────
   const mostrarBotonRegistrar =
     puedeRegistrar &&
     ["ingresos", "egresos", "cartera", "proveedores"].includes(tab);
@@ -554,24 +547,25 @@ const ContabilidadPage = () => {
       proveedores: "Registrar abono",
     }[tab] ?? "Nuevo";
 
-  // ── RENDER ────────────────────────────────────────────────
+  const subtituloHeader =
+    tab === "panel"
+      ? formatFecha(filtroPanelF)
+      : tab === "ganancia"
+        ? `${formatFecha(rangoGanancia.desde)}${rangoGanancia.desde !== rangoGanancia.hasta ? ` — ${formatFecha(rangoGanancia.hasta)}` : ""}`
+        : tab === "cierre-diario"
+          ? "Cierre de caja del día"
+          : tab === "cierre-semanal"
+            ? "Cierre de caja de la semana"
+            : tab === "cobros"
+              ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
+              : `Semana ${filtroSemana || SEM_ACTUAL}`;
+
   return (
     <div className="cont-page">
-      {/* Header */}
       <div className="cont-page__header">
         <div>
           <h1 className="cont-page__title">Contabilidad</h1>
-          <p className="cont-subtitulo">
-            {tab === "panel"
-              ? formatFecha(filtroPanelF)
-              : tab === "ganancia"
-                ? `${formatFecha(rangoGanancia.desde)}${rangoGanancia.desde !== rangoGanancia.hasta ? ` — ${formatFecha(rangoGanancia.hasta)}` : ""}`
-                : tab === "cierre"
-                  ? "Cierre diario y semanal"
-                  : tab === "cobros"
-                    ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
-                    : `Semana ${filtroSemana || SEM_ACTUAL}`}
-          </p>
+          <p className="cont-subtitulo">{subtituloHeader}</p>
         </div>
         <div className="cont-page__acciones">
           {esAdmin && !["arqueo", "panel"].includes(tab) && (
@@ -592,7 +586,10 @@ const ContabilidadPage = () => {
               </select>
             </div>
           )}
-          {tab !== "panel" && tab !== "ganancia" && tab !== "cobros" && (
+          {tab !== "panel" &&
+            tab !== "ganancia" &&
+            tab !== "cobros" &&
+            !esTabCierre && (
             <div className="filter-group">
               <label htmlFor="cont-semana">Semana</label>
               <input
@@ -653,7 +650,6 @@ const ContabilidadPage = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="cont-tabs">
         {TABS.map((t) => (
           <button
@@ -668,7 +664,6 @@ const ContabilidadPage = () => {
         ))}
       </div>
 
-      {/* Contenido */}
       {cargando ? (
         <Spinner />
       ) : (
@@ -698,18 +693,6 @@ const ContabilidadPage = () => {
             />
           )}
 
-          {/* 
-          {tab === "cartera" && (
-            <CarteraTab
-              cartera={carteraMapeada}
-              sedes={sedes}
-              esAdmin={esAdmin}
-              onEditar={abrirEditar}
-              onEliminar={abrirEliminar}
-            />
-          )}
-            */}
-
           {tab === "proveedores" && (
             <ProveedoresTab
               proveedores={proveedoresMap}
@@ -730,8 +713,12 @@ const ContabilidadPage = () => {
             />
           )}
 
-          {tab === "cierre" && (
-            <CierreCajaTab sedeId={filtroSedeId} esAdmin={esAdmin} />
+          {tab === "cierre-diario" && (
+            <CierreCajaTab sedeId={filtroSedeId} esAdmin={esAdmin} modo="diario" />
+          )}
+
+          {tab === "cierre-semanal" && (
+            <CierreCajaTab sedeId={filtroSedeId} esAdmin={esAdmin} modo="semanal" />
           )}
 
           {tab === "panel" && !panelGeneral && (
@@ -779,7 +766,6 @@ const ContabilidadPage = () => {
         </div>
       )}
 
-      {/* Modal unificado de formularios */}
       <ContabilidadModal
         isOpen={modalOpen}
         onClose={cerrarModal}
@@ -796,7 +782,6 @@ const ContabilidadPage = () => {
         cargando={cargando}
       />
 
-      {/* Modal confirmar eliminar */}
       <Modal
         isOpen={!!itemEliminar}
         onClose={() => {
