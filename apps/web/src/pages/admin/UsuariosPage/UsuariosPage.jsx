@@ -35,15 +35,15 @@ const FORM_INICIAL = {
 
 // Tipos de sede permitidos al crear/editar un usuario según su rol.
 //   Admin / AdminBogota → bodegas y oficinas
-//   Bodega              → solo bodegas (identifica a qué bodega pertenece)
-//   Entregador          → solo bodegas (multi-bodega, sin sede principal)
-//   Oficinista          → solo bodegas
+//   Bodega              → solo bodegas
+//   Entregador          → solo bodegas (multi-bodega)
+//   Oficinista          → solo oficinas
 const SEDES_POR_ROL = {
   Admin:       ["Bodega", "Oficina"],
   AdminBogota: ["Bodega", "Oficina"],
   Bodega:      ["Bodega"],
   Entregador:  ["Bodega"],
-  Oficinista:  ["Bodega"],
+  Oficinista:  ["Oficina"],
 };
 
 const Spinner = () => (
@@ -195,12 +195,23 @@ const UsuariosPage = () => {
     return sedes.filter((sede) => tipos.includes(sede.tipo));
   }, [sedes, form.rol]);
 
+  const labelSedeForm =
+    form.rol === "Oficinista"
+      ? "Oficinas"
+      : form.rol === "Entregador"
+        ? "Bodegas"
+        : "Bodega";
+
+  const placeholderSedeForm =
+    form.rol === "Oficinista"
+      ? "Selecciona una oficina"
+      : "Selecciona una bodega";
+
   const usuariosFiltrados = useMemo(() => {
     const termino = busqueda.trim().toLowerCase();
 
     return usuarios.filter((usuario) => {
       const pasaRol = !filtroRol || usuario.rol === filtroRol;
-      // Filtro de sede: sede principal O alguna de las bodegas del entregador
       const pasaSede =
         !filtroSedeId ||
         String(usuario.sedeId) === String(filtroSedeId) ||
@@ -368,7 +379,10 @@ const UsuariosPage = () => {
           "Asigna al menos una bodega al entregador.";
       }
     } else if (!form.sedeId) {
-      nuevosErrores.sedeId = "Selecciona una sede.";
+      nuevosErrores.sedeId =
+        form.rol === "Oficinista"
+          ? "Selecciona una oficina."
+          : "Selecciona una bodega.";
     }
 
     if (!usuarioSel && !form.contrasena) {
@@ -739,7 +753,7 @@ const UsuariosPage = () => {
           {form.rol !== "Entregador" && (
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="usr-sede">Bodega *</label>
+                <label htmlFor="usr-sede">{labelSedeForm} *</label>
                 <select
                   id="usr-sede"
                   name="sedeId"
@@ -749,8 +763,8 @@ const UsuariosPage = () => {
                 >
                   <option value="">
                     {cargandoSedes
-                      ? "Cargando sedes..."
-                      : "Selecciona una bodega"}
+                      ? "Cargando..."
+                      : placeholderSedeForm}
                   </option>
                   {sedesPorRol.map((sede) => (
                     <option key={sede.id} value={sede.id}>
