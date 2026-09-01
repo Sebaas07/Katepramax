@@ -19,7 +19,13 @@ const sesionBodegaMock = {
   usuario: { ...sesionAdminMock.usuario, rol: "Bodega" },
 };
 
-let app, tokenAdmin, tokenBodega;
+const sesionAdminBogotaMock = {
+  ...sesionAdminMock,
+  id: 12,
+  usuario: { ...sesionAdminMock.usuario, rol: "AdminBogota" },
+};
+
+let app, tokenAdmin, tokenBodega, tokenAdminBogota;
 
 beforeAll(async () => {
   app = await buildApp();
@@ -27,6 +33,7 @@ beforeAll(async () => {
   await app.ready();
   tokenAdmin  = app.jwt.sign({ sesionId: 10 });
   tokenBodega = app.jwt.sign({ sesionId: 11 });
+  tokenAdminBogota = app.jwt.sign({ sesionId: 12 });
 });
 
 afterAll(() => app.close());
@@ -110,6 +117,30 @@ describe("GET /api/v1/sedes", () => {
     expect(res.statusCode).toBe(200);
     expect(prisma.sede.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: {} }),
+    );
+  });
+
+  it("AdminBogota solo ve sedes de Bogotá (filtra por nombre)", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminBogotaMock);
+    prisma.sede.findMany.mockResolvedValue([
+      { id: 1, nombre: "Bogotá", tipo: "Bodega" },
+      { id: 2, nombre: "Bogotá Centro", tipo: "Oficina" },
+    ]);
+
+    const res = await app.inject({
+      method:  "GET",
+      url:     "/api/v1/sedes",
+      headers: { authorization: `Bearer ${tokenAdminBogota}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(prisma.sede.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          activo: true,
+          nombre: { contains: "bogotá", mode: "insensitive" },
+        },
+      }),
     );
   });
 });

@@ -148,9 +148,13 @@ const ProductosPage = () => {
   } = useAuth();
   const puedeEditar = esAdmin || esBodega;
   const puedeGestionarEstado = esAdmin || esAdminBogota;
-  const sedeIdUsuario = esBodega
-    ? (usuario?.bodegaId ?? usuario?.sedeId ?? null)
-    : (usuario?.sedeId ?? null);
+  // La sede de trabajo del usuario. Un Bodega y un Oficinista cuya oficina se
+  // alimenta de una bodega operan sobre esa bodega (bodegaId); un Admin y
+  // AdminBogota usan su propia sede.
+  const sedeIdUsuario =
+    esBodega || usuario?.rol === "Oficinista"
+      ? (usuario?.bodegaId ?? usuario?.sedeId ?? null)
+      : (usuario?.sedeId ?? null);
 
   const [productos, setProductos] = useState([]);
   const [sedes, setSedes] = useState([]);

@@ -25,7 +25,18 @@ const esRolAdmin = () => obtenerSesion()?.rol === "Admin";
 export const tieneAccesoTotal = () => obtenerSesion()?.rol === "Admin";
 
 // ── Sede ──────────────────────────────────────────────────────
-export const obtenerSedeUsuario = () => obtenerSesion()?.sedeId ?? null;
+// Retorna la sede "operativa" del usuario para consultas scoped por sede.
+// Para un Bodega y para un Oficinista cuya oficina se alimenta de una bodega,
+// la sede operativa es la bodega (bodegaId), porque ahí se registra el
+// inventario/stock. Admin/AdminBogota usan su propia sede.
+export const obtenerSedeUsuario = () => {
+  const usuario = obtenerSesion();
+  if (!usuario) return null;
+  if (usuario.rol === "Bodega" || usuario.rol === "Oficinista") {
+    return usuario.bodegaId ?? usuario.sedeId ?? null;
+  }
+  return usuario.sedeId ?? null;
+};
 
 /**
  * Construye un objeto de filtros con sedeId forzado si el usuario

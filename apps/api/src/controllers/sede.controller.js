@@ -14,6 +14,14 @@ const sedeController = {
       where.activo = true;
     }
 
+    // Un AdminBogota solo debe gestionar las sedes de su ciudad (Bogotá).
+    // La ciudad se identifica por el nombre de la sede (contiene "Bogotá"),
+    // tal como quedan registradas en el seed (bodega "Bogotá", oficinas
+    // "Bogotá Centro", "Bogotá Norte", etc.).
+    if (request.user?.rol === "AdminBogota") {
+      where.nombre = { contains: "bogotá", mode: "insensitive" };
+    }
+
     const sedes = await request.server.prisma.sede.findMany({
       where,
       select: {

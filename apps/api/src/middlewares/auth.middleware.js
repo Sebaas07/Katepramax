@@ -48,11 +48,15 @@ const verifyToken = async (request, reply) => {
     }
 
     // Sede "operativa" del usuario para filtros de inventario/productos.
-    // Si el rol Bodega está en una oficina, usa la bodega padre (bodegaId);
-    // si está asignado directamente a una bodega, usa su sedeId.
+    // - Rol Bodega: si está en una oficina usa la bodega padre (bodegaId);
+    //   si está asignado directamente a una bodega, usa su sedeId.
+    // - Rol Oficinista: su oficina se alimenta de la bodega padre (bodegaId),
+    //   así que opera sobre la bodega para ver los productos/existencias que
+    //   registra la bodega. Si su oficina no tiene bodega, usa su sede.
+    const esOficina = sede?.tipo === "Oficina" && sede.bodegaId;
     const sedeOperativa =
-      sesion.usuario.rol === "Bodega"
-        ? (sede?.bodegaId ?? sesion.usuario.sedeId)
+      sesion.usuario.rol === "Bodega" || sesion.usuario.rol === "Oficinista"
+        ? (esOficina ? sede.bodegaId : sesion.usuario.sedeId)
         : sesion.usuario.sedeId;
 
     request.user = {
