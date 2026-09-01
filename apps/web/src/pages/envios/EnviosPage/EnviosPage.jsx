@@ -47,6 +47,9 @@ const EnviosPage = () => {
   const [envioActivo, setEnvioActivo] = useState(null);
   const [formConfirmar, setFormConfirmar] = useState({ detalles: [], observacionRecepcion: "" });
 
+  const [modalCancelar, setModalCancelar] = useState(false);
+  const [envioCancelar, setEnvioCancelar] = useState(null);
+
   // ── Carga de catálogos ────────────────────────────────────
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -209,13 +212,13 @@ const EnviosPage = () => {
     sedeOperativaId != null &&
     Number(envio.sedeOrigenId) === sedeOperativaId;
 
-  const handleCancelarEnvio = async (envio) => {
-    const destino = envio.sedeDestino?.nombre ?? `sede ${envio.sedeDestinoId}`;
-    if (!window.confirm(`¿Cancelar el envío hacia "${destino}"? Se devolverá el stock a tu sede.`)) return;
+  const handleCancelarEnvio = async () => {
     setGuardando(true);
     try {
-      await envioService.cancelarEnvio(envio.id);
+      await envioService.cancelarEnvio(envioCancelar.id);
       toast.success("Envío cancelado. El stock fue devuelto a tu sede.");
+      setModalCancelar(false);
+      setEnvioCancelar(null);
       await cargarEnvios();
     } catch (err) {
       toast.error(err.message);
@@ -237,7 +240,10 @@ const EnviosPage = () => {
       acciones.push({
         label: "Cancelar envío",
         variante: "danger",
-        onClick: () => handleCancelarEnvio(fila),
+        onClick: () => {
+          setEnvioCancelar(fila);
+          setModalCancelar(true);
+        },
       });
     }
     return acciones;
@@ -493,6 +499,32 @@ const EnviosPage = () => {
                 onChange={(e) => setFormConfirmar((p) => ({ ...p, observacionRecepcion: e.target.value }))}
               />
             </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Modal: Cancelar envío ──────────────────────────── */}
+      <Modal
+        isOpen={modalCancelar}
+        onClose={() => {
+          setModalCancelar(false);
+          setEnvioCancelar(null);
+        }}
+        titulo="Cancelar envío"
+        onConfirmar={handleCancelarEnvio}
+        textoBotonConfirmar={guardando ? "Cancelando..." : "Cancelar envío"}
+        disabled={guardando}
+        maxWidth="480px"
+      >
+        {envioCancelar && (
+          <div className="env-form">
+            <span className="form-hint">
+              ¿Cancelar el envío hacia{" "}
+              <strong>
+                {envioCancelar.sedeDestino?.nombre ?? `sede ${envioCancelar.sedeDestinoId}`}
+              </strong>
+              ? Se devolverá el stock a su sede de origen.
+            </span>
           </div>
         )}
       </Modal>

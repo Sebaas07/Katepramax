@@ -24,6 +24,7 @@ const COLUMNAS = [
   { campo: "valorPagado", label: "Pagado", tipo: "moneda" },
   { campo: "estadoDeuda", label: "Estado", tipo: "estado" },
   { campo: "observacion", label: "Obs.", tipo: "texto" },
+  { campo: "comprobante", label: "Comprobante", tipo: "texto" },
 ];
 
 // Backend: GET /abonos/resumen-sede → [{ sede, sedeId, totalPagado }]
@@ -118,7 +119,7 @@ const ProveedoresTab = memo(
             datos={proveedores}
             filasPorPagina={10}
             mostrarBuscador
-            buscarEnCampos={["sede", "proveedor", "observacion"]}
+            buscarEnCampos={["sede", "proveedor", "observacion", "comprobante"]}
             paginacion
             renderAcciones={acciones}
             renderCeldaCustom={(fila, col) =>

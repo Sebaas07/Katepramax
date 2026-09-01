@@ -65,6 +65,7 @@ const FORM_VACIO = {
   saldoDia: "",
   proveedorId: "",
   valorAbono: "",
+  comprobante: "",
   tipoAbono: "abono_proveedor",
 };
 
@@ -372,6 +373,7 @@ const ContabilidadPage = () => {
         proveedorId: String(item.proveedorId ?? ""),
         valorAbono: String(item.valorPagado ?? ""),
         observacion: item.observacion ?? "",
+        comprobante: item.comprobante ?? "",
         tipoAbono: "abono_proveedor",
       }));
       setModalOpen(true);
@@ -390,6 +392,7 @@ const ContabilidadPage = () => {
         proveedorId: String(item.proveedorId ?? ""),
         valorAbono: "",
         observacion: "",
+        comprobante: "",
         tipoAbono: "abono_proveedor",
       }));
       setModalOpen(true);
@@ -427,6 +430,7 @@ const ContabilidadPage = () => {
       saldoDia: String(item.saldoDia ?? ""),
       proveedorId: String(item.proveedorId ?? ""),
       valorAbono: String(item.valorPagado ?? ""),
+      comprobante: item.comprobante ?? "",
     }));
     setModalOpen(true);
   }, []);
@@ -490,6 +494,7 @@ const ContabilidadPage = () => {
         const datos = {
           valorPagado: payload.valorPagado,
           observacion: payload.observacion,
+          comprobante: payload.comprobante,
         };
         if (itemEditar) {
           await contabilidadService.editarPagoProveedor(itemEditar.id, datos);

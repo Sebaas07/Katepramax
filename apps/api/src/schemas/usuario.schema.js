@@ -63,7 +63,7 @@ const createUsuarioBody = {
     usuario: {
       type: "string",
       minLength: 5,
-      maxLength: 50,
+      maxLength: 25,
       pattern: "^[a-zA-Z0-9_]+$",
       description: "Solo letras, números y guión bajo",
     },
@@ -97,7 +97,7 @@ const updateUsuarioBody = {
     usuario: {
       type: "string",
       minLength: 5,
-      maxLength: 50,
+      maxLength: 25,
       pattern: "^[a-zA-Z0-9_]+$",
       description: "Solo letras, números y guión bajo",
     },

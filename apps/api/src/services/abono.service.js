@@ -38,6 +38,7 @@ async function registrar(app, body, usuario) {
     sedeId,
     valorPagado: numeroPositivo(body.valorPagado, "valor de abono"),
     observacion: body.observacion === undefined ? null : sanitizarTexto(body.observacion),
+    comprobante: body.comprobante === undefined ? null : sanitizarTexto(body.comprobante, 50),
   });
 
   await registrarAccion(
@@ -93,6 +94,7 @@ async function editar(app, id, body, usuario) {
   const data = {};
   if (body.valorPagado !== undefined) data.valorPagado = numeroPositivo(body.valorPagado, "valor de abono");
   if (body.observacion !== undefined) data.observacion = sanitizarTexto(body.observacion);
+  if (body.comprobante !== undefined) data.comprobante = body.comprobante === null ? null : sanitizarTexto(body.comprobante, 50);
   const actualizado = await repo.actualizar(app.prisma, id, data);
   await registrarAccion(
     app,

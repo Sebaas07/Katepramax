@@ -485,39 +485,44 @@ const ProductosPage = () => {
     });
   }, [filtroDepto, filtroStockBajo, productosNormalizados]);
 
-  const datosTabla = useMemo(
-    () =>
-      productosFiltrados.map((producto) => ({
-        ...producto,
-        porcentajeGanancia:
-          producto.porcentajeGanancia != null
-            ? `${producto.porcentajeGanancia}%`
-            : "—",
-        precioMayoreo: producto.precioMayoreo ?? "—",
-        stockMinimo: producto.stockMinimo ?? "—",
-        proveedor:
-          typeof producto.proveedor === "string"
-            ? producto.proveedor
-            : (producto.proveedor?.nombre ?? "—"),
-        stockTotal:
-          Array.isArray(producto.stockSedes) && producto.stockSedes.length
-            ? producto.stockSedes.reduce(
-                (sum, s) => sum + (s.stockActual ?? 0),
-                0,
+  const datosTabla = useMemo(() => {
+    const veResumenGlobal = esAdmin || esAdminBogota;
+
+    return productosFiltrados.map((producto) => ({
+      ...producto,
+      porcentajeGanancia:
+        producto.porcentajeGanancia != null
+          ? `${producto.porcentajeGanancia}%`
+          : "—",
+      precioMayoreo: producto.precioMayoreo ?? "—",
+      stockMinimo: producto.stockMinimo ?? "—",
+      proveedor:
+        typeof producto.proveedor === "string"
+          ? producto.proveedor
+          : (producto.proveedor?.nombre ?? "—"),
+      // La suma global de todas las sedes solo aplica para Admin/AdminBogota.
+      // Bodega y Oficinista ven únicamente el stock de su sede operativa.
+      stockTotal: veResumenGlobal
+        ? Array.isArray(producto.stockSedes) && producto.stockSedes.length
+          ? producto.stockSedes.reduce(
+              (sum, s) => sum + (s.stockActual ?? 0),
+              0,
+            )
+          : 0
+        : (producto.existencia ?? 0),
+      sedes:
+        veResumenGlobal &&
+        Array.isArray(producto.stockSedes) &&
+        producto.stockSedes.length
+          ? producto.stockSedes
+              .map(
+                (s) =>
+                  `${s.sede?.nombre ?? `Sede ${s.sedeId}`}: ${s.stockActual ?? 0}`,
               )
-            : 0,
-        sedes:
-          Array.isArray(producto.stockSedes) && producto.stockSedes.length
-            ? producto.stockSedes
-                .map(
-                  (s) =>
-                    `${s.sede?.nombre ?? `Sede ${s.sedeId}`}: ${s.stockActual ?? 0}`,
-                )
-                .join(" | ")
-            : "—",
-      })),
-    [productosFiltrados],
-  );
+              .join(" | ")
+          : "—",
+    }));
+  }, [productosFiltrados, esAdmin, esAdminBogota]);
 
   const totalProductos = productosNormalizados.length;
   const productosStockBajo = productosNormalizados.filter(
@@ -528,8 +533,12 @@ const ProductosPage = () => {
     0,
   );
 
-  const columnas = useMemo(
-    () => [
+  const columnas = useMemo(() => {
+    // La suma global (todas las sedes) y el desglose por sede solo los ven
+    // Admin / AdminBogota. Bodega y Oficinista solo ven el stock de su sede.
+    const veResumenGlobal = esAdmin || esAdminBogota;
+
+    const cols = [
       { campo: "sku", label: "Código", tipo: "texto" },
       { campo: "nombre", label: "Nombre", tipo: "texto" },
       { campo: "precioCosto", label: "Precio Costo", tipo: "moneda" },
@@ -540,13 +549,15 @@ const ProductosPage = () => {
       { campo: "stockMinimo", label: "Mínimo", tipo: "texto" },
       { campo: "departamento", label: "Departamento", tipo: "texto" },
       { campo: "proveedor", label: "Proveedor", tipo: "texto" },
-      { campo: "sedes", label: "Sedes", tipo: "texto" },
+      ...(veResumenGlobal
+        ? [{ campo: "sedes", label: "Sedes", tipo: "texto" }]
+        : []),
       { campo: "activo", label: "Estado", tipo: "booleano" },
       { campo: "creadoEn", label: "Creado", tipo: "fecha" },
       { campo: "actualizadoEn", label: "Actualizado", tipo: "fecha" },
-    ],
-    [],
-  );
+    ];
+    return cols;
+  }, [esAdmin, esAdminBogota]);
 
   const acciones = useCallback(
     (prod) => [

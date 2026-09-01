@@ -719,6 +719,7 @@ const UsuariosPage = () => {
                 id="usr-usuario"
                 name="usuario"
                 type="text"
+                maxLength={25}
                 value={form.usuario}
                 onChange={handleCambioForm}
                 className="form-control"

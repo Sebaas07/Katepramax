@@ -2,6 +2,7 @@ import { getSemanaISO } from "./formatters";
 
 export const MAX_OBSERVACION = 500;
 export const MAX_CONCEPTO = 200;
+export const MAX_COMPROBANTE = 50;
 
 const HOY = new Date().toISOString().split("T")[0];
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -134,6 +135,7 @@ export const construirPayloadContabilidad = (modalTipo, form) => {
       proveedorId: Number.parseInt(form.proveedorId, 10),
       valorPagado: numeroPositivo(form.valorAbono, { requerido: true }),
       observacion: sanitizarTexto(form.observacion) || undefined,
+      comprobante: sanitizarTexto(form.comprobante, MAX_COMPROBANTE) || undefined,
     };
   }
 

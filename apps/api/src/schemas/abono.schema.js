@@ -8,6 +8,7 @@ const abonoBase = {
     semana:      { type: "integer" },
     valorPagado: { type: "number" },
     observacion: { type: "string", nullable: true },
+    comprobante: { type: "string", nullable: true },
     creadoEn:    { type: "string", format: "date-time" },
     proveedor:   { type: "object", properties: { id: { type: "integer" }, nombre: { type: "string" } } },
     sede:        { type: "object", properties: { id: { type: "integer" }, nombre: { type: "string" } } },
@@ -28,6 +29,7 @@ const crearAbono = {
       sedeId:      { type: "integer" },
       valorPagado: { type: "number", minimum: 0.01 },
       observacion: { type: "string", maxLength: 500 },
+      comprobante: { type: "string", maxLength: 50 },
     },
     additionalProperties: false,
   },
@@ -78,6 +80,7 @@ const editarAbono = {
     properties: {
       valorPagado: { type: "number", minimum: 0.01 },
       observacion: { type: "string", maxLength: 500 },
+      comprobante: { type: "string", maxLength: 50 },
     },
     minProperties: 1,
     additionalProperties: false,

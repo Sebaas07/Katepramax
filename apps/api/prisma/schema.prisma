@@ -79,7 +79,7 @@ model Log {
 model Usuario {
   id             Int      @id @default(autoincrement())
   nombreCompleto String   @map("nombre_completo") @db.VarChar(255)
-  usuario        String   @unique @db.VarChar(50)
+  usuario        String   @unique @db.VarChar(25)
   clave          String   @db.VarChar(255)
   correo         String   @unique @db.VarChar(150)
   telefono       String   @db.VarChar(20)
@@ -376,6 +376,7 @@ model Abono {
   semana      Int
   valorPagado Decimal  @map("valor_pagado") @db.Decimal(15, 2)
   observacion String?  @db.VarChar(500)
+  comprobante String?  @db.VarChar(50)
   creadoEn    DateTime @default(now()) @map("creado_en")
 
   proveedorId Int @map("proveedor_id")

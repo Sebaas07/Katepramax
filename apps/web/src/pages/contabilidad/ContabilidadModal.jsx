@@ -4,6 +4,7 @@ import { formatCOP } from "@/utils/formatters";
 import {
   esCampoNumerico,
   esCampoTexto,
+  MAX_COMPROBANTE,
   normalizarNumeroInput,
   sanitizarTexto,
 } from "@/utils/contabilidadForm";
@@ -394,6 +395,21 @@ const ContabilidadModal = memo(
                   </span>
                 )}
                 <ErrorField mensaje={errores.valorAbono} />
+              </div>
+              <div className={grupoClase}>
+                <Label htmlFor="cont-comprobante-abono">
+                  Nº de comprobante de pago
+                </Label>
+                <input
+                  id="cont-comprobante-abono"
+                  type="text"
+                  name="comprobante"
+                  placeholder="Número del recibo o comprobante..."
+                  value={form.comprobante}
+                  onChange={manejarCambio}
+                  className={inputClase}
+                  maxLength={MAX_COMPROBANTE}
+                />
               </div>
               <div className={grupoClase}>
                 <Label htmlFor="cont-observacion-abono">Observación</Label>
