@@ -1,15 +1,7 @@
 const repo = require("../repositories/inventario.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
-
-function sedeEsPermitida(usuario) {
-  return (
-    usuario.rol === "Admin" ||
-    usuario.rol === "Bodega" ||
-    usuario.rol === "AdminBogota" ||
-    usuario.rol === "Oficinista"
-  );
-}
+const { sedeEsPermitida, rangoDia, fechaValida } = require("../utils/contabilidad");
 
 /**
  * Calcula el delta de stock según el tipo de movimiento.
@@ -50,11 +42,13 @@ async function registrar(app, body, usuario) {
   if (!producto.activo)
     throw new AppError(`Producto "${body.productoId}" está inactivo`, 422);
 
-  const fecha = new Date(body.fecha);
-  fecha.setUTCHours(0, 0, 0, 0);
+  const fecha = fechaValida(body.fecha);
 
   const tipo = body.tipo ?? "entrada";
   const cantidad = Number(body.cantidadIngresada);
+  if (!Number.isFinite(cantidad)) {
+    throw new AppError("La cantidad debe ser un número válido.", 400);
+  }
 
   if (tipo === "ajuste") {
     if (cantidad === 0) {
@@ -67,23 +61,26 @@ async function registrar(app, body, usuario) {
     throw new AppError("La cantidad debe ser mayor a 0.", 400);
   }
 
-  const costoUnitarioRegistro =
+  let costoUnitarioRegistro =
     body.costoUnitario ?? Number(producto.precioCosto);
+  costoUnitarioRegistro = Number(costoUnitarioRegistro);
+  if (!Number.isFinite(costoUnitarioRegistro) || costoUnitarioRegistro < 0) {
+    throw new AppError("El costo unitario debe ser un número válido.", 400);
+  }
 
   const delta = calcularDelta(tipo, cantidad);
 
-  // FIX: validar que una salida no deje stock negativo
-  if (tipo === "salida") {
-    const stockActual = await app.prisma.stockSede.findUnique({
-      where: { sedeId_productoId: { sedeId, productoId: body.productoId } },
-    });
-    const disponible = stockActual?.stockActual ?? 0;
-    if (disponible + delta < 0) {
-      throw new AppError(
-        `Stock insuficiente para registrar la salida. Disponible: ${disponible}, solicitado: ${Math.abs(delta)}`,
-        422,
-      );
-    }
+  // Validar que una salida o un ajuste negativo no deje stock negativo
+  const stockActual = await app.prisma.stockSede.findUnique({
+    where: { sedeId_productoId: { sedeId, productoId: body.productoId } },
+  });
+  const disponible = stockActual?.stockActual ?? 0;
+  if (disponible + delta < 0) {
+    const razon = tipo === "ajuste" ? "ajuste" : "salida";
+    throw new AppError(
+      `Stock insuficiente para registrar la ${razon.toLowerCase() === "salida" ? "salida" : "el ajuste"}. Disponible: ${disponible}, solicitado: ${Math.abs(delta)}`,
+      422,
+    );
   }
 
   const registro = await repo.crear(app.prisma, {
@@ -126,7 +123,7 @@ async function obtenerLista(app, query, usuario) {
     skip: Number(query.skip ?? 0),
     take: Number(query.take ?? 50),
   };
-  if (query.fecha) filtros.fecha = new Date(query.fecha);
+  if (query.fecha) filtros.fecha = rangoDia(query.fecha);
   if (query.semana) filtros.semana = Number(query.semana);
   if (query.productoId) filtros.productoId = query.productoId;
   if (query.tipo) filtros.tipo = query.tipo;
@@ -170,19 +167,16 @@ async function editar(app, id, body, usuario) {
     throw new AppError("No tienes permiso para editar este registro.", 403);
   }
 
-  // FIX: recalcular el delta correctamente considerando el tipo nuevo vs anterior
-  // Si cambia la cantidad O el tipo, hay que revertir el delta anterior y aplicar el nuevo
   const cambiaAmount = body.cantidadIngresada !== undefined;
-  const cambiaTipo = body.tipo !== undefined && body.tipo !== anterior.tipo;
 
   let deltaAjuste = 0;
 
-  if (cambiaAmount || cambiaTipo) {
-    const tipoNuevo = body.tipo ?? anterior.tipo;
-    const cantidadNueva =
-      body.cantidadIngresada !== undefined
-        ? Number(body.cantidadIngresada)
-        : Math.abs(anterior.cantidadIngresada); // cantidad original sin signo
+  if (cambiaAmount) {
+    const tipoNuevo = anterior.tipo;
+    const cantidadNueva = Number(body.cantidadIngresada);
+    if (!Number.isFinite(cantidadNueva)) {
+      throw new AppError("La cantidad debe ser un número válido.", 400);
+    }
 
     if (tipoNuevo === "ajuste") {
       if (cantidadNueva === 0) {
@@ -199,8 +193,27 @@ async function editar(app, id, body, usuario) {
     const deltaAnterior = anterior.cantidadIngresada; // ya tiene signo guardado
     deltaAjuste = deltaNuevo - deltaAnterior;
 
+    // Validar que el nuevo estado no deje stock negativo
+    if (deltaAjuste !== 0) {
+      const stockActual = await app.prisma.stockSede.findUnique({
+        where: {
+          sedeId_productoId: {
+            sedeId: anterior.sedeId,
+            productoId: anterior.productoId,
+          },
+        },
+      });
+      const disponible = stockActual?.stockActual ?? 0;
+      if (disponible + deltaAjuste < 0) {
+        throw new AppError(
+          `El cambio dejaría el stock en negativo. Stock actual: ${disponible}, variación: ${deltaAjuste}`,
+          422,
+        );
+      }
+    }
+
     // Sobreescribir cantidadIngresada en body con el valor ya con signo correcto
-    body = { ...body, cantidadIngresada: deltaNuevo };
+    body = { ...body, cantidadIngresada: deltaNuevo, tipo: tipoNuevo };
   }
 
   const actualizado = await repo.actualizar(app.prisma, id, body);

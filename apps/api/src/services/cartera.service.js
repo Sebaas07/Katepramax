@@ -1,18 +1,7 @@
 const repo     = require("../repositories/cartera.repository");
 const AppError = require("../errors/AppError");
-const { calcularVariacion, fechaValida, numeroPositivo, semanaValida } = require("../utils/contabilidad");
+const { calcularVariacion, fechaValida, numeroPositivo, rangoDia, semanaValida, sedeEsPermitida, sedeWhere } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
-
-function sedeEsPermitida(usuario) {
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota" || usuario.rol === "Oficinista";
-}
-
-function sedeWhere(usuario) {
-  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
-    return { sedeId: usuario.sedeId };
-  }
-  return {};
-}
 
 async function registrar(app, body, usuario) {
   if (!sedeEsPermitida(usuario)) {
@@ -46,10 +35,9 @@ async function registrar(app, body, usuario) {
     resultado = await repo.crear(app.prisma, data);
   } catch (error) {
     if (error?.code === "P2002") {
-      resultado = await repo.actualizarPorSedeFecha(app.prisma, sedeId, fecha, data);
-    } else {
-      throw error;
+      throw new AppError("Ya existe un saldo de cartera para esta sede y fecha. Usa la edición para modificarlo.", 409);
     }
+    throw error;
   }
 
   await registrarAccion(
@@ -68,8 +56,8 @@ async function obtenerLista(app, query, usuario) {
   }
 
   const filtros = { skip: Number(query.skip ?? 0), take: Number(query.take ?? 50) };
-  if (query.fecha)  filtros.fecha  = new Date(query.fecha);
-  if (query.semana) filtros.semana = Number(query.semana);
+  if (query.fecha)  filtros.fecha  = rangoDia(query.fecha);
+  if (query.semana) filtros.semana = semanaValida(query.semana);
 
   if (usuario.rol !== "Admin") {
     filtros.sedeId = usuario.sedeId;
@@ -105,7 +93,7 @@ async function editar(app, id, body, usuario) {
 
   if (body.sedeId !== undefined) {
     let sedeId = Number(body.sedeId);
-    if (!sedeId) throw new AppError("Selecciona la sede.", 422);
+    if (!Number.isFinite(sedeId) || sedeId <= 0) throw new AppError("Selecciona la sede.", 422);
     const sede = await app.prisma.sede.findUnique({ where: { id: sedeId } });
     if (!sede) throw new AppError(`Sede ${sedeId} no encontrada`, 404);
     if (usuario.rol !== "Admin" && sedeId !== usuario.sedeId) {

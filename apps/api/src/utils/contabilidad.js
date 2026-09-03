@@ -25,7 +25,8 @@ const numeroPositivo = (valor, nombre = "valor") => {
 };
 
 const semanaValida = (semana) => {
-  const n = Number.parseInt(semana, 10);
+  if (!/^\d{1,2}$/.test(String(semana).trim())) throw new AppError("La semana debe ser un número entre 1 y 53.", 422);
+  const n = Number(semana);
   if (!Number.isInteger(n) || n < 1 || n > 53) throw new AppError("La semana debe estar entre 1 y 53.", 422);
   return n;
 };
@@ -37,6 +38,15 @@ const fechaValida = (fecha) => {
   return d;
 };
 
+// Devuelve un rango { gte, lt } para filtrar por un día completo (formato YYYY-MM-DD).
+// Evita los falsos vacíos del filtro por igualdad sobre un DateTime.
+const rangoDia = (fecha) => {
+  const d = fechaValida(fecha);
+  const fin = new Date(d);
+  fin.setUTCDate(fin.getUTCDate() + 1);
+  return { gte: d, lt: fin };
+};
+
 const semanaDesdeFecha = (fecha) => {
   const d = new Date(fecha);
   const utc = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -44,6 +54,8 @@ const semanaDesdeFecha = (fecha) => {
   const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
   return Math.ceil((((utc - yearStart) / 86400000) + 1) / 7);
 };
+
+const ROLES_PERMITIDOS = new Set(["Admin", "Bodega", "AdminBogota", "Oficinista"]);
 
 const calcularVariacion = async (prisma, sedeId, fecha, idExcluir = null) => {
   const anterior = await prisma.cartera.findFirst({
@@ -59,6 +71,19 @@ const calcularVariacion = async (prisma, sedeId, fecha, idExcluir = null) => {
   return { saldoAnterior, variacion: 0 };
 };
 
+// ROL permitido para operar sobre un módulo de contabilidad.
+function sedeEsPermitida(usuario) {
+  return ROLES_PERMITIDOS.has(usuario?.rol);
+}
+
+// Filtro Prisma de sede para el usuario. Admin no firma por sede (acceso total).
+function sedeWhere(usuario) {
+  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
+    return { sedeId: usuario.sedeId };
+  }
+  return {};
+}
+
 module.exports = {
   MAX_OBSERVACION,
   MAX_CONCEPTO,
@@ -67,6 +92,9 @@ module.exports = {
   numeroPositivo,
   semanaValida,
   fechaValida,
+  rangoDia,
   semanaDesdeFecha,
   calcularVariacion,
+  sedeEsPermitida,
+  sedeWhere,
 };

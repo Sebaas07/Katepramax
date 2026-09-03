@@ -61,7 +61,7 @@ describe("egresoRepository.listar", () => {
     await repo.listar(prisma, { concepto: "Trans" });
 
     const where = prisma.egreso.findMany.mock.calls[0][0].where;
-    expect(where.concepto).toEqual({ contains: "Trans" });
+    expect(where.concepto).toEqual({ contains: "Trans", mode: "insensitive" });
   });
 
   it("debería ordenar por fecha desc y sedeId asc", async () => {

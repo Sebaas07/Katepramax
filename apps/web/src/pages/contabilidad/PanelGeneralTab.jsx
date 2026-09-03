@@ -81,6 +81,7 @@ const PanelGeneralTab = ({
     (totalesDiaIngresos ?? []).forEach((d) => {
       const key = d.fecha?.slice(0, 10) ?? d.fecha;
       mapa[key] = {
+        key,
         dia: labelDia(d.fecha),
         Ingresos: toNumber(d.total),
         Egresos: 0,
@@ -91,12 +92,13 @@ const PanelGeneralTab = ({
       if (mapa[key]) mapa[key].Egresos = toNumber(d.total);
       else
         mapa[key] = {
+          key,
           dia: labelDia(d.fecha),
           Ingresos: 0,
           Egresos: toNumber(d.total),
         };
     });
-    return Object.values(mapa).sort((a, b) => a.dia.localeCompare(b.dia));
+    return Object.values(mapa).sort((a, b) => (a.key ?? "").localeCompare(b.key ?? ""));
   }, [totalesDiaIngresos, totalesDiaEgresos]);
 
   const saldoNeto =

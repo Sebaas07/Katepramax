@@ -1,18 +1,7 @@
 const repo     = require("../repositories/abono.repository");
 const AppError = require("../errors/AppError");
-const { fechaValida, numeroPositivo, sanitizarTexto, semanaValida } = require("../utils/contabilidad");
+const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
-
-function sedeEsPermitida(usuario) {
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota" || usuario.rol === "Oficinista";
-}
-
-function sedeWhere(usuario) {
-  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
-    return { sedeId: usuario.sedeId };
-  }
-  return {};
-}
 
 async function registrar(app, body, usuario) {
   if (!sedeEsPermitida(usuario)) {
@@ -37,8 +26,8 @@ async function registrar(app, body, usuario) {
     proveedorId: body.proveedorId,
     sedeId,
     valorPagado: numeroPositivo(body.valorPagado, "valor de abono"),
-    observacion: body.observacion === undefined ? null : sanitizarTexto(body.observacion),
-    comprobante: body.comprobante === undefined ? null : sanitizarTexto(body.comprobante, 50),
+    observacion: body.observacion === undefined ? null : sanitizarTexto(body.observacion) || null,
+    comprobante: body.comprobante === undefined ? null : sanitizarTexto(body.comprobante, 50) || null,
   });
 
   await registrarAccion(
@@ -58,8 +47,8 @@ async function obtenerLista(app, query, usuario) {
 
   const filtros = { skip: Number(query.skip ?? 0), take: Number(query.take ?? 50) };
   if (query.proveedorId) filtros.proveedorId = Number(query.proveedorId);
-  if (query.semana)      filtros.semana      = Number(query.semana);
-  if (query.fecha)       filtros.fecha       = new Date(query.fecha);
+  if (query.semana)      filtros.semana      = semanaValida(query.semana);
+  if (query.fecha)       filtros.fecha       = rangoDia(query.fecha);
 
   if (usuario.rol !== "Admin") {
     filtros.sedeId = usuario.sedeId;

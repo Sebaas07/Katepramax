@@ -1,18 +1,7 @@
 const repo     = require("../repositories/ingreso.repository");
 const AppError = require("../errors/AppError");
-const { fechaValida, numero, sanitizarTexto, semanaValida } = require("../utils/contabilidad");
+const { fechaValida, numero, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
-
-function sedeEsPermitida(usuario) {
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota" || usuario.rol === "Oficinista";
-}
-
-function sedeWhere(usuario) {
-  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
-    return { sedeId: usuario.sedeId };
-  }
-  return {};
-}
 
 async function registrar(app, body, usuario) {
   if (!sedeEsPermitida(usuario)) {
@@ -59,8 +48,8 @@ async function obtenerLista(app, query, usuario) {
   }
 
   const filtros = { skip: Number(query.skip ?? 0), take: Number(query.take ?? 50) };
-  if (query.fecha)  filtros.fecha  = new Date(query.fecha);
-  if (query.semana) filtros.semana = Number(query.semana);
+  if (query.fecha)  filtros.fecha  = rangoDia(query.fecha);
+  if (query.semana) filtros.semana = semanaValida(query.semana);
   if (query.concepto) filtros.concepto = query.concepto;
 
   if (usuario.rol !== "Admin") {
@@ -100,8 +89,10 @@ async function editar(app, id, body, usuario) {
   if (body.observacion !== undefined) data.observacion = sanitizarTexto(body.observacion) || null;
 
   if (data.efectivo !== undefined || data.cuentas !== undefined) {
-    data.total = (data.efectivo ?? Number(actual.efectivo)) + (data.cuentas ?? Number(actual.cuentas));
-    if (data.efectivo <= 0 && data.cuentas <= 0) throw new AppError("Ingresa al menos un valor en efectivo o cuentas.", 422);
+    const efectivoFinal = data.efectivo ?? Number(actual.efectivo);
+    const cuentasFinal  = data.cuentas  ?? Number(actual.cuentas);
+    data.total = efectivoFinal + cuentasFinal;
+    if (efectivoFinal <= 0 && cuentasFinal <= 0) throw new AppError("Ingresa al menos un valor en efectivo o cuentas.", 422);
   }
 
   const actualizado = await repo.actualizar(app.prisma, id, data);

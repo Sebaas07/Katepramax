@@ -84,6 +84,9 @@ function mockArqueo() {
       .fn()
       .mockResolvedValue([{ semana: 18, _sum: { costoUnitario: 150000 } }]),
     aggregate: vi.fn().mockResolvedValue({ _sum: { costoUnitario: 150000 } }),
+    findMany: vi.fn().mockResolvedValue([
+      { cantidadIngresada: 2, costoUnitario: 75000 },
+    ]),
   };
   prisma.cliente = {
     ...prisma.cliente,
@@ -329,9 +332,7 @@ describe("GET /api/v1/reportes/historial-semanal", () => {
         .mockResolvedValue([{ semana: 18, _sum: { valorPagado: 20000 } }]),
     };
     prisma.inventario = {
-      groupBy: vi
-        .fn()
-        .mockResolvedValue([{ semana: 18, _sum: { costo: 150000 } }]),
+      findMany: vi.fn().mockResolvedValue([]),
     };
 
     const res = await app.inject({
@@ -358,7 +359,7 @@ describe("GET /api/v1/reportes/historial-semanal", () => {
     };
     prisma.egreso = { groupBy: vi.fn().mockResolvedValue([]) };
     prisma.abono = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.inventario = { groupBy: vi.fn().mockResolvedValue([]) };
+    prisma.inventario = { findMany: vi.fn().mockResolvedValue([]) };
 
     const res = await app.inject({
       method: "GET",

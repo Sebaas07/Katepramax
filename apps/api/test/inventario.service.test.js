@@ -411,10 +411,14 @@ describe("inventarioService.editar", () => {
   });
 
   it("debería recalcular stock si cambia el tipo de entrada a salida", async () => {
-    prisma.inventario.findUnique.mockResolvedValue(inventarioMock); // cantidadIngresada: +10, tipo: entrada
+    // NOTA: el schema de edición (editarInventario) solo permite
+    // cantidadIngresada y costoUnitario — no permite cambiar `tipo`.
+    // Antes había código que recalculaba el delta al cambiar de tipo,
+    // pero era inalcanzable (dead code) y se eliminó.
+    prisma.inventario.findUnique.mockResolvedValue(inventarioMock);
     prisma.inventario.update.mockResolvedValue({
       ...inventarioMock,
-      cantidadIngresada: -10,
+      cantidadIngresada: 6,
       tipo: "salida",
     });
     prisma.stockSede.upsert.mockResolvedValue({});
@@ -422,13 +426,13 @@ describe("inventarioService.editar", () => {
     await inventarioService.editar(
       appMock,
       1,
-      { tipo: "salida" },
+      { cantidadIngresada: 6 },
       usuarioAdmin,
     );
 
-    // deltaNuevo=-10, deltaAnterior=+10 → ajuste=-20
+    // deltaNuevo=6, deltaAnterior=10 → ajuste=-4
     expect(prisma.stockSede.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ update: { stockActual: { increment: -20 } } }),
+      expect.objectContaining({ update: { stockActual: { increment: -4 } } }),
     );
   });
 

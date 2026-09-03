@@ -11,7 +11,7 @@ async function listar(prisma, { fecha, semana, sedeId, concepto, skip = 0, take 
   if (fecha)    where.fecha    = fecha;
   if (semana)   where.semana   = semana;
   if (sedeId)   where.sedeId   = sedeId;
-  if (concepto) where.concepto = { contains: concepto };
+  if (concepto) where.concepto = { contains: concepto, mode: "insensitive" };
   return prisma.egreso.findMany({
     where,
     include: INCLUDE,

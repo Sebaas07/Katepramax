@@ -137,12 +137,15 @@ async function arqueoSemanal(app, semana, usuario) {
   const cartera = await prisma.cliente.aggregate({ where: carteraWhere, _sum: { saldoDeuda: true } });
   const totalCartera = toNum(cartera._sum.saldoDeuda);
 
-  // FIX: campo correcto es "costoUnitario", no "costo"
-  const invRows = await prisma.inventario.aggregate({
+  // FIX: el costo de inventario debe ser Σ (cantidad × costoUnitario), no Σ costoUnitario.
+  const invMovs = await prisma.inventario.findMany({
     where: { semana, ...whereSede },
-    _sum:  { costoUnitario: true },
+    select: { cantidadIngresada: true, costoUnitario: true },
   });
-  const costoInventario = toNum(invRows._sum.costoUnitario);
+  const costoInventario = invMovs.reduce(
+    (acc, m) => acc + toNum(m.cantidadIngresada) * toNum(m.costoUnitario),
+    0,
+  );
 
   return {
     semana,
@@ -338,13 +341,16 @@ async function historialSemanal(app, { skip = 0, take = 20 } = {}, usuario) {
     _sum:  { valorPagado: true },
     orderBy: { semana: "desc" },
   });
-  // FIX: campo correcto es "costoUnitario", no "costo"
-  const semanasInv = await prisma.inventario.groupBy({
-    by:    ["semana"],
+  // FIX: el costo de inventario debe ser Σ (cantidad × costoUnitario) por semana.
+  const invMovs = await prisma.inventario.findMany({
     where: filtroSede,
-    _sum:  { costoUnitario: true },
-    orderBy: { semana: "desc" },
+    select: { semana: true, cantidadIngresada: true, costoUnitario: true },
   });
+  const costoPorSemana = new Map();
+  for (const m of invMovs) {
+    const costo = toNum(m.cantidadIngresada) * toNum(m.costoUnitario);
+    costoPorSemana.set(m.semana, (costoPorSemana.get(m.semana) ?? 0) + costo);
+  }
 
   // Unión de todas las semanas con datos
   const todasSemanas = [
@@ -352,7 +358,7 @@ async function historialSemanal(app, { skip = 0, take = 20 } = {}, usuario) {
       ...semanasIng.map((r) => r.semana),
       ...semanasEgr.map((r) => r.semana),
       ...semanasAbo.map((r) => r.semana),
-      ...semanasInv.map((r) => r.semana),
+      ...costoPorSemana.keys(),
     ]),
   ].sort((a, b) => b - a);
 
@@ -363,7 +369,6 @@ async function historialSemanal(app, { skip = 0, take = 20 } = {}, usuario) {
     const ing = semanasIng.find((r) => r.semana === semana);
     const egr = semanasEgr.find((r) => r.semana === semana);
     const abo = semanasAbo.find((r) => r.semana === semana);
-    const inv = semanasInv.find((r) => r.semana === semana);
 
     const ingTotal = toNum(ing?._sum.total);
     const egrTotal = toNum(egr?._sum.total) + toNum(abo?._sum.valorPagado);
@@ -376,7 +381,7 @@ async function historialSemanal(app, { skip = 0, take = 20 } = {}, usuario) {
       ingEfectivo:      toNum(ing?._sum.efectivo),
       ingCuentas:       toNum(ing?._sum.cuentas),
       deudaProveedores: toNum(abo?._sum.valorPagado),
-      costoInventario:  toNum(inv?._sum.costoUnitario),
+      costoInventario:  toNum(costoPorSemana.get(semana)),
     };
   });
 

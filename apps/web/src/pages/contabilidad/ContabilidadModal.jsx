@@ -10,7 +10,7 @@ import {
 } from "@/utils/contabilidadForm";
 import { memo } from "react";
 
-const HOY = new Date().toISOString().split("T")[0];
+const hoyISO = () => new Date().toISOString().split("T")[0];
 
 // Sugerencias para el autocompletar del campo "Concepto" de egresos. Es
 // texto libre (el usuario puede escribir cualquier cosa), esto solo ayuda
@@ -78,6 +78,7 @@ const ContabilidadModal = memo(
   }) => {
     const inputClase = "cont-input";
     const grupoClase = "cont-form-group";
+    const HOY = hoyISO();
 
     const titulo = (() => {
       if (itemEditar) {
@@ -94,12 +95,7 @@ const ContabilidadModal = memo(
     })();
 
     // Expresión barata — no necesita useMemo
-    const textoBoton =
-      modalTipo === "abono"
-        ? "Registrar Abono"
-        : itemEditar
-          ? "Guardar cambios"
-          : "Guardar";
+    const textoBoton = itemEditar ? "Guardar cambios" : "Guardar";
 
     const nombreProveedor =
       proveedores.find(

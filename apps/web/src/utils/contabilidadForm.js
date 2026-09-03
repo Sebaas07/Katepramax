@@ -4,7 +4,7 @@ export const MAX_OBSERVACION = 500;
 export const MAX_CONCEPTO = 200;
 export const MAX_COMPROBANTE = 50;
 
-const HOY = new Date().toISOString().split("T")[0];
+const HOY = () => new Date().toISOString().split("T")[0];
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
 const NUMERIC_FIELDS = ["efectivo", "cuentas", "total", "saldoDia", "valorAbono"];
 const TEXT_FIELDS = ["observacion", "observaciones", "concepto"];
@@ -42,16 +42,17 @@ export const parseNumero = (valor) => {
   return Number.isFinite(numero) ? numero : NaN;
 };
 
-export const numeroPositivo = (valor, { requerido = false } = {}) => {
+export const numeroPositivo = (valor) => {
   const numero = parseNumero(valor);
-  if (Number.isNaN(numero)) return requerido ? 0 : 0;
-  return Math.max(0, numero);
+  // No se aplana hacia cero: los negativos deben propagarse para que la
+  // validación (`> 0`) o el backend los rechacen. Solo se neutraliza el NaN.
+  return Number.isNaN(numero) ? 0 : numero;
 };
 
 export const validarFechaFormulario = (fecha) => {
   if (!fecha) return "La fecha es obligatoria.";
   if (!FECHA_RE.test(fecha)) return "Ingresa una fecha válida.";
-  if (fecha > HOY) return "La fecha no puede ser futura.";
+  if (fecha > HOY()) return "La fecha no puede ser futura.";
   return "";
 };
 

@@ -202,6 +202,8 @@ describe("POST /api/v1/inventario", () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.sede.findUnique.mockResolvedValue(sedeMock);
     prisma.producto.findUnique.mockResolvedValue(productoMock);
+    // Stock suficiente para soportar el ajuste negativo
+    prisma.stockSede.findUnique.mockResolvedValue({ stockActual: 20 });
     prisma.inventario.create.mockResolvedValue({ ...inventarioMock, cantidadIngresada: -10, tipo: "ajuste" });
     prisma.stockSede.upsert.mockResolvedValue({});
 
@@ -229,6 +231,31 @@ describe("POST /api/v1/inventario", () => {
         update: { stockActual: { increment: -10 } },
       }),
     );
+  });
+
+  it("debería rechazar un ajuste negativo que deje el stock en negativo", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    // Stock insuficiente (0) para un ajuste de -10
+    prisma.stockSede.findUnique.mockResolvedValue({ stockActual: 0 });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/inventario",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+      payload: {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: -10,
+        tipo: "ajuste",
+        fecha: "2026-06-02",
+        semana: 23,
+      },
+    });
+
+    expect(res.statusCode).toBe(422);
+    expect(prisma.inventario.create).not.toHaveBeenCalled();
   });
 
   it("debería retornar 400 si el ajuste es 0", async () => {

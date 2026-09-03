@@ -273,15 +273,6 @@
   color: var(--card-accent, var(--secondary));
 }
 
-/* ─── Tabla wrap ─────────────────────────────────────────────*/
-.cont-tabla-wrap {
-  background: var(--surface-container);
-  border: 1px solid rgba(197, 179, 88, 0.12);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  min-height: 180px;
-}
-
 /* ─── Filtros ────────────────────────────────────────────────*/
 .filter-group {
   display: flex;

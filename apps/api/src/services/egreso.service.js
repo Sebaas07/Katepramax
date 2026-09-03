@@ -1,18 +1,7 @@
 const repo     = require("../repositories/egreso.repository");
 const AppError = require("../errors/AppError");
-const { fechaValida, numeroPositivo, sanitizarTexto, semanaValida } = require("../utils/contabilidad");
+const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
-
-function sedeEsPermitida(usuario) {
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota" || usuario.rol === "Oficinista";
-}
-
-function sedeWhere(usuario) {
-  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
-    return { sedeId: usuario.sedeId };
-  }
-  return {};
-}
 
 async function registrar(app, body, usuario) {
   if (!sedeEsPermitida(usuario)) {
@@ -55,8 +44,8 @@ async function obtenerLista(app, query, usuario) {
   }
 
   const filtros = { skip: Number(query.skip ?? 0), take: Number(query.take ?? 50) };
-  if (query.fecha)    filtros.fecha    = new Date(query.fecha);
-  if (query.semana)   filtros.semana   = Number(query.semana);
+  if (query.fecha)    filtros.fecha    = rangoDia(query.fecha);
+  if (query.semana)   filtros.semana   = semanaValida(query.semana);
   if (query.concepto) filtros.concepto = query.concepto;
 
   if (usuario.rol !== "Admin") {

@@ -36,7 +36,7 @@ import Modal from "@/components/common/Modal/Modal";
 import "./ContabilidadPage.css";
 
 // ─────────────────────────────────────────────────────────────
-const HOY = new Date().toISOString().split("T")[0];
+const hoyISO = () => new Date().toISOString().split("T")[0];
 const SEM_ACTUAL = getSemanaISO(new Date());
 
 const TABS = [
@@ -54,7 +54,7 @@ const TABS = [
 ];
 
 const FORM_VACIO = {
-  fecha: HOY,
+  fecha: hoyISO(),
   sedeId: "",
   efectivo: "",
   cuentas: "",
@@ -105,9 +105,9 @@ const ContabilidadPage = () => {
   const [filtroSedeId, setFiltroSedeId] = useState(
     sedeIdUsuario ? String(sedeIdUsuario) : "",
   );
-  const [filtroPanelF, setFiltroPanelFecha] = useState(HOY);
+  const [filtroPanelF, setFiltroPanelFecha] = useState(hoyISO());
   const [periodoGanancia, setPeriodoGanancia] = useState("dia");
-  const [fechaGanancia, setFechaGanancia] = useState(HOY);
+  const [fechaGanancia, setFechaGanancia] = useState(hoyISO());
   const [fechaInicioCobros, setFechaInicioCobros] = useState(
     () => getRangoSemana(SEM_ACTUAL).inicio,
   );
@@ -289,15 +289,24 @@ const ContabilidadPage = () => {
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
     if (tab !== "ganancia") return;
+    let activo = true;
     setCargandoCorte(true);
     reporteService
       .obtenerCorteCaja({ ...rangoGanancia, sedeId: filtroSedeId || undefined })
-      .then(setCorteCaja)
+      .then((data) => {
+        if (activo) setCorteCaja(data);
+      })
       .catch((err) => {
+        if (!activo) return;
         toast.error("Error al cargar el corte de caja: " + (err?.message || "desconocido"));
         setCorteCaja(null);
       })
-      .finally(() => setCargandoCorte(false));
+      .finally(() => {
+        if (activo) setCargandoCorte(false);
+      });
+    return () => {
+      activo = false;
+    };
   }, [tab, rangoGanancia, filtroSedeId, isSessionChecked, isAuthenticated]);
 
   const mapSede = useCallback(
@@ -368,7 +377,7 @@ const ContabilidadPage = () => {
       setModalTipo("abono");
       setForm((prev) => ({
         ...prev,
-        fecha: HOY,
+        fecha: hoyISO(),
         sedeId: String(item.sedeId ?? sedeIdUsuario ?? ""),
         proveedorId: String(item.proveedorId ?? ""),
         valorAbono: String(item.valorPagado ?? ""),
@@ -387,7 +396,7 @@ const ContabilidadPage = () => {
       setModalTipo("abono");
       setForm((prev) => ({
         ...prev,
-        fecha: HOY,
+        fecha: hoyISO(),
         sedeId: String(item.sedeId ?? sedeIdUsuario ?? ""),
         proveedorId: String(item.proveedorId ?? ""),
         valorAbono: "",
@@ -403,7 +412,6 @@ const ContabilidadPage = () => {
   const TAB_A_MODAL_TIPO = {
     ingresos: "ingreso",
     egresos: "egreso",
-    cartera: "cartera",
     proveedores: "abono",
   };
 
@@ -419,7 +427,7 @@ const ContabilidadPage = () => {
     setModalTipo(tipo);
     setForm((prev) => ({
       ...prev,
-      fecha: item.fecha?.split("T")[0] ?? HOY,
+      fecha: item.fecha?.split("T")[0] ?? hoyISO(),
       sedeId: String(item.sedeId),
       efectivo: String(item.efectivo ?? ""),
       cuentas: String(item.cuentas ?? ""),
@@ -542,13 +550,12 @@ const ContabilidadPage = () => {
 
   const mostrarBotonRegistrar =
     puedeRegistrar &&
-    ["ingresos", "egresos", "cartera", "proveedores"].includes(tab);
+    ["ingresos", "egresos", "proveedores"].includes(tab);
 
   const textoBotonNuevo =
     {
       ingresos: "Nuevo ingreso",
       egresos: "Nuevo egreso",
-      cartera: "Registrar cartera",
       proveedores: "Registrar abono",
     }[tab] ?? "Nuevo";
 
@@ -616,7 +623,7 @@ const ContabilidadPage = () => {
                 <DatePicker
                   id="cont-cobros-desde"
                   value={fechaInicioCobros}
-                  max={fechaFinCobros || HOY}
+                  max={fechaFinCobros || hoyISO()}
                   onChange={(e) => setFechaInicioCobros(e.target.value)}
                   className="filter-select"
                 />
@@ -627,7 +634,7 @@ const ContabilidadPage = () => {
                   id="cont-cobros-hasta"
                   value={fechaFinCobros}
                   min={fechaInicioCobros}
-                  max={HOY}
+                  max={hoyISO()}
                   onChange={(e) => setFechaFinCobros(e.target.value)}
                   className="filter-select"
                 />
@@ -639,7 +646,7 @@ const ContabilidadPage = () => {
               <label htmlFor="cont-panel-fecha">Fecha panel</label>
               <DatePicker
                 id="cont-panel-fecha"
-                max={HOY}
+                max={hoyISO()}
                 value={filtroPanelF}
                 onChange={(e) => setFiltroPanelFecha(e.target.value)}
                 className="filter-select"

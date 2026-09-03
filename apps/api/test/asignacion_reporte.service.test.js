@@ -250,6 +250,9 @@ function mockArqueoBase() {
   prisma.inventario = {
     groupBy:   vi.fn().mockResolvedValue([]),
     aggregate: vi.fn().mockResolvedValue({ _sum: { costoUnitario: 150000 } }),
+    findMany:  vi.fn().mockResolvedValue([
+      { cantidadIngresada: 2, costoUnitario: 75000 },
+    ]),
   };
 }
 
@@ -370,13 +373,14 @@ describe("reporteService.historialSemanal", () => {
     prisma.abono      = { groupBy: vi.fn().mockResolvedValue([
       { semana: 18, _sum: { valorPagado: 20000 } },
     ]) };
-    prisma.inventario = { groupBy: vi.fn().mockResolvedValue([
-      { semana: 18, _sum: { costoUnitario: 150000 } },
+    prisma.inventario = { findMany: vi.fn().mockResolvedValue([
+      { semana: 18, cantidadIngresada: 2, costoUnitario: 75000 },
     ]) };
 
     const result = await reporteSvc.historialSemanal(appMock);
 
     // saldoNeto = ingTotal(400000) - egrTotal(50000+20000=70000) = 330000
+    // costoInventario = cantidad × costoUnitario = 2 × 75000 = 150000
     expect(result.data[0].saldoNeto).toBe(330000);
     expect(result.data[0].costoInventario).toBe(150000);
     expect(result.total).toBe(1);
@@ -390,7 +394,7 @@ describe("reporteService.historialSemanal", () => {
     ]) };
     prisma.egreso     = { groupBy: vi.fn().mockResolvedValue([]) };
     prisma.abono      = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.inventario = { groupBy: vi.fn().mockResolvedValue([]) };
+    prisma.inventario = { findMany: vi.fn().mockResolvedValue([]) };
 
     const result = await reporteSvc.historialSemanal(appMock);
 
@@ -407,7 +411,7 @@ describe("reporteService.historialSemanal", () => {
     ]) };
     prisma.egreso     = { groupBy: vi.fn().mockResolvedValue([]) };
     prisma.abono      = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.inventario = { groupBy: vi.fn().mockResolvedValue([]) };
+    prisma.inventario = { findMany: vi.fn().mockResolvedValue([]) };
 
     const result = await reporteSvc.historialSemanal(appMock, { skip: 1, take: 1 });
 
@@ -426,7 +430,7 @@ describe("reporteService.historialSemanal", () => {
       { semana: 17, _sum: { total: 30000 } }, // semana sin ingresos
     ]) };
     prisma.abono      = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.inventario = { groupBy: vi.fn().mockResolvedValue([]) };
+    prisma.inventario = { findMany: vi.fn().mockResolvedValue([]) };
 
     const result = await reporteSvc.historialSemanal(appMock);
 

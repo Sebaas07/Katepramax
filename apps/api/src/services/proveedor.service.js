@@ -8,10 +8,7 @@
 const proveedorRepository = require("../repositories/proveedor.repository");
 const AppError             = require("../errors/AppError");
 const { registrarAccion }  = require("../utils/logger");
-
-function sedeEsPermitida(usuario) {
-  return usuario.rol === "Admin" || usuario.rol === "Bodega" || usuario.rol === "AdminBogota" || usuario.rol === "Oficinista";
-}
+const { sedeEsPermitida, sanitizarTexto } = require("../utils/contabilidad");
 
 const proveedorService = (app) => {
   const repo = proveedorRepository(app.prisma);
@@ -46,11 +43,13 @@ const proveedorService = (app) => {
       if (!sedeEsPermitida(usuario)) {
         throw new AppError("No tienes permiso para crear proveedores.", 403);
       }
+      const nombreLimpio = sanitizarTexto(nombre, 200);
+      if (!nombreLimpio) throw new AppError("El nombre del proveedor es obligatorio.", 422);
       // Nombre único
-      const existe = await repo.findByNombre(nombre);
-      if (existe) throw new AppError(`Ya existe un proveedor con el nombre "${nombre}"`, 409);
-      const nuevo = await repo.create({ nombre });
-      await registrarAccion(app, usuario.id, "CREAR_PROVEEDOR", `Creó el proveedor "${nombre}".`);
+      const existe = await repo.findByNombre(nombreLimpio);
+      if (existe) throw new AppError(`Ya existe un proveedor con el nombre "${nombreLimpio}"`, 409);
+      const nuevo = await repo.create({ nombre: nombreLimpio });
+      await registrarAccion(app, usuario.id, "CREAR_PROVEEDOR", `Creó el proveedor "${nombreLimpio}".`);
       return nuevo;
     },
 
@@ -61,14 +60,17 @@ const proveedorService = (app) => {
       const proveedor = await repo.findById(id);
       if (!proveedor) throw new AppError(`Proveedor ${id} no encontrado`, 404);
 
-      // Si cambia el nombre, verificar que no colisione con otro
-      if (data.nombre && data.nombre !== proveedor.nombre) {
-        const colision = await repo.findByNombre(data.nombre);
-        if (colision) throw new AppError(`Ya existe un proveedor con el nombre "${data.nombre}"`, 409);
-      }
-
       const campos = {};
-      if (data.nombre !== undefined) campos.nombre = data.nombre;
+      if (data.nombre !== undefined) {
+        const nombreLimpio = sanitizarTexto(data.nombre, 200);
+        if (!nombreLimpio) throw new AppError("El nombre del proveedor es obligatorio.", 422);
+        // Si cambia el nombre, verificar que no colisione con otro
+        if (nombreLimpio !== proveedor.nombre) {
+          const colision = await repo.findByNombre(nombreLimpio);
+          if (colision) throw new AppError(`Ya existe un proveedor con el nombre "${nombreLimpio}"`, 409);
+        }
+        campos.nombre = nombreLimpio;
+      }
       if (data.activo !== undefined) campos.activo = data.activo;
 
       const actualizado = await repo.update(id, campos);
