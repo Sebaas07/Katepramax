@@ -84,8 +84,22 @@
 
 @media print {
   .factura-publica {
-    background: #fff;
-    padding: 0;
-    min-height: auto;
+    background: #fff !important;
+    padding: 0 !important;
+    min-height: auto !important;
+  }
+
+  .factura-publica__card {
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .factura-publica__aviso,
+  .factura-publica__btn,
+  .factura-publica__link {
+    display: none !important;
   }
 }
