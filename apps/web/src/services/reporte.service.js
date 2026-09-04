@@ -22,19 +22,6 @@ const reporteService = {
   },
 
   /**
-   * Historial semanal acumulado — usado en Contabilidad > Historial Semanal.
-   */
-  obtenerHistorialSemanal: async () => {
-    try {
-      const datos = await reportesApi.obtenerHistorialSemanal();
-      return Array.isArray(datos?.data) ? datos.data : [];
-    } catch (e) {
-      console.error("[reporteService] obtenerHistorialSemanal:", e.message);
-      return [];
-    }
-  },
-
-  /**
    * Cobros por entregador en un rango de fechas.
    * Backend: GET /reportes/cobros-entregador?fechaInicio&fechaFin&sedeId
    */

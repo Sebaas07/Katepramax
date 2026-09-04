@@ -278,6 +278,15 @@ const contabilidadService = {
     }
   },
 
+  // Saldo total de cuentas por pagar por proveedor (deuda de compras − abonos)
+  obtenerDeudaProveedores: async () => {
+    try {
+      return await contabilidadApi.obtenerDeudaProveedores();
+    } catch {
+      return [];
+    }
+  },
+
   // ── ARQUEO ────────────────────────────────────────────────
   obtenerArqueo: async (semana) => {
     try {

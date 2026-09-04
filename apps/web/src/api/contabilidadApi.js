@@ -181,6 +181,15 @@ const contabilidadApi = {
     return r.data;
   },
 
+  // Backend: GET /inventario/deuda-proveedores?semana=N → Admin, Bodega
+  // Saldo (deuda de compras menos abonos) agrupado por proveedor.
+  obtenerDeudaProveedores: async (semana) => {
+    const r = await clienteApi.get(
+      semana ? `/inventario/deuda-proveedores?semana=${semana}` : "/inventario/deuda-proveedores",
+    );
+    return r.data;
+  },
+
   // ── REPORTES ──────────────────────────────────────────────────
   // Backend: GET /reportes/arqueo-semanal?semana=N → solo Admin
   obtenerArqueo: async (semana) => {

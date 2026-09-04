@@ -15,6 +15,8 @@ const inventarioBase = {
     costoUnitario: { type: "number" },
     tipo: { type: "string" },
     nota: { type: ["string", "null"] },
+    proveedorId: { type: ["integer", "null"] },
+    deuda: { type: ["number", "null"] },
     creadoEn: { type: "string", format: "date-time" },
     sede: {
       type: "object",
@@ -28,6 +30,13 @@ const inventarioBase = {
       properties: {
         codigo: { type: "string" },
         descripcion: { type: "string" },
+      },
+    },
+    proveedor: {
+      type: "object",
+      properties: {
+        id: { type: "integer" },
+        nombre: { type: "string" },
       },
     },
   },
@@ -49,6 +58,8 @@ const crearInventario = {
       costoUnitario: { type: "number", minimum: 0 },
       tipo: { type: "string", enum: ["entrada", "salida", "ajuste"] },
       nota: { type: "string" },
+      proveedorId: { type: "integer" }, // proveedor de la compra (opcional)
+      deuda: { type: "number", minimum: 0 }, // monto pendiente por pagar (opcional)
     },
     additionalProperties: false,
   },
@@ -170,6 +181,36 @@ const resumenSemanal = {
   },
 };
 
+// GET /api/inventario/deuda-proveedores
+const resumenDeudaProveedores = {
+  summary: "Saldo de deuda pendiente por proveedor (cuentas por pagar)",
+  tags: ["Inventario"],
+  security: [{ bearerAuth: [] }],
+  querystring: {
+    type: "object",
+    properties: {
+      sedeId: { type: "integer" },
+      semana: { type: "integer", minimum: 1, maximum: 53 },
+    },
+    additionalProperties: false,
+  },
+  response: {
+    200: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          proveedor:      { type: "string" },
+          proveedorId:    { type: "integer" },
+          deudaPendiente: { type: "number" },
+          totalAbonado:   { type: "number" },
+          saldoPendiente: { type: "number" },
+        },
+      },
+    },
+  },
+};
+
 module.exports = {
   crearInventario,
   listarInventario,
@@ -177,4 +218,5 @@ module.exports = {
   editarInventario,
   eliminarInventario,
   resumenSemanal,
+  resumenDeudaProveedores,
 };

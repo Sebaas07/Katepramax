@@ -160,11 +160,17 @@ model Inventario {
   nota              String?  @db.Text
   creadoEn          DateTime @default(now()) @map("creado_en")
 
+  // Proveedor de la compra y monto de la deuda pendiente con ese proveedor
+  // (cuenta por pagar). Null en salidas/ajustes o compras ya saldadas.
+  proveedorId Int?     @map("proveedor_id")
+  deuda      Decimal?  @map("deuda") @db.Decimal(15, 2)
+
   sedeId     Int @map("sede_id")
   productoId Int @map("producto_id")
 
-  sede     Sede     @relation(fields: [sedeId], references: [id])
-  producto Producto @relation(fields: [productoId], references: [codigo])
+  sede     Sede      @relation(fields: [sedeId], references: [id])
+  producto Producto  @relation(fields: [productoId], references: [codigo])
+  proveedor Proveedor? @relation(fields: [proveedorId], references: [id])
 
   @@index([sedeId, productoId, fecha])
   @@index([semana])
@@ -225,8 +231,9 @@ model Proveedor {
   activo   Boolean  @default(true)
   creadoEn DateTime @default(now()) @map("creado_en")
 
-  productos Producto[]
-  abonos    Abono[]
+  productos    Producto[]
+  abonos       Abono[]
+  inventarios  Inventario[]
 
   @@unique([nombre])
   @@map("proveedores")

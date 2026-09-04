@@ -274,6 +274,104 @@ describe("inventarioService.registrar", () => {
       ),
     ).rejects.toMatchObject({ statusCode: 403 });
   });
+
+  it("debería lanzar AppError 404 si el proveedor no existe", async () => {
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.proveedor.findUnique.mockResolvedValue(null);
+
+    await expect(
+      inventarioService.registrar(
+        appMock,
+        {
+          sedeId: 1,
+          productoId: 1,
+          cantidadIngresada: 10,
+          proveedorId: 3,
+          fecha: "2026-06-02",
+          semana: 23,
+        },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      message: expect.stringMatching(/proveedor/i),
+    });
+  });
+
+  it("debería lanzar AppError 422 si el proveedor está inactivo", async () => {
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.proveedor.findUnique.mockResolvedValue({ id: 3, nombre: "Cemex", activo: false });
+
+    await expect(
+      inventarioService.registrar(
+        appMock,
+        {
+          sedeId: 1,
+          productoId: 1,
+          cantidadIngresada: 10,
+          proveedorId: 3,
+          fecha: "2026-06-02",
+          semana: 23,
+        },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      message: expect.stringMatching(/inactivo/i),
+    });
+  });
+
+  it("debería guardar proveedorId y deuda cuando se envían", async () => {
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.proveedor.findUnique.mockResolvedValue({ id: 3, nombre: "Cemex", activo: true });
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
+    prisma.stockSede.upsert.mockResolvedValue({});
+
+    await inventarioService.registrar(
+      appMock,
+      {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: 10,
+        proveedorId: 3,
+        deuda: 120000,
+        fecha: "2026-06-02",
+        semana: 23,
+      },
+      usuarioAdmin,
+    );
+
+    const callData = prisma.inventario.create.mock.calls[0][0].data;
+    expect(callData.proveedorId).toBe(3);
+    expect(callData.deuda).toBe(120000);
+  });
+
+  it("debería lanzar AppError 400 si la deuda es negativa", async () => {
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+
+    await expect(
+      inventarioService.registrar(
+        appMock,
+        {
+          sedeId: 1,
+          productoId: 1,
+          cantidadIngresada: 10,
+          proveedorId: 3,
+          deuda: -5000,
+          fecha: "2026-06-02",
+          semana: 23,
+        },
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringMatching(/deuda/i),
+    });
+  });
 });
 
 // ── obtenerLista ──────────────────────────────────────────────────────────────
@@ -559,5 +657,81 @@ describe("inventarioService.resumenSemanal", () => {
 
     const sedeNorte = result.find((r) => r.sedeId === 2);
     expect(sedeNorte).toBeUndefined();
+  });
+});
+
+// ── resumenDeudaProveedores ───────────────────────────────────────────────────
+
+describe("inventarioService.resumenDeudaProveedores", () => {
+  it("debería restar lo abonado a la deuda registrada", async () => {
+    prisma.inventario.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { deuda: 120000 } },
+    ]);
+    prisma.abono.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { valorPagado: 45000 } },
+    ]);
+    prisma.proveedor.findMany.mockResolvedValue([
+      { id: 3, nombre: "Cemex" },
+    ]);
+
+    const result = await inventarioService.resumenDeudaProveedores(
+      appMock,
+      {},
+      usuarioAdmin,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      proveedor: "Cemex",
+      proveedorId: 3,
+      deudaPendiente: 120000,
+      totalAbonado: 45000,
+      saldoPendiente: 75000,
+    });
+  });
+
+  it("debería forzar la sede del usuario para Bodega", async () => {
+    prisma.inventario.groupBy.mockResolvedValue([]);
+    prisma.abono.groupBy.mockResolvedValue([]);
+    prisma.proveedor.findMany.mockResolvedValue([]);
+
+    await inventarioService.resumenDeudaProveedores(
+      appMock,
+      { sedeId: 99 },
+      usuarioBodega, // sedeId: 1
+    );
+
+    const callWhere = prisma.inventario.groupBy.mock.calls[0][0].where;
+    const abonoWhere = prisma.abono.groupBy.mock.calls[0][0].where;
+    expect(callWhere.sedeId).toBe(1);
+    expect(abonoWhere.sedeId).toBe(1);
+  });
+
+  it("no debería permitir saldo negativo (sobreabono)", async () => {
+    prisma.inventario.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { deuda: 10000 } },
+    ]);
+    prisma.abono.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { valorPagado: 30000 } },
+    ]);
+    prisma.proveedor.findMany.mockResolvedValue([{ id: 3, nombre: "Cemex" }]);
+
+    const result = await inventarioService.resumenDeudaProveedores(
+      appMock,
+      {},
+      usuarioAdmin,
+    );
+
+    expect(result[0].saldoPendiente).toBe(0);
+  });
+
+  it("debería lanzar AppError 403 si el rol no tiene permisos", async () => {
+    await expect(
+      inventarioService.resumenDeudaProveedores(
+        appMock,
+        {},
+        { id: 3, rol: "Entregador", sedeId: 1 },
+      ),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 });

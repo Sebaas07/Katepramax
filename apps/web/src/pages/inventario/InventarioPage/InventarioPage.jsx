@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import inventarioService from "@/services/inventario.service";
+import contabilidadService from "@/services/contabilidad.service";
+import { formatCOP } from "@/utils/formatters";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
@@ -43,6 +45,7 @@ const InventarioPage = () => {
   const [activeTab, setActiveTab] = useState("entradas");
   const [productos, setProductos] = useState([]);
   const [sedes, setSedes] = useState([]);
+  const [proveedores, setProveedores] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [guardandoMov, setGuardandoMov] = useState(false);
@@ -57,6 +60,9 @@ const InventarioPage = () => {
     nota: "",
     sedeId: "",
     fecha: HOY,
+    proveedorId: "",
+    quedaDebiendo: false,
+    deuda: "",
   });
 
   // Filtros de la tabla (el tipo ya lo determina la tab activa)
@@ -108,6 +114,14 @@ const InventarioPage = () => {
     if (!isSessionChecked || !isAuthenticated) return;
     void cargarSedes();
     void cargarProductos();
+    // Catálogo de proveedores para el selector del modal de entradas
+    contabilidadService
+      .obtenerProveedores({ activo: true })
+      .then((data) => setProveedores(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        console.error("Error al cargar proveedores:", err);
+        setProveedores([]);
+      });
   }, [isSessionChecked, isAuthenticated, cargarSedes, cargarProductos]);
 
   useEffect(() => {
@@ -139,6 +153,9 @@ const InventarioPage = () => {
       nota: "",
       sedeId: esAdmin ? "" : String(sedeIdUsuario),
       fecha: HOY,
+      proveedorId: "",
+      quedaDebiendo: false,
+      deuda: "",
     });
     setModalMovAbierto(true);
   };
@@ -155,6 +172,24 @@ const InventarioPage = () => {
       const cantidadFinal =
         form.tipo === "ajuste" && form.signoAjuste === "restar" ? -magnitud : magnitud;
 
+      // Deuda con proveedor: solo aplica en entradas
+      let deuda = null;
+      if (form.tipo === "entrada") {
+        if (form.quedaDebiendo && !form.proveedorId) {
+          toast.error("Selecciona el proveedor para registrar la deuda.");
+          setGuardandoMov(false);
+          return;
+        }
+        if (form.quedaDebiendo) {
+          deuda = Math.abs(parseFloat(form.deuda) || 0);
+          if (!(deuda > 0)) {
+            toast.error("Ingresa el monto de la deuda con el proveedor.");
+            setGuardandoMov(false);
+            return;
+          }
+        }
+      }
+
       await inventarioService.registrarMovimiento({
         tipo: form.tipo,
         productoId: form.productoId,
@@ -162,6 +197,8 @@ const InventarioPage = () => {
         nota: form.nota || null,
         sedeId: parseInt(form.sedeId),
         fecha: form.fecha,
+        proveedorId: form.proveedorId || null,
+        deuda,
       });
       toast.success("Movimiento registrado correctamente.");
       window.dispatchEvent(new Event("katepramax:inventario-actualizado"));
@@ -184,6 +221,8 @@ const InventarioPage = () => {
     { campo: "sede", label: "Sede", tipo: "texto" },
     { campo: "cantidadIngresada", label: "Cantidad", tipo: "texto" },
     { campo: "costoUnitario", label: "Costo Unit.", tipo: "moneda" },
+    { campo: "proveedor", label: "Proveedor", tipo: "texto" },
+    { campo: "deuda", label: "Deuda", tipo: "moneda" },
     { campo: "nota", label: "Nota", tipo: "texto" },
     { campo: "creadoEn", label: "Registrado", tipo: "fecha" },
   ];
@@ -195,6 +234,8 @@ const InventarioPage = () => {
         producto: m.producto?.descripcion ?? String(m.productoId ?? "—"),
         sede: m.sede?.nombre ?? `Sede ${m.sedeId}`,
         costoUnitario: Number(m.costoUnitario ?? 0),
+        proveedor: m.proveedor?.nombre ?? "—",
+        deuda: m.deuda != null ? Number(m.deuda) : null,
         nota: m.nota ?? "—",
       })),
     [movimientos],
@@ -422,6 +463,75 @@ const InventarioPage = () => {
                 placeholder="0"
               />
             </div>
+          )}
+
+          {/* Proveedor y deuda — solo aplican a entradas */}
+          {form.tipo === "entrada" && (
+            <>
+              <div className="form-group">
+                <label htmlFor="mov-proveedor">Proveedor</label>
+                <select
+                  id="mov-proveedor"
+                  name="proveedorId"
+                  value={form.proveedorId}
+                  onChange={handleCambioForm}
+                  className="form-control"
+                >
+                  <option value="">— Sin proveedor —</option>
+                  {proveedores.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
+                <span className="form-hint">
+                  Un proveedor y su deuda sirven para llevar las cuentas por
+                  pagar.
+                </span>
+              </div>
+
+              {form.proveedorId && (
+                <div className="form-group">
+                  <label className="mov-deuda-checkbox">
+                    <input
+                      type="checkbox"
+                      name="quedaDebiendo"
+                      checked={form.quedaDebiendo}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          quedaDebiendo: e.target.checked,
+                          ...(e.target.checked ? {} : { deuda: "" }),
+                        })
+                      }
+                    />
+                    ¿Le quedé debiendo a este proveedor?
+                  </label>
+                </div>
+              )}
+
+              {form.quedaDebiendo && (
+                <div className="form-group">
+                  <label htmlFor="mov-deuda">Monto de la deuda (COP) *</label>
+                  <input
+                    id="mov-deuda"
+                    name="deuda"
+                    type="number"
+                    value={form.deuda}
+                    onChange={handleCambioForm}
+                    className="form-control"
+                    min="1"
+                    step="1000"
+                    placeholder="0"
+                  />
+                  {form.deuda && (
+                    <span className="form-hint">
+                      {formatCOP(Math.abs(parseFloat(form.deuda) || 0))}
+                    </span>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {/* Fecha */}

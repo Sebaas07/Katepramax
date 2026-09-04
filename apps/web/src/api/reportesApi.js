@@ -36,12 +36,6 @@ const reportesApi = {
     return data;
   },
 
-  // Backend: GET /reportes/historial-semanal → solo Admin
-  obtenerHistorialSemanal: async () => {
-    const { data } = await clienteApi.get("/reportes/historial-semanal");
-    return data;
-  },
-
   // Backend: GET /reportes/cobros-entregador?fechaInicio&fechaFin&sedeId → Admin, Bodega
   obtenerCobrosEntregador: async (filtros = {}) => {
     const qs = buildParams(filtros);

@@ -5,6 +5,7 @@ import DatePicker from "@/components/common/DatePicker/DatePicker";
 import reporteService from "@/services/reporte.service";
 import TarjetaKpi from "./TarjetaKpi";
 import { EmptyState, Spinner } from "./ContabilidadUI";
+import CorteCajaTicket from "./CorteCajaTicket";
 
 /**
  * CierreCajaTab
@@ -169,6 +170,7 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
   const subtituloBloque = esDiario
     ? formatFecha(fechaDia)
     : `${formatFecha(rangoSemana.inicio)} — ${formatFecha(rangoSemana.fin)}`;
+  const tituloTicket = esDiario ? "CIERRE DE CAJA DIARIO" : "CIERRE DE CAJA SEMANAL";
   const iconoBloque = esDiario ? "today" : "date_range";
   const tituloKpi = esDiario ? "Ganancia del día" : "Ganancia de la semana";
   const colorKpi = corte?.ganancia >= 0 ? (esDiario ? "#4ade80" : "#60a5fa") : "#f87171";
@@ -260,6 +262,14 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
             />
           </div>
         </div>
+      )}
+
+      {corte && (
+        <CorteCajaTicket
+          corte={corte}
+          titulo={tituloTicket}
+          subtitulo={subtituloBloque}
+        />
       )}
     </div>
   );

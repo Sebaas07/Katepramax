@@ -1,6 +1,7 @@
 const INCLUDE = {
   sede: { select: { id: true, nombre: true } },
   producto: { select: { codigo: true, descripcion: true, precioCosto: true } },
+  proveedor: { select: { id: true, nombre: true } },
 };
 
 async function crear(
@@ -14,6 +15,8 @@ async function crear(
     costoUnitario,
     tipo,
     nota,
+    proveedorId,
+    deuda,
   },
 ) {
   return prisma.inventario.create({
@@ -26,6 +29,8 @@ async function crear(
       costoUnitario,
       tipo: tipo ?? "entrada",
       nota: nota ?? null,
+      proveedorId: proveedorId ?? null,
+      deuda: deuda ?? null,
     },
     include: INCLUDE,
   });
@@ -59,7 +64,7 @@ async function buscarPorId(prisma, id) {
 async function actualizar(
   prisma,
   id,
-  { cantidadIngresada, costoUnitario, tipo, nota },
+  { cantidadIngresada, costoUnitario, tipo, nota, proveedorId, deuda },
 ) {
   const data = {};
   if (cantidadIngresada !== undefined)
@@ -67,6 +72,8 @@ async function actualizar(
   if (costoUnitario !== undefined) data.costoUnitario = costoUnitario;
   if (tipo !== undefined) data.tipo = tipo;
   if (nota !== undefined) data.nota = nota;
+  if (proveedorId !== undefined) data.proveedorId = proveedorId;
+  if (deuda !== undefined) data.deuda = deuda;
   return prisma.inventario.update({ where: { id }, data, include: INCLUDE });
 }
 

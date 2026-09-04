@@ -521,7 +521,7 @@ const PedidosPage = () => {
       const factura = await pedidosService.obtenerFactura(pedido.id);
       setFacturaSeleccionada(factura);
     } catch (err) {
-      toast.error("No se pudo cargar la factura: " + err.message);
+      toast.error("No se pudo cargar el recibo: " + err.message);
       setModalFacturaAbierto(false);
     } finally {
       setCargandoFactura(false);
@@ -582,7 +582,7 @@ const PedidosPage = () => {
     }
 
     accs.push({
-      label: "Factura",
+      label: "Recibo",
       icon: "receipt_long",
       onClick: () => abrirFactura(pedido),
     });
@@ -1170,8 +1170,8 @@ const PedidosPage = () => {
       <Modal
         isOpen={modalFacturaAbierto}
         onClose={() => setModalFacturaAbierto(false)}
-        titulo="Factura de venta"
-        textoBotonConfirmar="Imprimir factura"
+        titulo="Recibo de compra"
+        textoBotonConfirmar="Imprimir recibo"
         onConfirmar={() => window.print()}
         mostrarCancelar
         disabled={!facturaSeleccionada}
@@ -1180,7 +1180,7 @@ const PedidosPage = () => {
         {/* Vista previa dentro del modal (solo pantalla) */}
         <div className="ped-factura-preview" aria-hidden="true">
           {cargandoFactura ? (
-            <div className="ped-factura-carga">Cargando factura...</div>
+            <div className="ped-factura-carga">Cargando recibo...</div>
           ) : facturaSeleccionada ? (
             <FacturaTicket factura={facturaSeleccionada} />
           ) : null}
@@ -1198,7 +1198,7 @@ const PedidosPage = () => {
         createPortal(
           <div className="factura-print-area">
             {cargandoFactura ? (
-              <div className="ped-factura-carga">Cargando factura...</div>
+              <div className="ped-factura-carga">Cargando recibo...</div>
             ) : facturaSeleccionada ? (
               <FacturaTicket factura={facturaSeleccionada} />
             ) : null}

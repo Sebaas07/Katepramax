@@ -414,6 +414,135 @@ describe("GET /api/v1/inventario/resumen-semanal", () => {
   });
 });
 
+// ── Deuda a proveedores ───────────────────────────────────────────────────────
+
+describe("Registro de deuda a proveedor en POST /api/v1/inventario", () => {
+  it("debería retornar 404 si el proveedor no existe", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.proveedor.findUnique.mockResolvedValue(null);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/inventario",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+      payload: {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: 10,
+        proveedorId: 3,
+        deuda: 120000,
+        fecha: "2026-06-02",
+        semana: 23,
+      },
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error).toMatch(/proveedor/i);
+  });
+
+  it("debería guardar proveedorId y deuda al crear la entrada", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.proveedor.findUnique.mockResolvedValue({
+      id: 3,
+      nombre: "Cemex",
+      activo: true,
+    });
+    prisma.inventario.create.mockResolvedValue({
+      ...inventarioMock,
+      proveedorId: 3,
+      deuda: 120000,
+    });
+    prisma.stockSede.upsert.mockResolvedValue({});
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/inventario",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+      payload: {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: 10,
+        proveedorId: 3,
+        deuda: 120000,
+        fecha: "2026-06-02",
+        semana: 23,
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(prisma.inventario.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ proveedorId: 3, deuda: 120000 }),
+      }),
+    );
+  });
+
+  it("debería retornar 400 si la deuda es negativa (schema)", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/inventario",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+      payload: {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: 10,
+        proveedorId: 3,
+        deuda: -5000,
+        fecha: "2026-06-02",
+        semana: 23,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+// ── GET /api/v1/inventario/deuda-proveedores ──────────────────────────────────
+
+describe("GET /api/v1/inventario/deuda-proveedores", () => {
+  it("debería retornar 401 sin token", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario/deuda-proveedores",
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("debería retornar el saldo pendiente por proveedor", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.inventario.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { deuda: 120000 } },
+    ]);
+    prisma.abono.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { valorPagado: 45000 } },
+    ]);
+    prisma.proveedor.findMany.mockResolvedValue([{ id: 3, nombre: "Cemex" }]);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario/deuda-proveedores",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([
+      expect.objectContaining({
+        proveedor: "Cemex",
+        proveedorId: 3,
+        deudaPendiente: 120000,
+        totalAbonado: 45000,
+        saldoPendiente: 75000,
+      }),
+    ]);
+  });
+});
+
 // ── GET /api/v1/inventario/:id ────────────────────────────────────────────────
 
 describe("GET /api/v1/inventario/:id", () => {

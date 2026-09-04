@@ -1,16 +1,17 @@
 import { useMemo } from "react";
-import {
+/* import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
-} from "recharts";
+} from "recharts"; */
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
-import ChartTooltip from "@/components/common/ChartTooltip/ChartTooltip";
+//import ChartTooltip from "@/components/common/ChartTooltip/ChartTooltip";
 import { formatCOP, formatFecha } from "@/utils/formatters";
 import { EmptyState } from "./ContabilidadUI";
 
-const toNumber = (v) => Number(v ?? 0);
+//const toNumber = (v) => Number(v ?? 0);
 
-const TICK_TEMA = { fill: "var(--on-surface-variant)", fontSize: 12 };
-const AXIS_TEMA = { stroke: "var(--outline-variant)" };
+
+//const TICK_TEMA = { fill: "var(--on-surface-variant)", fontSize: 12 };
+//const AXIS_TEMA = { stroke: "var(--outline-variant)" };
 
 // Antes vivía en una página aparte ("Reportes"), pero esa sección solo
 // tenía dos pestañas y "Gastos Diarios" ya estaba duplicada con la
@@ -19,14 +20,14 @@ const AXIS_TEMA = { stroke: "var(--outline-variant)" };
 const CobrosEntregadorTab = ({ cobros, fechaInicio, fechaFin }) => {
   const detalle = useMemo(() => cobros?.detalle ?? [], [cobros]);
 
-  const chartData = useMemo(
+  /* const chartData = useMemo(
     () =>
       detalle.map((c) => ({
         entregador: c.entregador,
         total: toNumber(c.total),
       })),
     [detalle],
-  );
+  ); */
 
   if (detalle.length === 0) {
     return (
@@ -75,7 +76,7 @@ const CobrosEntregadorTab = ({ cobros, fechaInicio, fechaFin }) => {
           </div>
         </div>
       </div>
-
+{/* 
       {chartData.length > 0 && (
         <div className="cont-section">
           <h3 className="cont-section__title">
@@ -95,6 +96,7 @@ const CobrosEntregadorTab = ({ cobros, fechaInicio, fechaFin }) => {
           </div>
         </div>
       )}
+        */}
 
       <div className="cont-tabla-wrap">
         <TablaGenerica

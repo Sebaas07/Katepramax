@@ -1,0 +1,125 @@
+/* Impresión POS 58mm para cierres/cortes (mismo patrón que el recibo).
+ * Papel 58mm → ancho imprimible de ~48mm-58mm.
+ */
+
+/* En pantalla el portal se mantiene oculto; solo se muestra al imprimir. */
+.ticket-termico-print {
+  display: none;
+}
+
+.ticket-58 {
+  width: 100%;
+  max-width: 48mm;
+  margin: 0 auto;
+  padding: 4mm 2mm;
+  box-sizing: border-box;
+  background: #fff;
+  color: #000;
+  font-family: "Courier New", "Courier", monospace;
+  font-size: 9px;
+  line-height: 1.3;
+  letter-spacing: 0;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+.ticket-centro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ticket-razon {
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.ticket-titulo {
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.ticket-subtitulo {
+  font-size: 9px;
+}
+
+.ticket-sep {
+  border-top: 1px dashed #000;
+  margin: 3px 0;
+}
+
+.ticket-linea {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ticket-linea > span:first-child {
+  flex-shrink: 0;
+}
+
+.ticket-linea strong {
+  text-align: right;
+}
+
+.ticket-linea--sub {
+  padding-left: 6px;
+  font-size: 8px;
+}
+
+.ticket-linea--sub strong {
+  font-weight: normal;
+}
+
+.ticket-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+/* ── Impresión POS ────────────────────────────────────────────
+ * Igual que el recibo: el portal vive directo en <body>; al imprimir
+ * se oculta TODO hijo de <body> que no sea .ticket-termico-print.
+ */
+@media print {
+  @page {
+    size: 58mm auto;
+    margin: 0;
+  }
+
+  body:has(.ticket-termico-print) {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    width: 58mm !important;
+  }
+
+  body:has(.ticket-termico-print) > *:not(.ticket-termico-print) {
+    display: none !important;
+  }
+
+  .ticket-termico-print {
+    display: block !important;
+    width: 58mm !important;
+    max-width: 58mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    visibility: visible !important;
+  }
+
+  .ticket-termico-print * {
+    visibility: visible !important;
+  }
+
+  .ticket-58 {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 2mm 3mm !important;
+    margin: 0 !important;
+  }
+}

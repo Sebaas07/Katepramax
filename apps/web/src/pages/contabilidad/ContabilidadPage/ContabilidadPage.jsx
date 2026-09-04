@@ -12,7 +12,7 @@ import {
   esCampoTexto,
   normalizarNumeroInput,
   normalizarSemana,
-  sanitizarTexto,
+  sanitizarTextoInput,
   validarFormularioContabilidad,
 } from "@/utils/contabilidadForm";
 
@@ -23,7 +23,6 @@ import EgresosTab from "../EgresosTab";
 import ProveedoresTab from "../ProveedoresTab";
 import PanelGeneralTab from "../PanelGeneralTab";
 import ArqueoSemanalTab from "../ArqueoSemanalTab";
-import HistorialSemanalTab from "../HistorialSemanalTab";
 import GananciaGastoTab from "../GananciaGastoTab";
 import CobrosEntregadorTab from "../CobrosEntregadorTab";
 import CierreCajaTab from "../CierreCajaTab";
@@ -43,14 +42,13 @@ const TABS = [
   { key: "ingresos", label: "Ingresos Diarios", icon: "trending_up" },
   { key: "egresos", label: "Egresos Diarios", icon: "trending_down" },
   //{ key: "cartera", label: "Cartera", icon: "account_balance" },
-  { key: "proveedores", label: "Abonos a Proveedores", icon: "payments" },
+  { key: "proveedores", label: "Proveedores", icon: "payments" },
   { key: "cobros", label: "Cobros por Entregador", icon: "delivery_dining" },
   { key: "cierre-diario", label: "Cierre Diario", icon: "today" },
   { key: "cierre-semanal", label: "Cierre Semanal", icon: "date_range" },
   { key: "panel", label: "Panel General", icon: "dashboard" },
   { key: "ganancia", label: "Ganancia / Gasto", icon: "point_of_sale" },
   { key: "arqueo", label: "Arqueo Semanal", icon: "summarize" },
-  { key: "historial", label: "Historial Semanal", icon: "timeline" },
 ];
 
 const FORM_VACIO = {
@@ -92,10 +90,10 @@ const ContabilidadPage = () => {
   const [resumenEgrConcepto, setResumenEgrConcepto] = useState([]);
   const [totalesDiaEgr, setTotalesDiaEgr] = useState([]);
   const [resumenSedeAbonos, setResumenSedeAbonos] = useState([]);
+  const [deudaProveedores, setDeudaProveedores] = useState([]);
   const [arqueo, setArqueo] = useState(null);
   const [arqueoError, setArqueoError] = useState("");
   const [panelGeneral, setPanelGeneral] = useState(null);
-  const [historialSemanal, setHistorialSemanal] = useState([]);
   const [corteCaja, setCorteCaja] = useState(null);
   const [cargandoCorte, setCargandoCorte] = useState(false);
   const [cobrosEntregador, setCobrosEntregador] = useState(null);
@@ -136,7 +134,7 @@ const ContabilidadPage = () => {
     if (esCampoTexto(name)) {
       setForm((prev) => ({
         ...prev,
-        [name]: sanitizarTexto(value, name === "concepto" ? 200 : 500),
+        [name]: sanitizarTextoInput(value, name === "concepto" ? 200 : 500),
       }));
       return;
     }
@@ -188,14 +186,16 @@ const ContabilidadPage = () => {
       } else if (tab === "cartera") {
         //setCartera(await contabilidadService.obtenerCartera(fBase));
       } else if (tab === "proveedores") {
-        const [lista, resumen, resSede] = await Promise.all([
+        const [lista, resumen, resSede, saldosDeuda] = await Promise.all([
           contabilidadService.listarAbonos(fBase),
           contabilidadService.obtenerResumenProveedores(semanaNum),
           contabilidadService.obtenerResumenSedeAbonos(semanaNum),
+          contabilidadService.obtenerDeudaProveedores(),
         ]);
         setProveedores(lista);
         setResumenProv(resumen);
         setResumenSedeAbonos(resSede);
+        setDeudaProveedores(saldosDeuda);
       } else if (tab === "arqueo") {
         const [reporte, carteraSem, invSem] = await Promise.all([
           contabilidadService.obtenerArqueo(semanaNum),
@@ -223,8 +223,6 @@ const ContabilidadPage = () => {
         setPanelGeneral(panel);
         setTotalesDiaIng(totIngDia);
         setTotalesDiaEgr(totEgrDia);
-      } else if (tab === "historial") {
-        setHistorialSemanal(await reporteService.obtenerHistorialSemanal());
       } else if (tab === "cobros") {
         const sede = esAdmin ? (filtroSedeId ? parseInt(filtroSedeId, 10) : undefined) : undefined;
         const data = await reporteService.obtenerCobrosEntregador({
@@ -344,10 +342,18 @@ const ContabilidadPage = () => {
     [ingresos, mapSede],
   );
   const egresosMapeados = useMemo(() => mapSede(egresos), [egresos, mapSede]);
-  const proveedoresMap = useMemo(
-    () => mapProveedor(proveedores),
-    [proveedores, mapProveedor],
-  );
+  const proveedoresMap = useMemo(() => {
+    const saldoPorProveedor = new Map(
+      deudaProveedores.map((d) => [
+        Number(d.proveedorId),
+        Number(d.saldoPendiente ?? 0),
+      ]),
+    );
+    return mapProveedor(proveedores).map((fila) => ({
+      ...fila,
+      saldoPendiente: saldoPorProveedor.get(Number(fila.proveedorId)) ?? 0,
+    }));
+  }, [proveedores, mapProveedor, deudaProveedores]);
 
   const totalIngresoForm = useMemo(
     () => (parseFloat(form.efectivo) || 0) + (parseFloat(form.cuentas) || 0),
@@ -711,6 +717,7 @@ const ContabilidadPage = () => {
               resumenProv={resumenProv}
               resumenSede={resumenSedeAbonos}
               esAdmin={esAdmin}
+              saldosDeuda={deudaProveedores}
               onAbonar={abrirAbono}
               onEditar={abrirEditarProv}
               onEliminar={abrirEliminar}
@@ -770,10 +777,6 @@ const ContabilidadPage = () => {
               onFiltroSemanaChange={handleFiltroSemana}
               sedes={sedes}
             />
-          )}
-
-          {tab === "historial" && (
-            <HistorialSemanalTab historial={historialSemanal} />
           )}
         </div>
       )}

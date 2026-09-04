@@ -76,6 +76,13 @@ const inventarioApi = {
     return response.data;
   },
 
+  // Backend: GET /inventario/deuda-proveedores → Admin, Bodega
+  // Devuelve el saldo (deuda − abonos) por proveedor.
+  deudaProveedores: async (filtros = {}) => {
+    const response = await clienteApi.get("/inventario/deuda-proveedores", { params: filtros });
+    return response.data;
+  },
+
   // Backend: GET /productos?stockBajo=true → Admin, Bodega
   obtenerStockBajo: async () => {
     const response = await clienteApi.get("/productos", { params: { stockBajo: true, activo: true } });

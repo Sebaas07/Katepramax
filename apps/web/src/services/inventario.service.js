@@ -233,6 +233,8 @@ const inventarioService = {
     nota,
     sedeId,
     fecha,
+    proveedorId,
+    deuda,
   }) => {
     try {
       if (!fecha) throw new Error("La fecha es obligatoria.");
@@ -251,7 +253,14 @@ const inventarioService = {
       const sedeFinal = sedeId ?? (!tieneAccesoTotal() ? obtenerSedeUsuario() : undefined);
       if (!sedeFinal) throw new Error("Selecciona la sede.");
 
-      return await inventarioApi.crearEntradaDiaria({
+      const deudaNum = deuda !== undefined && deuda !== null && deuda !== ""
+        ? toNumber(deuda, 0)
+        : null;
+      if (deudaNum !== null && deudaNum < 0) {
+        throw new Error("La deuda no puede ser negativa.");
+      }
+
+      const payload = {
         sedeId: parseInt(sedeFinal),
         productoId,
         cantidadIngresada: cantidadNum,
@@ -259,7 +268,14 @@ const inventarioService = {
         semana: getSemanaISO(new Date(fecha)),
         tipo: tipoFinal,
         nota: nota || null,
-      });
+      };
+      // Solo se envía proveedor/deuda cuando hay un proveedor seleccionado
+      if (tipoFinal === "entrada" && proveedorId) {
+        payload.proveedorId = parseInt(proveedorId, 10);
+        if (deudaNum !== null) payload.deuda = deudaNum;
+      }
+
+      return await inventarioApi.crearEntradaDiaria(payload);
     } catch (e) {
       console.error("inventarioService.registrarMovimiento:", e);
       throw e;
@@ -282,6 +298,18 @@ const inventarioService = {
     } catch (error) {
       console.error("inventarioService.listarMovimientos:", error);
       throw new Error(getApiErrorMessage(error), { cause: error });
+    }
+  },
+
+  // Backend: GET /inventario/deuda-proveedores → Admin, Bodega
+  obtenerDeudaProveedores: async (filtros = {}) => {
+    try {
+      const f = { ...filtros };
+      // Si no es Admin, el backend ya filtra por la sede del usuario
+      return await inventarioApi.deudaProveedores(f);
+    } catch (e) {
+      console.error("inventarioService.obtenerDeudaProveedores:", e);
+      return [];
     }
   },
 

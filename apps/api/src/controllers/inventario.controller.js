@@ -30,4 +30,9 @@ async function resumenSemanal(request, reply) {
   return reply.send(resumen);
 }
 
-module.exports = { crear, listar, obtenerPorId, editar, eliminar, resumenSemanal };
+async function resumenDeudaProveedores(request, reply) {
+  const resumen = await svc.resumenDeudaProveedores(request.server, request.query, request.user);
+  return reply.send(resumen);
+}
+
+module.exports = { crear, listar, obtenerPorId, editar, eliminar, resumenSemanal, resumenDeudaProveedores };

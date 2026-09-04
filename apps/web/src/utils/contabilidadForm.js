@@ -15,9 +15,7 @@ export const normalizarSemana = (valor) => {
   return String(Math.min(53, Math.max(1, numero)));
 };
 
-export const sanitizarTexto = (valor, max = MAX_OBSERVACION) => {
-  if (valor === null || valor === undefined) return "";
-  // Eliminar caracteres de control sin usar regex con escapes
+const limpiarCaracteresPeligrosos = (valor) => {
   let limpio = String(valor).replace(/[<>]/g, "");
   for (let i = 0; i <= 0x1f; i += 1) {
     const char = String.fromCharCode(i);
@@ -25,11 +23,23 @@ export const sanitizarTexto = (valor, max = MAX_OBSERVACION) => {
       limpio = limpio.split(char).join("");
     }
   }
-  limpio = limpio.replace(/\s+/g, " ").trim().slice(0, max);
-  if (limpio.includes("\x7F")) {
-    return limpio.split("\x7F").join("");
-  }
-  return limpio;
+  return limpio.split("\x7F").join("");
+};
+
+export const sanitizarTexto = (valor, max = MAX_OBSERVACION) => {
+  if (valor === null || valor === undefined) return "";
+  return limpiarCaracteresPeligrosos(valor)
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+};
+
+// Sanitización durante el tipeo: elimina caracteres peligrosos pero
+// conserva espacios y saltos de línea para que el usuario pueda escribir
+// observaciones largas sin que se le borren los espacios.
+export const sanitizarTextoInput = (valor, max = MAX_OBSERVACION) => {
+  if (valor === null || valor === undefined) return "";
+  return limpiarCaracteresPeligrosos(valor).slice(0, max);
 };
 
 export const parseNumero = (valor) => {

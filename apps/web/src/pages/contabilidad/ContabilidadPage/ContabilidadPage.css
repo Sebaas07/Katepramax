@@ -1019,10 +1019,6 @@
   cursor: not-allowed;
 }
 
-.cont-ganancia-gasto__rango-print {
-  display: none; /* solo se muestra al imprimir, ver @media print */
-}
-
 .cont-ganancia-gasto__desglose {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1062,43 +1058,6 @@
 
 @media (max-width: 767.98px) {
   .cont-ganancia-gasto__desglose { grid-template-columns: 1fr; }
-}
-
-/* ─── Impresión: solo el corte de caja, sin el resto de la app ─
- * Importante: esto se limita con `:has()` a cuando #corte-caja-imprimible
- * o #cierre-caja-imprimible realmente existen en el documento. Sin esta
- * restricción, `body * { visibility: hidden }` es GLOBAL: una vez que
- * Vite carga este CSS (al visitar Contabilidad), la regla queda activa
- * para CUALQUIER impresión en el resto de la app durante esa sesión
- * (p. ej. la factura de Pedidos), ocultando todo sin excepción porque
- * esos otros elementos impresos no coinciden con #corte-caja-imprimible
- * ni #cierre-caja-imprimible.
- */
-@media print {
-  body:has(#corte-caja-imprimible) *,
-  body:has(#cierre-caja-imprimible) * {
-    visibility: hidden;
-  }
-  #corte-caja-imprimible,
-  #corte-caja-imprimible *,
-  #cierre-caja-imprimible,
-  #cierre-caja-imprimible * {
-    visibility: visible;
-  }
-  #corte-caja-imprimible,
-  #cierre-caja-imprimible {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-  }
-  .cont-ganancia-gasto__rango-print {
-    display: block;
-    font-family: var(--font-headline);
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 1rem;
-  }
 }
 
 /* ─── Cierre de Caja (diario + semanal) ──────────────────────*/

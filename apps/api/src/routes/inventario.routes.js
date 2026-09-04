@@ -8,6 +8,10 @@ async function inventarioRoutes(app) {
     { schema: schemas.resumenSemanal, ...consultaBodega },
     ctrl.resumenSemanal,
   );
+  app.get("/inventario/deuda-proveedores",
+    { schema: schemas.resumenDeudaProveedores, ...consultaBodega },
+    ctrl.resumenDeudaProveedores,
+  );
 
   // Lectura — Bodega solo ve información de su sede
   app.get(   "/inventario",     { schema: schemas.listarInventario,   ...consultaBodega    }, ctrl.listar);

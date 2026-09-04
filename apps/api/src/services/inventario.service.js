@@ -1,7 +1,7 @@
 const repo = require("../repositories/inventario.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
-const { sedeEsPermitida, rangoDia, fechaValida } = require("../utils/contabilidad");
+const { sedeEsPermitida, rangoDia, fechaValida, sedeWhere, semanaValida } = require("../utils/contabilidad");
 
 /**
  * Calcula el delta de stock según el tipo de movimiento.
@@ -41,6 +41,27 @@ async function registrar(app, body, usuario) {
     throw new AppError(`Producto "${body.productoId}" no encontrado`, 404);
   if (!producto.activo)
     throw new AppError(`Producto "${body.productoId}" está inactivo`, 422);
+
+  // Proveedor de la compra (opcional) y monto de la deuda pendiente.
+  let proveedorId = null;
+  if (body.proveedorId !== undefined && body.proveedorId !== null) {
+    const proveedor = await app.prisma.proveedor.findUnique({
+      where: { id: Number(body.proveedorId) },
+    });
+    if (!proveedor)
+      throw new AppError(`Proveedor ${body.proveedorId} no encontrado`, 404);
+    if (!proveedor.activo)
+      throw new AppError(`Proveedor "${proveedor.nombre}" está inactivo`, 422);
+    proveedorId = proveedor.id;
+  }
+
+  let deuda = null;
+  if (body.deuda !== undefined && body.deuda !== null) {
+    deuda = Number(body.deuda);
+    if (!Number.isFinite(deuda) || deuda < 0) {
+      throw new AppError("La deuda debe ser un número mayor o igual a cero.", 400);
+    }
+  }
 
   const fecha = fechaValida(body.fecha);
 
@@ -92,6 +113,8 @@ async function registrar(app, body, usuario) {
     costoUnitario: costoUnitarioRegistro,
     tipo,
     nota: body.nota ?? null,
+    proveedorId,
+    deuda,
   });
 
   await app.prisma.stockSede.upsert({
@@ -345,6 +368,64 @@ async function resumenSemanal(app, semana, usuario) {
   return resultado;
 }
 
+// Saldo de cuentas por pagar por proveedor: deuda registrada en entradas de
+// inventario menos lo abonado. Filtra por sede del usuario (o por sedeId para Admin).
+async function resumenDeudaProveedores(app, query, usuario) {
+  if (!sedeEsPermitida(usuario)) {
+    throw new AppError("No tienes permiso para ver la deuda de proveedores.", 403);
+  }
+
+  const prisma = app.prisma;
+  const where = sedeWhere(usuario);
+  if (usuario.rol === "Admin" && query.sedeId) where.sedeId = Number(query.sedeId);
+  if (query.semana) where.semana = semanaValida(query.semana);
+
+  const [deudas, abonos] = await Promise.all([
+    prisma.inventario.groupBy({
+      by: ["proveedorId"],
+      where: { ...where, proveedorId: { not: null } },
+      _sum: { deuda: true },
+    }),
+    prisma.abono.groupBy({
+      by: ["proveedorId"],
+      where,
+      _sum: { valorPagado: true },
+    }),
+  ]);
+
+  const proveedores = await prisma.proveedor.findMany({
+    select: { id: true, nombre: true },
+  });
+  const mapa = Object.fromEntries(proveedores.map((p) => [p.id, p.nombre]));
+
+  const filas = new Map();
+  for (const f of deudas) {
+    if (f.proveedorId == null) continue;
+    filas.set(f.proveedorId, {
+      proveedorId: f.proveedorId,
+      deudaPendiente: Number(f._sum.deuda ?? 0),
+      totalAbonado: 0,
+    });
+  }
+  for (const f of abonos) {
+    const actual = filas.get(f.proveedorId) ?? {
+      proveedorId: f.proveedorId,
+      deudaPendiente: 0,
+      totalAbonado: 0,
+    };
+    actual.totalAbonado = Number(f._sum.valorPagado ?? 0);
+    filas.set(f.proveedorId, actual);
+  }
+
+  return [...filas.values()]
+    .map((f) => ({
+      proveedor: mapa[f.proveedorId] ?? `Proveedor ${f.proveedorId}`,
+      ...f,
+      saldoPendiente: Math.max(0, f.deudaPendiente - f.totalAbonado),
+    }))
+    .sort((a, b) => b.saldoPendiente - a.saldoPendiente);
+}
+
 module.exports = {
   registrar,
   obtenerLista,
@@ -352,4 +433,5 @@ module.exports = {
   editar,
   borrar,
   resumenSemanal,
+  resumenDeudaProveedores,
 };

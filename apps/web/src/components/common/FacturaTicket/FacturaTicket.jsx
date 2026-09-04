@@ -32,7 +32,7 @@ const FacturaTicket = ({ factura, mostrarQR = true, url }) => {
       <div className="factura-ticket__sep" />
 
       <div className="factura-ticket__centro">
-        <strong className="factura-ticket__titulo">FACTURA DE VENTA</strong>
+        <strong className="factura-ticket__titulo">RECIBO DE COMPRA</strong>
         <span className="factura-ticket__folio">No. {factura.id}</span>
       </div>
 

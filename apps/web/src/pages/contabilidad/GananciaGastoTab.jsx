@@ -3,6 +3,7 @@ import { formatCOP, formatFecha } from "@/utils/formatters";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
 import TarjetaKpi from "./TarjetaKpi";
 import { EmptyState, Spinner } from "./ContabilidadUI";
+import CorteCajaTicket from "./CorteCajaTicket";
 
 /**
  * GananciaGastoTab
@@ -75,13 +76,9 @@ const GananciaGastoTab = ({
       )}
 
       {!cargando && corte && (
-        <div className="cont-ganancia-gasto__contenido" id="corte-caja-imprimible">
-          <div className="cont-ganancia-gasto__rango-print">
-            Corte de caja: {formatFecha(corte.desde)}
-            {corte.desde !== corte.hasta ? ` — ${formatFecha(corte.hasta)}` : ""}
-          </div>
-
-          <div className="panel-kpis">
+        <>
+          <div className="cont-ganancia-gasto__contenido">
+            <div className="panel-kpis">
             <TarjetaKpi
               titulo="Recaudado por entregadores"
               icono="local_shipping"
@@ -181,7 +178,14 @@ const GananciaGastoTab = ({
               </table>
             </div>
           )}
-        </div>
+          </div>
+
+        <CorteCajaTicket
+          corte={corte}
+          titulo="CORTE DE CAJA"
+          subtitulo={`${formatFecha(corte.desde)}${corte.desde !== corte.hasta ? ` — ${formatFecha(corte.hasta)}` : ""}`}
+        />
+        </>
       )}
     </div>
   );

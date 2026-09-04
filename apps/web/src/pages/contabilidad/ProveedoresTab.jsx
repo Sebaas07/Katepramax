@@ -22,18 +22,21 @@ const COLUMNAS = [
   { campo: "sede", label: "Sede", tipo: "texto" },
   { campo: "proveedor", label: "Proveedor", tipo: "texto" },
   { campo: "valorPagado", label: "Pagado", tipo: "moneda" },
+  { campo: "deuda", label: "Deuda", tipo: "moneda" },
   { campo: "estadoDeuda", label: "Estado", tipo: "estado" },
   { campo: "observacion", label: "Obs.", tipo: "texto" },
   { campo: "comprobante", label: "Comprobante", tipo: "texto" },
 ];
 
 // Backend: GET /abonos/resumen-sede → [{ sede, sedeId, totalPagado }]
+// saldosDeuda: GET /inventario/deuda-proveedores → [{ proveedor, proveedorId, deudaPendiente, totalAbonado, saldoPendiente }]
 const ProveedoresTab = memo(
   ({
     proveedores,
     resumenProv,
     resumenSede,
     esAdmin,
+    saldosDeuda = [],
     onAbonar,
     onEditar,
     onEliminar,
@@ -45,6 +48,25 @@ const ProveedoresTab = memo(
     const totalAbonos = useMemo(
       () => resumenProv.reduce((t, p) => t + toNumber(p.abonos), 0),
       [resumenProv],
+    );
+
+    const deudaPorProveedor = useMemo(
+      () => new Map(saldosDeuda.map((d) => [Number(d.proveedorId), toNumber(d.saldoPendiente)])),
+      [saldosDeuda],
+    );
+    const totalDeuda = useMemo(
+      () => [...deudaPorProveedor.values()].reduce((t, v) => t + v, 0),
+      [deudaPorProveedor],
+    );
+
+    // Filas de la tarjeta "Deuda pendiente": solo proveedores con saldo.
+    const filasDeuda = useMemo(
+      () =>
+        saldosDeuda
+          .filter((d) => toNumber(d.saldoPendiente) > 0)
+          .slice(0, 4)
+          .map((d) => ({ sede: d.proveedor, valor: toNumber(d.saldoPendiente) })),
+      [saldosDeuda],
     );
 
     // Filas de "Pagado por sede": usa el endpoint /abonos/resumen-sede si está disponible,
@@ -111,6 +133,15 @@ const ProveedoresTab = memo(
                 .map((p) => ({ sede: p.proveedor, valor: p.abonos }))}
               total={totalAbonos}
             />
+            {totalDeuda > 0 && (
+              <TarjetaResumenProveedor
+                titulo="Deuda Pendiente"
+                icono="account_balance"
+                color="#f87171"
+                filas={filasDeuda}
+                total={totalDeuda}
+              />
+            )}
           </div>
         )}
         <div className="cont-tabla-wrap">

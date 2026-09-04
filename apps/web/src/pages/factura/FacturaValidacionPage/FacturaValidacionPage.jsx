@@ -40,7 +40,7 @@ const FacturaValidacionPage = () => {
   if (cargando) {
     return (
       <div className="factura-publica">
-        <div className="factura-publica__carga">Cargando factura...</div>
+        <div className="factura-publica__carga">Cargando recibo...</div>
       </div>
     );
   }
@@ -68,7 +68,7 @@ const FacturaValidacionPage = () => {
         <div className="factura-publica__aviso">
           <span className="material-symbols-outlined">verified</span>
           <p>
-            <strong>Documento de venta válido</strong> generado por Katepramax.
+            <strong>Recibo de compra válido</strong> generado por Katepramax.
             Consérvelo como comprobante de su compra.
           </p>
         </div>
@@ -91,7 +91,7 @@ const FacturaValidacionPage = () => {
           className="factura-publica__btn"
           onClick={() => window.print()}
         >
-          Imprimir factura
+          Imprimir recibo
         </button>
 
         <Link to="/" className="factura-publica__link">

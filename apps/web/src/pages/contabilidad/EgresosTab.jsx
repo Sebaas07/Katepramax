@@ -142,6 +142,7 @@ const EgresosTab = memo(
           </div>
         )}
 
+        {/* 
         {totalesDia?.length > 0 && (
           <div className="cont-tabla-wrap">
             <h4 className="cont-subtitulo">Totales por día</h4>
@@ -152,6 +153,7 @@ const EgresosTab = memo(
             />
           </div>
         )}
+          */}
 
         <div className="cont-tabla-wrap">
           <TablaGenerica

@@ -136,7 +136,7 @@ const IngresosTab = ({
           />
         </div>
       )}
-      {totalesDia?.length > 0 && (
+      {/* {totalesDia?.length > 0 && (
         <div className="cont-tabla-wrap">
           <TablaGenerica
             columnas={[
@@ -149,7 +149,7 @@ const IngresosTab = ({
             filasPorPagina={7}
           />
         </div>
-      )}
+      )} */}
       <div className="cont-tabla-wrap">
         <TablaGenerica
           columnas={COLUMNAS}

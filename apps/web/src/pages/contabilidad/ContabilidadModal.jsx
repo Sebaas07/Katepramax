@@ -6,7 +6,7 @@ import {
   esCampoTexto,
   MAX_COMPROBANTE,
   normalizarNumeroInput,
-  sanitizarTexto,
+  sanitizarTextoInput,
 } from "@/utils/contabilidadForm";
 import { memo } from "react";
 
@@ -121,7 +121,7 @@ const ContabilidadModal = memo(
         onFormChange({
           target: {
             name,
-            value: sanitizarTexto(value, name === "concepto" ? 200 : 500),
+            value: sanitizarTextoInput(value, name === "concepto" ? 200 : 500),
           },
         });
         return;
