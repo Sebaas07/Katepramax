@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import pedidosService from "@/services/pedidos.service";
@@ -1176,7 +1177,8 @@ const PedidosPage = () => {
         disabled={!facturaSeleccionada}
         maxWidth="420px"
       >
-        <div className="factura-print-area">
+        {/* Vista previa dentro del modal (solo pantalla) */}
+        <div className="ped-factura-preview" aria-hidden="true">
           {cargandoFactura ? (
             <div className="ped-factura-carga">Cargando factura...</div>
           ) : facturaSeleccionada ? (
@@ -1184,6 +1186,25 @@ const PedidosPage = () => {
           ) : null}
         </div>
       </Modal>
+
+      {/*
+       * El ticket que realmente se imprime vive en un portal fuera del
+       * modal: `.modal-content` tiene overflow:hidden + max-height:90vh,
+       * y eso recorta cualquier descendiente con position:absolute
+       * (incluida .factura-print-area), causando facturas "en blanco"
+       * al imprimir. Montarlo directo en document.body evita el recorte.
+       */}
+      {modalFacturaAbierto &&
+        createPortal(
+          <div className="factura-print-area">
+            {cargandoFactura ? (
+              <div className="ped-factura-carga">Cargando factura...</div>
+            ) : facturaSeleccionada ? (
+              <FacturaTicket factura={facturaSeleccionada} />
+            ) : null}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
