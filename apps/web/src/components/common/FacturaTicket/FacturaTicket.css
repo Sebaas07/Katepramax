@@ -2,6 +2,16 @@
  * Papel 58mm → ancho imprimible de ~48mm-58mm.
  */
 
+/* `.factura-print-area` es el portal montado directo en <body> para
+ * impresión (ver PedidosPage.jsx / FacturaValidacionPage.jsx). En
+ * pantalla debe permanecer oculto siempre — solo se muestra dentro
+ * del bloque @media print de más abajo. Sin esto, el portal se ve
+ * "flotando" fuera del modal/página, encima de todo lo demás.
+ */
+.factura-print-area {
+  display: none;
+}
+
 .factura-ticket {
   width: 100%;
   max-width: 48mm;
@@ -107,9 +117,26 @@
 }
 
 /* ── Impresión POS ────────────────────────────────────────────────────
- * El contenedor padre lleva la clase `factura-print-area` para que
- * window.print() imprima EXCLUSIVAMENTE el ticket (el resto de la UI queda
- * oculto).
+ * `.factura-print-area` se monta vía React Portal directo en <body>
+ * (fuera de #root) — ver PedidosPage.jsx / FacturaValidacionPage.jsx.
+ * Así, para imprimir SOLO el ticket, basta con ocultar #root; no hace
+ * falta (ni conviene) el truco de `visibility: hidden` en `body *`,
+ * porque ese truco solo oculta visualmente pero NO libera el espacio
+ * que ocupa el resto de la app (dashboard, tablas, etc.), y eso hacía
+ * que el navegador generara hojas extra en blanco al paginar todo ese
+ * contenido invisible.
+ *
+ * El `:has()` limita esto a cuando el ticket realmente está en el DOM,
+ * así no afecta otras impresiones de la app (cierre de caja, ganancia/
+ * gasto) que no usan este portal.
+ *
+ * OJO: `<Modal>` (components/common/Modal) TAMBIÉN se monta con su
+ * propio portal directo en <body> (no vive dentro de #root). Por eso
+ * no basta con ocultar #root — el modal de "Factura de venta" se
+ * imprimía igual, con su ticket de vista previa adentro, duplicando
+ * todo. La regla de abajo oculta CUALQUIER hijo directo de <body>
+ * que no sea `.factura-print-area`, sin importar si es #root, el
+ * <dialog> del modal, o cualquier otro portal (toasts, etc.).
  */
 @media print {
   @page {
@@ -117,30 +144,28 @@
     margin: 0;
   }
 
-  html, body {
+  body:has(.factura-print-area) {
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
     width: 58mm !important;
   }
 
-  body * {
-    visibility: hidden;
-  }
-
-  .factura-print-area,
-  .factura-print-area * {
-    visibility: visible;
+  body:has(.factura-print-area) > *:not(.factura-print-area) {
+    display: none !important;
   }
 
   .factura-print-area {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    display: block !important;
     width: 58mm !important;
     max-width: 58mm !important;
     margin: 0 !important;
     padding: 0 !important;
+    visibility: visible !important;
+  }
+
+  .factura-print-area * {
+    visibility: visible !important;
   }
 
   .factura-ticket {

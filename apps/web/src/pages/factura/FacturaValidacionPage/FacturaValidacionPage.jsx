@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useParams, Link } from "react-router-dom";
 import pedidosService from "@/services/pedidos.service";
 import FacturaTicket from "@/components/common/FacturaTicket/FacturaTicket";
@@ -72,9 +73,18 @@ const FacturaValidacionPage = () => {
           </p>
         </div>
 
-        <div className="factura-print-area">
+        {/* Vista previa en pantalla (el ticket real para imprimir se
+         * monta aparte en un portal — ver .factura-print-area más abajo). */}
+        <div className="factura-publica__preview" aria-hidden="true">
           <FacturaTicket factura={factura} />
         </div>
+
+        {createPortal(
+          <div className="factura-print-area">
+            <FacturaTicket factura={factura} />
+          </div>,
+          document.body
+        )}
 
         <button
           type="button"
