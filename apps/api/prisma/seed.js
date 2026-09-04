@@ -73,8 +73,8 @@ async function main() {
 
   // Índices de `sedes` según el tipo exigido por cada rol:
   //   Admin/AdminBogota → cualquier sede
-  //   Bodega            → oficina (tipo Oficina); opera sobre su bodega (bodegaId)
-  //   Oficinista        → bodega (tipo Bodega)
+  //   Bodega            → bodega (tipo Bodega); sus oficinas cuelgan de ella
+  //   Oficinista        → oficina (tipo Oficina); su bodega es sede.bodegaId
   //   Entregador        → bodegas (multi-bodega)
   const usuarios = await Promise.all([
     usuRepo.create({
@@ -102,7 +102,7 @@ async function main() {
       usuario: "bodega",
       rol: "Bodega",
       telefono: "3000000003",
-      sedeId: sedes[6].id, // Cartagena Centro (oficina) → bodega Cartagena
+      sedeId: sedes[1].id, // Cartagena (bodega)
     }),
     usuRepo.create({
       correo: "oficinista@example.com",
@@ -111,7 +111,7 @@ async function main() {
       usuario: "oficinista",
       rol: "Oficinista",
       telefono: "3000000004",
-      sedeId: sedes[2].id, // Villavicencio (bodega)
+      sedeId: sedes[3].id, // Villavicencio Centro (oficina) → bodega Villavicencio
     }),
     usuRepo.create({
       correo: "entregador@example.com",

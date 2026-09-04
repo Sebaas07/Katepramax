@@ -293,7 +293,7 @@ describe("POST /api/v1/usuarios", () => {
     prisma.usuario.findUnique
       .mockResolvedValueOnce(null) // usuario libre
       .mockResolvedValueOnce(null); // correo libre
-    prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
     prisma.usuario.create.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
 
@@ -307,7 +307,7 @@ describe("POST /api/v1/usuarios", () => {
         correo: "carlos@test.com",
         contrasena: "pass#123",
         rol: "Bodega",
-        sedeId: 6,
+        sedeId: 1,
       },
     });
 
@@ -363,7 +363,7 @@ describe("PUT /api/v1/usuarios/:id", () => {
   it("debería retornar 200 al actualizar correctamente", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
     prisma.usuario.findUnique.mockResolvedValue(usuarioMock);
-    prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
+    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
     prisma.entregadorSede.deleteMany.mockResolvedValue({ count: 0 });
     prisma.usuario.update.mockResolvedValue({
       ...usuarioMock,
