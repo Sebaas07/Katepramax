@@ -11,7 +11,7 @@ import CorteCajaTicket from "./CorteCajaTicket";
  * CierreCajaTab
  *
  * modo = "diario"  → solo cierre del día (DatePicker de fecha)
- * modo = "semanal" → solo cierre de la semana ISO (selector de semana)
+ * modo = "semanal" → solo cierre de la semana (selector de semana)
  */
 const BloqueCierre = ({ titulo, subtitulo, icono, corte, cargando }) => {
   if (cargando) {
@@ -199,7 +199,7 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
         ) : (
           <>
             <div className="filter-group">
-              <label htmlFor="cc-semana">Semana ISO</label>
+              <label htmlFor="cc-semana">Semana</label>
               <input
                 id="cc-semana"
                 type="number"
@@ -218,7 +218,7 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
         )}
         {esDiario && (
           <span className="cont-cierre-caja__semana">
-            Semana ISO {semanaDesdeFecha}
+            Semana {semanaDesdeFecha}
           </span>
         )}
         <button

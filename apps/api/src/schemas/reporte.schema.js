@@ -47,39 +47,6 @@ const panelGeneralSchema = {
   },
 };
 
-const historialSemanalSchema = {
-  summary: "Historial acumulado de arqueos por semana",
-  description: "Equivale a la hoja 'Historial Semanal' del Excel.",
-  tags: ["Reportes"], security: [{ bearerAuth: [] }],
-  querystring: { type: "object", properties: { skip: { type: "integer", minimum: 0, default: 0 }, take: { type: "integer", minimum: 1, maximum: 52, default: 20 } }, additionalProperties: false },
-  response: {
-    200: {
-      type: "object",
-      properties: {
-        total: { type: "integer" },
-        skip:  { type: "integer" },
-        take:  { type: "integer" },
-        data: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              semana:           { type: "integer" },
-              ingTotal:         { type: "number" },
-              egrTotal:         { type: "number" },
-              saldoNeto:        { type: "number" },
-              ingEfectivo:      { type: "number" },
-              ingCuentas:       { type: "number" },
-              deudaProveedores: { type: "number" },
-              costoInventario:  { type: "number" },
-            },
-          },
-        },
-      },
-    },
-  },
-};
-
 const cobrosPorEntregadorSchema = {
   summary: "Cobros realizados por cada entregador en un rango de fechas",
   tags: ["Reportes"], security: [{ bearerAuth: [] }],
@@ -195,7 +162,6 @@ const corteCajaSchema = {
 module.exports = {
   arqueoSemanalSchema,
   panelGeneralSchema,
-  historialSemanalSchema,
   cobrosPorEntregadorSchema,
   corteCajaSchema,
 };

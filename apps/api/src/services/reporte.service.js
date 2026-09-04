@@ -11,29 +11,39 @@ function toNum(v) { return Number(v ?? 0); }
  * una bodega (bodegaId); el set se resuelve en el auth middleware
  * (`usuario.sedesOperativas`) para que un Oficinista vea los datos de su
  * oficina y de la bodega que la alimenta, y una Bodega vea sus oficinas.
+ *
+ * `soloOficinas` permite restringir el resultado a sedes de tipo "Oficina"
+ * (se usa en el arqueo semanal, que solo calcula con oficinas).
  */
-async function getSedes(prisma, usuario, sedeIdFiltro) {
+async function getSedes(prisma, usuario, sedeIdFiltro, soloOficinas = false) {
+  const reducir = (sedes) =>
+    soloOficinas ? sedes.filter((s) => s.tipo === "Oficina") : sedes;
+
   if (usuario && usuario.rol !== "Admin") {
     const sedesIds = Array.isArray(usuario.sedesOperativas)
       ? usuario.sedesOperativas
       : [usuario.sedeId];
     const sedes = await prisma.sede.findMany({
       where: { id: { in: sedesIds } },
-      select: { id: true, nombre: true },
+      select: { id: true, nombre: true, tipo: true },
     });
-    if (sedes.length > 0) return sedes;
+    if (sedes.length > 0) return reducir(sedes);
     return sedesIds.map((id) => ({ id, nombre: `Sede ${id}` }));
   }
 
   if (sedeIdFiltro) {
     const sede = await prisma.sede.findUnique({
       where:  { id: Number(sedeIdFiltro) },
-      select: { id: true, nombre: true },
+      select: { id: true, nombre: true, tipo: true },
     });
-    return sede ? [sede] : [];
+    return sede ? reducir([sede]) : [];
   }
 
-  return prisma.sede.findMany({ where: { activo: true }, select: { id: true, nombre: true } });
+  const sedes = await prisma.sede.findMany({
+    where: { activo: true },
+    select: { id: true, nombre: true, tipo: true },
+  });
+  return reducir(sedes);
 }
 
 function sedeWhere(usuario, sedeIdFiltro) {
@@ -56,7 +66,7 @@ function sedeWhere(usuario, sedeIdFiltro) {
 
 async function arqueoSemanal(app, semana, usuario) {
   const prisma    = app.prisma;
-  const sedes     = await getSedes(prisma, usuario);
+  const sedes     = await getSedes(prisma, usuario, undefined, true);
   const whereSede = sedeWhere(usuario);
 
   const ingRows = await prisma.ingreso.groupBy({
@@ -316,78 +326,6 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
   };
 }
 
-async function historialSemanal(app, { skip = 0, take = 20 } = {}, usuario) {
-  const prisma    = app.prisma;
-  const whereSede = sedeWhere(usuario);
-  const filtroSede = whereSede.sedeId != null ? { sedeId: whereSede.sedeId } : {};
-
-  // FIX: agrupar solo por semana (no por sedeId) para evitar duplicados al haber varias sedes.
-  // Cuando no es Admin, filtroSede ya limita a la sede del usuario.
-  const semanasIng = await prisma.ingreso.groupBy({
-    by:    ["semana"],
-    where: filtroSede,
-    _sum:  { total: true, efectivo: true, cuentas: true },
-    orderBy: { semana: "desc" },
-  });
-  const semanasEgr = await prisma.egreso.groupBy({
-    by:    ["semana"],
-    where: filtroSede,
-    _sum:  { total: true },
-    orderBy: { semana: "desc" },
-  });
-  const semanasAbo = await prisma.abono.groupBy({
-    by:    ["semana"],
-    where: filtroSede,
-    _sum:  { valorPagado: true },
-    orderBy: { semana: "desc" },
-  });
-  // FIX: el costo de inventario debe ser Σ (cantidad × costoUnitario) por semana.
-  const invMovs = await prisma.inventario.findMany({
-    where: filtroSede,
-    select: { semana: true, cantidadIngresada: true, costoUnitario: true },
-  });
-  const costoPorSemana = new Map();
-  for (const m of invMovs) {
-    const costo = toNum(m.cantidadIngresada) * toNum(m.costoUnitario);
-    costoPorSemana.set(m.semana, (costoPorSemana.get(m.semana) ?? 0) + costo);
-  }
-
-  // Unión de todas las semanas con datos
-  const todasSemanas = [
-    ...new Set([
-      ...semanasIng.map((r) => r.semana),
-      ...semanasEgr.map((r) => r.semana),
-      ...semanasAbo.map((r) => r.semana),
-      ...costoPorSemana.keys(),
-    ]),
-  ].sort((a, b) => b - a);
-
-  const total     = todasSemanas.length;
-  const paginadas = todasSemanas.slice(skip, skip + take);
-
-  const historial = paginadas.map((semana) => {
-    const ing = semanasIng.find((r) => r.semana === semana);
-    const egr = semanasEgr.find((r) => r.semana === semana);
-    const abo = semanasAbo.find((r) => r.semana === semana);
-
-    const ingTotal = toNum(ing?._sum.total);
-    const egrTotal = toNum(egr?._sum.total) + toNum(abo?._sum.valorPagado);
-
-    return {
-      semana,
-      ingTotal,
-      egrTotal,
-      saldoNeto:        ingTotal - egrTotal,
-      ingEfectivo:      toNum(ing?._sum.efectivo),
-      ingCuentas:       toNum(ing?._sum.cuentas),
-      deudaProveedores: toNum(abo?._sum.valorPagado),
-      costoInventario:  toNum(costoPorSemana.get(semana)),
-    };
-  });
-
-  return { total, skip, take, data: historial };
-}
-
 // Corte de caja: cuánto se recaudó (entregadores) vs. cuánto se gastó
 // (egresos) en un rango de fechas. Sirve tanto para el corte del día
 // (desde == hasta) como para quincena o mes (el rango lo arma el frontend).
@@ -497,7 +435,6 @@ async function corteCaja(app, { desde, hasta, sedeId } = {}, usuario) {
 module.exports = {
   arqueoSemanal,
   panelGeneral,
-  historialSemanal,
   cobrosPorEntregador,
   corteCaja,
 };

@@ -7,7 +7,6 @@ const { adminGestion, consultaBodega } = require("../middlewares/auth.middleware
  *
  * GET /reportes/arqueo-semanal    → Admin + AdminBogota
  * GET /reportes/panel-general     → Admin + AdminBogota + Bodega (con filtro de sede automático)
- * GET /reportes/historial-semanal → Admin + AdminBogota
  * GET /reportes/cobros-entregador → Admin + AdminBogota + Bodega (reporte de entregas)
  * GET /reportes/corte-caja        → Admin + AdminBogota + Bodega
  */
@@ -21,11 +20,6 @@ async function reporteRoutes(app) {
   app.get("/reportes/panel-general",
     { schema: schemas.panelGeneralSchema, ...consultaBodega },
     ctrl.panelGeneral,
-  );
-
-  app.get("/reportes/historial-semanal",
-    { schema: schemas.historialSemanalSchema, ...adminGestion },
-    ctrl.historialSemanal,
   );
 
   app.get("/reportes/cobros-entregador",

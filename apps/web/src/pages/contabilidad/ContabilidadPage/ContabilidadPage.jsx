@@ -360,10 +360,6 @@ const ContabilidadPage = () => {
     [form.efectivo, form.cuentas],
   );
 
-  const semanaNumero = useMemo(
-    () => parseInt(filtroSemana, 10) || SEM_ACTUAL,
-    [filtroSemana],
-  );
   const erroresForm = useMemo(
     () => validarFormularioContabilidad({ modalTipo, form }),
     [modalTipo, form],
@@ -752,7 +748,6 @@ const ContabilidadPage = () => {
             <PanelGeneralTab
               panelGeneral={{ ...panelGeneral, _sedes: sedes }}
               fecha={filtroPanelF}
-              semanaNumero={semanaNumero}
               totalesDiaIngresos={totalesDiaIng}
               totalesDiaEgresos={totalesDiaEgr}
             />

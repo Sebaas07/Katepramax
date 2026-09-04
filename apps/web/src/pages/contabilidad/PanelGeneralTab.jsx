@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import TarjetaKpi from "./TarjetaKpi";
 import ChartTooltip from "@/components/common/ChartTooltip/ChartTooltip";
-import { formatCOP, formatFecha, getRangoSemana } from "@/utils/formatters";
+import { formatCOP, formatFecha } from "@/utils/formatters";
 
 const toNumber = (v) => Number(v ?? 0);
 
@@ -31,15 +31,9 @@ const labelDia = (fechaStr) => {
 const PanelGeneralTab = ({
   panelGeneral,
   fecha,
-  semanaNumero,
   totalesDiaIngresos,
   totalesDiaEgresos,
 }) => {
-  const rangoSemana = useMemo(
-    () => getRangoSemana(semanaNumero),
-    [semanaNumero],
-  );
-
   const panelSedes = useMemo(() => {
     if (!panelGeneral) return [];
     return (panelGeneral._sedes ?? []).map((s) => {
@@ -113,7 +107,7 @@ const PanelGeneralTab = ({
           icono="trending_up"
           color="#4ade80"
           valor={formatCOP(panelGeneral.ingresos?.total)}
-          subtitulo={`${formatFecha(fecha)} · ${formatFecha(rangoSemana.inicio)} al ${formatFecha(rangoSemana.fin)}`}
+          subtitulo={`Ingresos de ${formatFecha(fecha)}`}
         />
         <TarjetaKpi
           titulo="Egresos del dia"

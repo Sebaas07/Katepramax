@@ -4,12 +4,10 @@
  * Rutas cubiertas:
  *  GET /api/v1/reportes/arqueo-semanal    (solo Admin)
  *  GET /api/v1/reportes/panel-general     (Admin y Bodega)
- *  GET /api/v1/reportes/historial-semanal (solo Admin)
  *
  * Reglas de negocio cubiertas:
- *  - Arqueo agrega ingresos + egresos + abonos + saldo neto por sede
+ *  - Arqueo agrega ingresos + egresos + abonos + saldo neto por sede (solo oficinas)
  *  - Panel General es snapshot de un día (ingresos, egresos, cartera, stock)
- *  - Historial devuelve lista paginada de semanas con datos
  */
 const { buildApp } = require("../src/app");
 const { prisma } = require("./__mocks__/prisma");
@@ -17,8 +15,8 @@ const { prisma } = require("./__mocks__/prisma");
 // ── Mocks base ────────────────────────────────────────────────────────────────
 
 const sedes = [
-  { id: 1, nombre: "Bogotá", activo: true },
-  { id: 2, nombre: "Villavicencio", activo: true },
+  { id: 1, nombre: "Bogotá", tipo: "Oficina", activo: true },
+  { id: 2, nombre: "Villavicencio", tipo: "Oficina", activo: true },
 ];
 
 const sesionAdminMock = {
@@ -282,93 +280,5 @@ describe("GET /api/v1/reportes/panel-general", () => {
       headers: authBodega(),
     });
     expect(res.statusCode).toBe(200);
-  });
-});
-
-// ── GET /api/v1/reportes/historial-semanal ────────────────────────────────────
-
-describe("GET /api/v1/reportes/historial-semanal", () => {
-  it("debería retornar 401 sin token", async () => {
-    const res = await app.inject({
-      method: "GET",
-      url: "/api/v1/reportes/historial-semanal",
-    });
-    expect(res.statusCode).toBe(401);
-  });
-
-  it("debería retornar 403 si el rol es Bodega", async () => {
-    mockSesion(sesionBodegaMock);
-
-    const res = await app.inject({
-      method: "GET",
-      url: "/api/v1/reportes/historial-semanal",
-      headers: authBodega(),
-    });
-    expect(res.statusCode).toBe(403);
-  });
-
-  it("debería retornar 200 con historial paginado", async () => {
-    mockSesion(sesionAdminMock);
-    prisma.ingreso = {
-      groupBy: vi.fn().mockResolvedValue([
-        {
-          semana: 18,
-          _sum: { total: 400000, efectivo: 300000, cuentas: 100000 },
-        },
-        {
-          semana: 17,
-          _sum: { total: 350000, efectivo: 250000, cuentas: 100000 },
-        },
-      ]),
-    };
-    prisma.egreso = {
-      groupBy: vi
-        .fn()
-        .mockResolvedValue([{ semana: 18, _sum: { total: 50000 } }]),
-    };
-    prisma.abono = {
-      groupBy: vi
-        .fn()
-        .mockResolvedValue([{ semana: 18, _sum: { valorPagado: 20000 } }]),
-    };
-    prisma.inventario = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-
-    const res = await app.inject({
-      method: "GET",
-      url: "/api/v1/reportes/historial-semanal",
-      headers: authAdmin(),
-    });
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body.total).toBe(2);
-    expect(body.data[0].semana).toBe(18); // más reciente primero
-    expect(body.data[0].ingTotal).toBe(400000);
-    expect(body.data[0].saldoNeto).toBe(330000); // 400000 - 50000 - 20000
-  });
-
-  it("debería respetar parámetros de paginación skip/take", async () => {
-    mockSesion(sesionAdminMock);
-    prisma.ingreso = {
-      groupBy: vi.fn().mockResolvedValue([
-        { semana: 20, _sum: { total: 100000, efectivo: 100000, cuentas: 0 } },
-        { semana: 19, _sum: { total: 200000, efectivo: 200000, cuentas: 0 } },
-        { semana: 18, _sum: { total: 300000, efectivo: 300000, cuentas: 0 } },
-      ]),
-    };
-    prisma.egreso = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.abono = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.inventario = { findMany: vi.fn().mockResolvedValue([]) };
-
-    const res = await app.inject({
-      method: "GET",
-      url: "/api/v1/reportes/historial-semanal?skip=1&take=1",
-      headers: authAdmin(),
-    });
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].semana).toBe(19); // skip=1 salta la semana 20
   });
 });

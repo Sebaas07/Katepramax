@@ -222,8 +222,8 @@ describe("asignacionService.actualizarEstado", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const sedes = [
-  { id: 1, nombre: "Bogotá",        activo: true },
-  { id: 2, nombre: "Villavicencio", activo: true },
+  { id: 1, nombre: "Bogotá",        tipo: "Oficina", activo: true },
+  { id: 2, nombre: "Villavicencio", tipo: "Oficina", activo: true },
 ];
 
 function mockArqueoBase() {
@@ -359,86 +359,6 @@ describe("reporteService.panelGeneral", () => {
     expect(result.pedidosPendientes).toBe(0);
     expect(result.entregasEnRuta).toBe(0);
     expect(result.alertasInventario).toBe(0);
-  });
-});
-
-describe("reporteService.historialSemanal", () => {
-  it("debería calcular saldoNeto por semana correctamente", async () => {
-    prisma.ingreso    = { groupBy: vi.fn().mockResolvedValue([
-      { semana: 18, _sum: { total: 400000, efectivo: 300000, cuentas: 100000 } },
-    ]) };
-    prisma.egreso     = { groupBy: vi.fn().mockResolvedValue([
-      { semana: 18, _sum: { total: 50000 } },
-    ]) };
-    prisma.abono      = { groupBy: vi.fn().mockResolvedValue([
-      { semana: 18, _sum: { valorPagado: 20000 } },
-    ]) };
-    prisma.inventario = { findMany: vi.fn().mockResolvedValue([
-      { semana: 18, cantidadIngresada: 2, costoUnitario: 75000 },
-    ]) };
-
-    const result = await reporteSvc.historialSemanal(appMock);
-
-    // saldoNeto = ingTotal(400000) - egrTotal(50000+20000=70000) = 330000
-    // costoInventario = cantidad × costoUnitario = 2 × 75000 = 150000
-    expect(result.data[0].saldoNeto).toBe(330000);
-    expect(result.data[0].costoInventario).toBe(150000);
-    expect(result.total).toBe(1);
-  });
-
-  it("debería ordenar semanas de más reciente a más antigua", async () => {
-    prisma.ingreso    = { groupBy: vi.fn().mockResolvedValue([
-      { semana: 17, _sum: { total: 100000, efectivo: 100000, cuentas: 0 } },
-      { semana: 20, _sum: { total: 300000, efectivo: 300000, cuentas: 0 } },
-      { semana: 18, _sum: { total: 200000, efectivo: 200000, cuentas: 0 } },
-    ]) };
-    prisma.egreso     = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.abono      = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.inventario = { findMany: vi.fn().mockResolvedValue([]) };
-
-    const result = await reporteSvc.historialSemanal(appMock);
-
-    expect(result.data[0].semana).toBe(20);
-    expect(result.data[1].semana).toBe(18);
-    expect(result.data[2].semana).toBe(17);
-  });
-
-  it("debería respetar skip y take", async () => {
-    prisma.ingreso    = { groupBy: vi.fn().mockResolvedValue([
-      { semana: 20, _sum: { total: 100000, efectivo: 100000, cuentas: 0 } },
-      { semana: 19, _sum: { total: 200000, efectivo: 200000, cuentas: 0 } },
-      { semana: 18, _sum: { total: 300000, efectivo: 300000, cuentas: 0 } },
-    ]) };
-    prisma.egreso     = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.abono      = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.inventario = { findMany: vi.fn().mockResolvedValue([]) };
-
-    const result = await reporteSvc.historialSemanal(appMock, { skip: 1, take: 1 });
-
-    // skip=1 salta semana 20, take=1 devuelve solo semana 19
-    expect(result.data).toHaveLength(1);
-    expect(result.data[0].semana).toBe(19);
-    expect(result.total).toBe(3); // total de semanas sin paginar
-  });
-
-  it("debería incluir semanas de egresos aunque no tengan ingresos", async () => {
-    prisma.ingreso    = { groupBy: vi.fn().mockResolvedValue([
-      { semana: 18, _sum: { total: 400000, efectivo: 300000, cuentas: 100000 } },
-    ]) };
-    prisma.egreso     = { groupBy: vi.fn().mockResolvedValue([
-      { semana: 18, _sum: { total: 50000 } },
-      { semana: 17, _sum: { total: 30000 } }, // semana sin ingresos
-    ]) };
-    prisma.abono      = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.inventario = { findMany: vi.fn().mockResolvedValue([]) };
-
-    const result = await reporteSvc.historialSemanal(appMock);
-
-    expect(result.total).toBe(2);
-    const semana17 = result.data.find((r) => r.semana === 17);
-    expect(semana17.ingTotal).toBe(0);
-    expect(semana17.egrTotal).toBe(30000);
-    expect(semana17.saldoNeto).toBe(-30000);
   });
 });
 

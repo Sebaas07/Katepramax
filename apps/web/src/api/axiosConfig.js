@@ -15,7 +15,7 @@ const API_BASE_URL =
  */
 export const clienteApi = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 12000,
+  timeout: 60000,
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });
@@ -97,7 +97,7 @@ clienteApi.interceptors.response.use(
         const { data } = await axios.post(
           `${API_BASE_URL}/auth/refresh`,
           { refreshToken },
-          { timeout: 8000, withCredentials: true },
+          { timeout: 30000, withCredentials: true },
         );
 
         const nuevoAccess  = data.accessToken  ?? data.token;

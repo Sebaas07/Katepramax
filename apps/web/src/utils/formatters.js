@@ -75,29 +75,38 @@ export const truncar = (texto, max = 40) => {
 };
 
 /**
- * Obtiene el número de semana ISO de una fecha.
- * Ej: new Date("2025-05-11") → 19
+ * Obtiene el número de semana de negocio de una fecha.
+ * El calendario reinicia cada 7 de septiembre: ese día es la SEMANA 1.
+ * Ej: new Date("2026-09-07") → 1 · new Date("2026-09-13") → 2
  */
 export const getSemanaISO = (fecha = new Date()) => {
   const d = new Date(
     Date.UTC(fecha.getUTCFullYear(), fecha.getUTCMonth(), fecha.getUTCDate()),
   );
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  // La semana 1 arranca el 7 de septiembre del periodo en curso (o del anterior
+  // si la fecha aún no llega al reset del año).
+  const sep7Actual = new Date(Date.UTC(d.getUTCFullYear(), 8, 7));
+  const base =
+    d < sep7Actual
+      ? new Date(Date.UTC(d.getUTCFullYear() - 1, 8, 7))
+      : sep7Actual;
+  return Math.floor((d - base) / 86400000 / 7) + 1;
 };
 
 /**
- * Obtiene el rango de fechas (inicio/fin) de una semana ISO.
- * Ej: getRangoSemana(19, 2025) → { inicio: "2025-05-05", fin: "2025-05-11" }
+ * Obtiene el rango de fechas (inicio/fin) de una semana de negocio.
+ * La base es el 7 de septiembre más reciente (semana 1 de ese periodo).
+ * Ej: getRangoSemana(1) → { inicio: "2026-09-07", fin: "2026-09-13" }
  */
-export const getRangoSemana = (semana, anio = new Date().getFullYear()) => {
-  const jan4 = new Date(Date.UTC(anio, 0, 4));
-  const dayOfWeek = jan4.getUTCDay() || 7;
-  const week1Start = new Date(jan4);
-  week1Start.setUTCDate(jan4.getUTCDate() - dayOfWeek + 1);
-  const start = new Date(week1Start);
-  start.setUTCDate(week1Start.getUTCDate() + (semana - 1) * 7);
+export const getRangoSemana = (semana) => {
+  const hoy = new Date();
+  const sep7Anio = new Date(Date.UTC(hoy.getUTCFullYear(), 8, 7));
+  const base =
+    hoy < sep7Anio
+      ? new Date(Date.UTC(hoy.getUTCFullYear() - 1, 8, 7))
+      : sep7Anio;
+  const start = new Date(base);
+  start.setUTCDate(base.getUTCDate() + (semana - 1) * 7);
   const end = new Date(start);
   end.setUTCDate(start.getUTCDate() + 6);
   return {

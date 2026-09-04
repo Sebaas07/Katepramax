@@ -11,6 +11,13 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
   const semanaNum  = parseInt(filtroSemana, 10) || 1;
   const rangoSemana = useMemo(() => getRangoSemana(semanaNum), [semanaNum]);
 
+  // El arqueo semanal solo calcula con oficinas; el fallback de soporte debe
+  // mostrar las mismas sedes. Si ninguna sede trae tipo, se usan todas.
+  const sedesOficinas = useMemo(() => {
+    const oficinas = (sedes ?? []).filter((s) => s.tipo === "Oficina");
+    return oficinas.length ? oficinas : (sedes ?? []);
+  }, [sedes]);
+
   // ── Cálculos derivados del arqueo ───────────────────────────
   const arqueoIngresos = useMemo(() =>
     rowsDeReporte(arqueo?.ingresos).map((r) => ({
@@ -55,14 +62,14 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
       }));
     }
     const regs = (arqueo?.carteraSemana ?? []).slice().sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-    if (!regs.length) return sedes.map((s) => ({ sede: s.nombre, sedeId: s.id, saldoInicio: 0, saldoCierre: 0, variacion: 0 }));
-    return sedes.map((s) => {
+    if (!regs.length) return sedesOficinas.map((s) => ({ sede: s.nombre, sedeId: s.id, saldoInicio: 0, saldoCierre: 0, variacion: 0 }));
+    return sedesOficinas.map((s) => {
       const rows   = regs.filter((c) => c.sedeId === s.id);
       const ini    = toNumber(rows[0]?.saldoAnterior ?? rows[0]?.saldoDia);
       const cierre = toNumber(rows[rows.length - 1]?.saldoDia);
       return { sede: s.nombre, sedeId: s.id, saldoInicio: ini, saldoCierre: cierre, variacion: cierre - ini };
     });
-  }, [arqueo, sedes]);
+  }, [arqueo, sedesOficinas]);
 
   const arqueoInventario = useMemo(() => {
     const raw = Array.isArray(arqueo?.inventario) ? arqueo.inventario : arqueo?.inventario?.porSede ?? [];
@@ -74,8 +81,8 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
       }));
     }
     const regs = arqueo?.inventarioSemana ?? [];
-    if (!regs.length) return sedes.map((s) => ({ sede: s.nombre, sedeId: s.id, cantCierre: 0, costoCierre: 0 }));
-    return sedes.map((s) => {
+    if (!regs.length) return sedesOficinas.map((s) => ({ sede: s.nombre, sedeId: s.id, cantCierre: 0, costoCierre: 0 }));
+    return sedesOficinas.map((s) => {
       const filas = regs.filter((i) => i.sedeId === s.id);
       return {
         sede: s.nombre, sedeId: s.id,
@@ -83,7 +90,7 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
         costoCierre: filas.reduce((t, i) => t + toNumber(i.costo), 0),
       };
     });
-  }, [arqueo, sedes]);
+  }, [arqueo, sedesOficinas]);
 
   const totales = useMemo(() => ({
     ingresos: {
