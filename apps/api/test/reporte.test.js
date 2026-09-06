@@ -2,8 +2,8 @@
  * Tests de integración — rutas HTTP de Reporte
  *
  * Rutas cubiertas:
- *  GET /api/v1/reportes/arqueo-semanal    (solo Admin)
- *  GET /api/v1/reportes/panel-general     (Admin y Bodega)
+ *  GET /api/v1/reportes/arqueo-semanal    (Admin, AdminBogota y Oficinista)
+ *  GET /api/v1/reportes/panel-general     (Admin, AdminBogota, Bodega y Oficinista)
  *
  * Reglas de negocio cubiertas:
  *  - Arqueo agrega ingresos + egresos + abonos + saldo neto por sede (solo oficinas)

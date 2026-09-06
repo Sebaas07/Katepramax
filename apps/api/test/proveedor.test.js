@@ -2,10 +2,10 @@
  * Tests de integración — rutas HTTP de Proveedor
  *
  * Rutas cubiertas:
- *  GET    /api/v1/proveedores          (Admin y Bodega)
- *  GET    /api/v1/proveedores/:id      (Admin y Bodega)
- *  POST   /api/v1/proveedores          (solo Admin)
- *  PATCH  /api/v1/proveedores/:id      (solo Admin)
+ *  GET    /api/v1/proveedores          (Admin, AdminBogota, Bodega y Oficinista)
+ *  GET    /api/v1/proveedores/:id      (ídem)
+ *  POST   /api/v1/proveedores          (Admin, AdminBogota y Bodega)
+ *  PATCH  /api/v1/proveedores/:id      (Admin, AdminBogota y Bodega)
  *  DELETE /api/v1/proveedores/:id      (solo Admin)
  */
 const { buildApp } = require("../src/app");
@@ -162,8 +162,14 @@ describe("POST /api/v1/proveedores", () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it("debería retornar 403 si el rol es Bodega", async () => {
+  it("debería retornar 201 al crear correctamente (Bodega)", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionBodegaMock);
+    prisma.proveedor.findFirst.mockResolvedValue(null); // nombre libre
+    prisma.proveedor.create.mockResolvedValue({
+      ...proveedorMock,
+      id: 2,
+      nombre: "Nuevo Proveedor",
+    });
 
     const res = await app.inject({
       method: "POST",
@@ -172,7 +178,8 @@ describe("POST /api/v1/proveedores", () => {
       payload: { nombre: "Nuevo Proveedor" },
     });
 
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(201);
+    expect(res.json().nombre).toBe("Nuevo Proveedor");
   });
 
   it("debería retornar 409 si el nombre ya existe", async () => {
@@ -227,17 +234,24 @@ describe("POST /api/v1/proveedores", () => {
 // ── PATCH /api/v1/proveedores/:id ─────────────────────────────────────────────
 
 describe("PATCH /api/v1/proveedores/:id", () => {
-  it("debería retornar 403 si el rol es Bodega", async () => {
+  it("debería retornar 200 al actualizar correctamente (Bodega)", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionBodegaMock);
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.proveedor.findFirst.mockResolvedValue(null); // sin colisión
+    prisma.proveedor.update.mockResolvedValue({
+      ...proveedorMock,
+      nombre: "Cemex Editado",
+    });
 
     const res = await app.inject({
       method: "PATCH",
       url: "/api/v1/proveedores/1",
       headers: { authorization: `Bearer ${tokenBodega}` },
-      payload: { nombre: "Editado" },
+      payload: { nombre: "Cemex Editado" },
     });
 
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().nombre).toBe("Cemex Editado");
   });
 
   it("debería retornar 404 si el proveedor no existe", async () => {

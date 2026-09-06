@@ -57,6 +57,8 @@ const ROLES = {
   ENVIOS: ["Admin", "AdminBogota", "Bodega"],
   // Módulos de gestión solo Admin/AdminBogota
   GESTION: ["Admin", "AdminBogota"],
+  // Contabilidad: Admin + AdminBogota + Oficinista (oficina registra su cierre)
+  CONTABILIDAD: ["Admin", "AdminBogota", "Oficinista"],
   ENTREGADOR: ["Entregador"],
 };
 
@@ -107,19 +109,15 @@ const AppRouter = () => (
           <Route path="/pedidos" element={<PedidosPage />} />
         </Route>
 
-        {/* Consulta sin escritura (Bodega/Oficinista lee inventario y reportes) */}
+        {/* Consulta sin escritura (Bodega/Oficinista lee inventario, proveedores y reportes) */}
         <Route element={<RequireRole roles={ROLES.CONSULTA} />}>
           <Route path="/inventario" element={<InventarioPage />} />{" "}
+          <Route path="/proveedores" element={<ProveedoresPage />} />
         </Route>
 
         {/* Distribución / entregas: Admin, AdminBogota, Oficinista y Bodega */}
         <Route element={<RequireRole roles={ROLES.ENTREGAS} />}>
           <Route path="/distribucion" element={<DistribucionPage />} />
-        </Route>
-
-        {/* Módulos de gestión: Admin + AdminBogota */}
-        <Route element={<RequireRole roles={ROLES.GESTION} />}>
-          <Route path="/proveedores" element={<ProveedoresPage />} />
         </Route>
 
         {/* Gestión de oficina: catálogo, clientes, envíos y contabilidad */}
@@ -140,6 +138,10 @@ const AppRouter = () => (
 
         <Route element={<RequireRole roles={ROLES.GESTION} />}>
           <Route path="/clientes" element={<ClientesPage />} />
+        </Route>
+
+        {/* Contabilidad: Admin + AdminBogota + Oficinista (cierre de su sede propia) */}
+        <Route element={<RequireRole roles={ROLES.CONTABILIDAD} />}>
           <Route path="/contabilidad" element={<ContabilidadPage />} />
         </Route>
 

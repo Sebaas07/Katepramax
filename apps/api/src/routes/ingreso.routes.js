@@ -1,12 +1,13 @@
 const ctrl    = require("../controllers/ingreso.controller");
 const schemas = require("../schemas/ingreso.schema");
-const { adminGestion, adminOBodega } = require("../middlewares/auth.middleware");
+const { adminGestion, adminOBodega, gestion } = require("../middlewares/auth.middleware");
 
 async function ingresoRoutes(app) {
-  app.get("/ingresos/resumen-semanal", { schema: schemas.resumenSemanalIngreso, ...adminGestion }, ctrl.resumenSemanal);
-  app.get("/ingresos/totales-dia",     { schema: schemas.totalesDiaIngreso,     ...adminGestion }, ctrl.totalesDia);
+  // Resúmenes de contabilidad — Admin + AdminBogota + Oficinista (sede propia)
+  app.get("/ingresos/resumen-semanal", { schema: schemas.resumenSemanalIngreso, ...gestion }, ctrl.resumenSemanal);
+  app.get("/ingresos/totales-dia",     { schema: schemas.totalesDiaIngreso,     ...gestion }, ctrl.totalesDia);
 
-  // Admin, AdminBogota y Bodega (Bodega solo su propia sede)
+  // Admin, AdminBogota, Bodega y Oficinista (cada uno solo su propia sede)
   app.post(  "/ingresos",     { schema: schemas.crearIngreso,    ...adminOBodega }, ctrl.crear);
   app.get(   "/ingresos",     { schema: schemas.listarIngresos,  ...adminOBodega }, ctrl.listar);
   app.get(   "/ingresos/:id", { schema: schemas.obtenerIngreso,  ...adminOBodega }, ctrl.obtenerPorId);

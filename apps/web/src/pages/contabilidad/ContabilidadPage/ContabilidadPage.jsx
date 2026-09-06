@@ -69,10 +69,10 @@ const FORM_VACIO = {
 
 // ─────────────────────────────────────────────────────────────
 const ContabilidadPage = () => {
-  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } =
+  const { usuario, esAdmin, esBodega, esOficinista, isAuthenticated, isSessionChecked } =
     useAuth();
   const sedeIdUsuario = usuario?.sedeId ?? null;
-  const puedeRegistrar = esAdmin || esBodega;
+  const puedeRegistrar = esAdmin || esBodega || esOficinista;
 
   // ── Estado de datos ───────────────────────────────────────
   const [tab, setTab] = useState("ingresos");

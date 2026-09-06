@@ -66,13 +66,13 @@ const MENU = [
     path:  "/proveedores",
     label: "Proveedores",
     icon:  "factory",
-    roles: ["Admin", "AdminBogota"],
+    roles: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
   },
   {
     path:  "/contabilidad",
     label: "Contabilidad",
     icon:  "account_balance",
-    roles: ["Admin", "AdminBogota"],
+    roles: ["Admin", "AdminBogota", "Oficinista"],
   },
   // Sección Admin — visible también para AdminBogota
   {
