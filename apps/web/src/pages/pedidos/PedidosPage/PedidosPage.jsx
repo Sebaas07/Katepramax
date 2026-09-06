@@ -11,6 +11,7 @@ import Modal from "@/components/common/Modal/Modal";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
 import FacturaTicket from "@/components/common/FacturaTicket/FacturaTicket";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
+import { oficinasVisibles } from "@/utils/oficinas";
 import "./PedidosPage.css";
 
 const POLLING_INTERVAL_MS = 15000;
@@ -114,15 +115,23 @@ const PedidosPage = () => {
     [entregadores],
   );
 
+  // Oficinas que el rol puede usar al crear/filtrar pedidos (Admin ve todas;
+  // AdminBogota y Oficinista solo las de su ciudad/sede).
+  const oficinasVisiblesMemo = useMemo(
+    () => oficinasVisibles(sedes, usuario),
+    [sedes, usuario],
+  );
+
   const sedesDisponibles = useMemo(() => {
-    if (sedes.length > 0) return sedes.map((s) => s.id).sort((a, b) => a - b);
+    if (oficinasVisiblesMemo.length > 0)
+      return oficinasVisiblesMemo.map((s) => s.id).sort((a, b) => a - b);
     const s = new Set();
     productos.forEach((p) => {
       const sid = p.sedeId ?? p.sede?.id;
       if (sid != null) s.add(sid);
     });
     return Array.from(s).sort((a, b) => a - b);
-  }, [sedes, productos]);
+  }, [oficinasVisiblesMemo, productos]);
 
   const nombreSede = useCallback(
     (sedeId) => {
@@ -275,7 +284,7 @@ const PedidosPage = () => {
     { campo: "id", label: "ID", tipo: "texto" },
     { campo: "cliente", label: "Cliente", tipo: "texto" },
     { campo: "direccion", label: "Dirección", tipo: "texto" },
-    { campo: "sedeNombre", label: "Sede", tipo: "texto" },
+    { campo: "sedeNombre", label: "Oficina", tipo: "texto" },
     { campo: "totalPedido", label: "Total ($)", tipo: "moneda" },
     { campo: "estado", label: "Estado", tipo: "estado" },
     { campo: "creadoEn", label: "Fecha", tipo: "fecha" },
@@ -623,7 +632,7 @@ const PedidosPage = () => {
 
           {!errorDatos && (
             <div className="filter-group">
-              <label htmlFor="ped-sede">Sede</label>
+              <label htmlFor="ped-sede">Oficina</label>
               <select
                 id="ped-sede"
                 value={filtroSede}
@@ -761,24 +770,30 @@ const PedidosPage = () => {
             </span>
           </div>
 
-          {esAdmin && (
+          {oficinasVisiblesMemo.length > 0 && (
             <div className="form-group">
-              <label htmlFor="ped-sede-modal">Sede *</label>
+              <label htmlFor="ped-sede-modal">Oficina *</label>
               <select
                 id="ped-sede-modal"
                 name="sedeId"
                 value={formPedido.sedeId}
                 onChange={handleCambioFormPedido}
                 className="form-control"
+                disabled={!esAdmin}
                 required
               >
-                <option value="">— Selecciona una sede —</option>
+                <option value="">— Selecciona una oficina —</option>
                 {sedesDisponibles.map((sid) => (
                   <option key={sid} value={String(sid)}>
                     {nombreSede(sid)}
                   </option>
                 ))}
               </select>
+              {!esAdmin && (
+                <small className="form-hint">
+                  Tu pedido se registra en tu oficina asignada.
+                </small>
+              )}
             </div>
           )}
 

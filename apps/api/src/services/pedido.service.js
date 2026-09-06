@@ -52,6 +52,21 @@ function sedesOperativas(usuario) {
   return [usuario?.sedeId];
 }
 
+/**
+ * Sede donde se valida/descuenta el stock de un pedido.
+ * Las oficinas se alimentan de una bodega (sede.bodegaId) y no manejan stock
+ * propio: si la sede del pedido es una oficina con bodega asignada, el stock
+ * se toma de esa bodega. El pedido conserva su sedeId (la oficina).
+ */
+async function resolverSedeStock(app, sedeId) {
+  const sede = await app.prisma.sede.findUnique({
+    where: { id: sedeId },
+    select: { id: true, tipo: true, bodegaId: true },
+  });
+  if (sede?.tipo === "Oficina" && sede.bodegaId != null) return sede.bodegaId;
+  return sedeId;
+}
+
 async function crear(app, body, usuarioId) {
   const {
     clienteId,
@@ -96,6 +111,10 @@ async function crear(app, body, usuarioId) {
     }
   }
 
+  // El stock de un pedido en una oficina se descuenta de la bodega que la
+  // alimenta (la oficina no tiene stock propio).
+  const sedeStock = await resolverSedeStock(app, sedePedido);
+
   const detallesPreparados = [];
   let totalPedido = 0;
 
@@ -116,7 +135,7 @@ async function crear(app, body, usuarioId) {
 
     const stock = await app.prisma.stockSede.findUnique({
       where: {
-        sedeId_productoId: { sedeId: sedePedido, productoId: codigoProd },
+        sedeId_productoId: { sedeId: sedeStock, productoId: codigoProd },
       },
     });
     const stockDisponible = stock?.stockActual ?? 0;
@@ -173,7 +192,7 @@ async function crear(app, body, usuarioId) {
       await tx.stockSede.update({
         where: {
           sedeId_productoId: {
-            sedeId: sedePedido,
+            sedeId: sedeStock,
             productoId: codigoProd,
           },
         },
@@ -291,13 +310,16 @@ async function cambiarEstado(app, id, nuevoEstado, usuario) {
       (sum, d) => sum + Number(d.subtotal),
       0,
     );
+    // El stock se descontó de la bodega que alimenta la oficina del creador;
+    // la cancelación lo devuelve a la misma bodega.
+    const sedeStock = await resolverSedeStock(app, creador.sedeId);
 
     await app.prisma.$transaction(async (tx) => {
       for (const detalle of pedido.detalles) {
         await tx.stockSede.update({
           where: {
             sedeId_productoId: {
-              sedeId: creador.sedeId,
+              sedeId: sedeStock,
               productoId: detalle.productoId,
             },
           },

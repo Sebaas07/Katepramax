@@ -140,6 +140,71 @@ describe("pedidoService.crear", () => {
     expect(detalles[0].precioUnitario).toBe(20000);
     expect(detalles[0].subtotal).toBe(40000);
   });
+
+  it("debería validar/descontar stock en la bodega que alimenta la oficina", async () => {
+    const bodyNum = { clienteId: 1, items: [{ productoId: "100", cantidad: 2 }] };
+    prisma.cliente.findUnique.mockResolvedValue(clienteActivo);
+    prisma.usuario.findUnique.mockResolvedValue(creadorMock);
+    prisma.producto.findUnique.mockResolvedValue({ ...productaActivo, codigo: 100 });
+    // La sede del pedido es una oficina cuya bodega de abastecimiento es la 10
+    prisma.sede.findUnique.mockResolvedValue({ id: 1, tipo: "Oficina", bodegaId: 10 });
+    prisma.stockSede.findUnique.mockResolvedValue({
+      sedeId: 10, productoId: 100, stockActual: 100,
+    });
+    prisma.$transaction.mockImplementation(async (fn) => fn({
+      pedido:    { create: vi.fn().mockResolvedValue(pedidoMock) },
+      stockSede: { update: vi.fn() },
+      cliente:   { update: vi.fn() },
+    }));
+
+    await service.crear(appMock, bodyNum, 1);
+
+    // El stock se valida en la bodega (10), no en la oficina (1)
+    expect(prisma.stockSede.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { sedeId_productoId: { sedeId: 10, productoId: 100 } },
+      }),
+    );
+
+    const txFn = prisma.$transaction.mock.calls[0][0];
+    const txMock = {
+      pedido:    { create: vi.fn().mockResolvedValue(pedidoMock) },
+      stockSede: { update: vi.fn() },
+      cliente:   { update: vi.fn() },
+    };
+    await txFn(txMock);
+
+    // El pedido conserva su sede (la oficina) pero el descuento va a la bodega
+    expect(txMock.pedido.create.mock.calls[0][0].data.sedeId).toBe(1);
+    expect(txMock.stockSede.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { sedeId_productoId: { sedeId: 10, productoId: 100 } },
+      }),
+    );
+  });
+
+  it("debería validar/descontar stock en la propia sede si es una bodega", async () => {
+    const bodyNum = { clienteId: 1, items: [{ productoId: "100", cantidad: 2 }] };
+    prisma.cliente.findUnique.mockResolvedValue(clienteActivo);
+    prisma.usuario.findUnique.mockResolvedValue(creadorMock);
+    prisma.producto.findUnique.mockResolvedValue({ ...productaActivo, codigo: 100 });
+    // Sede tipo Bodega sin bodegaId: el stock se toma de sí misma
+    prisma.sede.findUnique.mockResolvedValue({ id: 1, tipo: "Bodega", bodegaId: null });
+    prisma.stockSede.findUnique.mockResolvedValue({ ...stockSuficiente, productoId: 100 });
+    prisma.$transaction.mockImplementation(async (fn) => fn({
+      pedido:    { create: vi.fn().mockResolvedValue(pedidoMock) },
+      stockSede: { update: vi.fn() },
+      cliente:   { update: vi.fn() },
+    }));
+
+    await service.crear(appMock, bodyNum, 1);
+
+    expect(prisma.stockSede.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { sedeId_productoId: { sedeId: 1, productoId: 100 } },
+      }),
+    );
+  });
 });
 
 // ── obtenerLista ──────────────────────────────────────────────────────────────
