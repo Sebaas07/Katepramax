@@ -536,8 +536,12 @@ const ProductosPage = () => {
   const productosStockBajo = productosNormalizados.filter(
     (p) => p.esStockBajo,
   ).length;
-  const valorInventario = productosNormalizados.reduce(
+  const valorInventarioVenta = productosNormalizados.reduce(
     (suma, producto) => suma + producto.precioDetal * producto.existencia,
+    0,
+  );
+  const valorInventarioCosto = productosNormalizados.reduce(
+    (suma, producto) => suma + producto.precioCosto * producto.existencia,
     0,
   );
 
@@ -733,14 +737,27 @@ const ProductosPage = () => {
         <div className="prod-stat-card prod-stat-card--gold">
           <div className="prod-stat-card__icon-wrap">
             <span className="material-symbols-outlined" aria-hidden="true">
-              attach_money
+              sell
             </span>
           </div>
           <div>
             <span className="prod-stat-valor">
-              {formatCOP(valorInventario)}
+              {formatCOP(valorInventarioVenta)}
             </span>
-            <span className="prod-stat-label">Valor Inventario</span>
+            <span className="prod-stat-label">Valor Inventario Venta</span>
+          </div>
+        </div>
+        <div className="prod-stat-card prod-stat-card--gold">
+          <div className="prod-stat-card__icon-wrap">
+            <span className="material-symbols-outlined" aria-hidden="true">
+              savings
+            </span>
+          </div>
+          <div>
+            <span className="prod-stat-valor">
+              {formatCOP(valorInventarioCosto)}
+            </span>
+            <span className="prod-stat-label">Valor Inventario Costo</span>
           </div>
         </div>
       </div>
