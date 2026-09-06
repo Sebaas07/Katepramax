@@ -36,25 +36,27 @@ const PanelGeneralTab = ({
 }) => {
   const panelSedes = useMemo(() => {
     if (!panelGeneral) return [];
-    return (panelGeneral._sedes ?? []).map((s) => {
-      const ing = (panelGeneral.ingresos?.porSede ?? []).find(
-        (r) => r.sedeId === s.id,
-      );
-      const egr = (panelGeneral.egresos?.porSede ?? []).find(
-        (r) => r.sedeId === s.id,
-      );
-      const ingV = toNumber(ing?.total);
-      const egrV = toNumber(egr?.total);
-      return {
-        sede: s.nombre,
-        sedeId: s.id,
-        efectivo: toNumber(ing?.efectivo),
-        cuentas: toNumber(ing?.cuentas),
-        ingresos: ingV,
-        egresos: egrV,
-        saldoNeto: ingV - egrV,
-      };
-    });
+    return (panelGeneral._sedes ?? [])
+      .filter((s) => s.tipo === "Oficina")
+      .map((s) => {
+        const ing = (panelGeneral.ingresos?.porSede ?? []).find(
+          (r) => r.sedeId === s.id,
+        );
+        const egr = (panelGeneral.egresos?.porSede ?? []).find(
+          (r) => r.sedeId === s.id,
+        );
+        const ingV = toNumber(ing?.total);
+        const egrV = toNumber(egr?.total);
+        return {
+          sede: s.nombre,
+          sedeId: s.id,
+          efectivo: toNumber(ing?.efectivo),
+          cuentas: toNumber(ing?.cuentas),
+          ingresos: ingV,
+          egresos: egrV,
+          saldoNeto: ingV - egrV,
+        };
+      });
   }, [panelGeneral]);
 
   const chartSedes = useMemo(

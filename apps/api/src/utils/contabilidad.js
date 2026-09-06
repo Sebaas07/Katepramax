@@ -3,6 +3,24 @@ const AppError = require("../errors/AppError");
 const MAX_OBSERVACION = 500;
 const MAX_CONCEPTO = 200;
 
+// Origen de un movimiento contable (Ingreso/Egreso). Permite distinguir los
+// registros manuales de los automáticos generados por otros módulos y evitar
+// (o alertar) duplicados:
+//   - manual:                capturado a mano en Contabilidad.
+//   - entrega:               cobro de una entrega confirmada (ingreso).
+//   - abono-deuda-entrega:   abono a deuda anterior recibido por el entregador.
+//   - abono-cliente:         abono a cuenta de un cliente (CxC).
+//   - compra:                compra de mercancía pagada de contado.
+//   - abono-proveedor:       pago realizado a un proveedor.
+const ORIGENES = Object.freeze({
+  MANUAL:           "manual",
+  ENTREGA:          "entrega",
+  ABONO_DEUDA_ENTREGA: "abono-deuda-entrega",
+  ABONO_CLIENTE:    "abono-cliente",
+  COMPRA:           "compra",
+  ABONO_PROVEEDOR:  "abono-proveedor",
+});
+
 const sanitizarTexto = (valor, max = MAX_OBSERVACION) => {
   if (valor === null || valor === undefined) return "";
   return String(valor)
@@ -47,12 +65,28 @@ const rangoDia = (fecha) => {
   return { gte: d, lt: fin };
 };
 
-const semanaDesdeFecha = (fecha) => {
+// Normaliza un instante al inicio de su día en el calendario LOCAL del
+// servidor. Los movimientos automáticos se fechan así para que el "día" de
+// negocio coincida con el calendario local (mismo día que ve el usuario).
+const inicioDiaLocal = (fecha = new Date()) => {
+  if (!fecha) return null;
   const d = new Date(fecha);
-  const utc = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-  utc.setUTCDate(utc.getUTCDate() + 4 - (utc.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
-  return Math.ceil((((utc - yearStart) / 86400000) + 1) / 7);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+};
+
+// Semana de negocio de una fecha, con el mismo calendario del frontend
+// (getSemanaISO): el 7 de septiembre es la SEMANA 1 de cada periodo.
+// Ej: 2026-09-06 → 53 · 2026-09-07 → 1.
+const semanaNegocio = (fecha) => {
+  const dia = inicioDiaLocal(fecha);
+  if (!dia) return 1;
+  const sep7Actual = new Date(dia.getFullYear(), 8, 7);
+  const base =
+    dia < sep7Actual
+      ? new Date(dia.getFullYear() - 1, 8, 7)
+      : sep7Actual;
+  return Math.floor((dia - base) / 86400000 / 7) + 1;
 };
 
 const ROLES_PERMITIDOS = new Set(["Admin", "Bodega", "AdminBogota", "Oficinista"]);
@@ -87,13 +121,15 @@ function sedeWhere(usuario) {
 module.exports = {
   MAX_OBSERVACION,
   MAX_CONCEPTO,
+  ORIGENES,
   sanitizarTexto,
   numero,
   numeroPositivo,
   semanaValida,
   fechaValida,
   rangoDia,
-  semanaDesdeFecha,
+  inicioDiaLocal,
+  semanaNegocio,
   calcularVariacion,
   sedeEsPermitida,
   sedeWhere,

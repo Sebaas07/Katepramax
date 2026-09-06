@@ -1,4 +1,5 @@
 const AppError = require("../errors/AppError");
+const { ORIGENES } = require("../utils/contabilidad");
 
 function toNum(v) { return Number(v ?? 0); }
 
@@ -100,24 +101,27 @@ async function arqueoSemanal(app, semana, usuario) {
     orderBy: { sedeId: "asc" },
   });
 
-  const aboRows = await prisma.abono.groupBy({
+  // Los abonos a proveedores ahora son Egresos (origen abono-proveedor):
+  // se desglosan para el arqueo sin duplicar el total de egresos.
+  const aboRows = await prisma.egreso.groupBy({
     by:      ["sedeId"],
-    where:   { semana, ...whereSede },
-    _sum:    { valorPagado: true },
+    where:   { semana, ...whereSede, origen: ORIGENES.ABONO_PROVEEDOR },
+    _sum:    { total: true },
     orderBy: { sedeId: "asc" },
   });
 
   const egresos = sedes.map((s) => {
     const ef = egrRows.find((r) => r.sedeId === s.id);
     const af = aboRows.find((r) => r.sedeId === s.id);
-    const operativo   = toNum(ef?._sum.total);
-    const proveedores = toNum(af?._sum.valorPagado);
+    const egresoTotal   = toNum(ef?._sum.total);
+    const proveedores   = toNum(af?._sum.total);
+    const operativo     = egresoTotal - proveedores;
     return {
       sede:         s.nombre,
       sedeId:       s.id,
       operativo,
       proveedores,
-      totalEgresos: operativo + proveedores,
+      totalEgresos: egresoTotal,
     };
   });
 
@@ -174,7 +178,7 @@ async function panelGeneral(app, { fecha, sedeId } = {}, usuario) {
   const diaFin  = new Date(dia);
   diaFin.setUTCHours(23, 59, 59, 999);
 
-  const sedes     = await getSedes(prisma, usuario, sedeId);
+  const sedes     = await getSedes(prisma, usuario, sedeId, true);
   const whereSede = sedeWhere(usuario, sedeId);
 
   const ingRows = await prisma.ingreso.groupBy({
@@ -284,6 +288,7 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
     },
     select: {
       montoCobrado: true,
+      abonoDeuda: true,
       metodoPago: true,
       entregadorId: true,
       entregador: { select: { id: true, nombreCompleto: true } },
@@ -300,6 +305,7 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
         entregador: a.entregador?.nombreCompleto ?? `Usuario ${key}`,
         pedidos: 0,
         total: 0,
+        abonos: 0,
         efectivo: 0,
         cuentas: 0,
         valorDomicilio: 0,
@@ -307,8 +313,10 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
     }
     const fila = porEntregador.get(key);
     const monto = toNum(a.montoCobrado);
+    const abono = toNum(a.abonoDeuda);
     fila.pedidos += 1;
     fila.total += monto;
+    fila.abonos += abono;
     fila.valorDomicilio += toNum(a.pedido?.valorDomicilio);
     if (a.metodoPago === "Efectivo") fila.efectivo += monto;
     if (a.metodoPago === "Transferencia") fila.cuentas += monto;
@@ -321,6 +329,7 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
     fechaFin,
     detalle,
     total: detalle.reduce((acc, f) => acc + f.total, 0),
+    totalAbonos: detalle.reduce((acc, f) => acc + f.abonos, 0),
     totalDomicilios: detalle.reduce((acc, f) => acc + f.valorDomicilio, 0),
     pedidos: detalle.reduce((acc, f) => acc + f.pedidos, 0),
   };

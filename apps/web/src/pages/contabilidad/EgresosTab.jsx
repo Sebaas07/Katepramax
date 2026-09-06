@@ -52,8 +52,28 @@ const COLUMNAS_EGRESOS = [
   { campo: "sede", label: "Sede", tipo: "texto" },
   { campo: "concepto", label: "Concepto", tipo: "texto" },
   { campo: "total", label: "Total", tipo: "moneda" },
+  { campo: "origen", label: "Origen", tipo: "texto" },
   { campo: "observaciones", label: "Obs.", tipo: "texto" },
 ];
+
+const ETIQUETA_ORIGEN = {
+  manual: null,
+  compra: { label: "Automático: compra", color: "#c4b5fd" },
+  "abono-proveedor": { label: "Automático: abono proveedor", color: "var(--aged-gold)" },
+};
+
+const CeldaOrigen = memo(({ origen }) => {
+  const et = ETIQUETA_ORIGEN[origen];
+  if (!et) return origen === "manual" ? "Manual" : (origen ?? "—");
+  return (
+    <span
+      className="cont-etiqueta-egreso"
+      style={{ color: et.color, borderColor: et.color + "44" }}
+    >
+      {et.label}
+    </span>
+  );
+});
 
 const COLUMNAS_DIA = [
   { campo: "fecha", label: "Fecha", tipo: "fecha" },
@@ -167,6 +187,8 @@ const EgresosTab = memo(
             renderCeldaCustom={(fila, col) =>
               col.campo === "concepto" ? (
                 <CeldaConcepto concepto={fila.concepto} />
+              ) : col.campo === "origen" ? (
+                <CeldaOrigen origen={fila.origen} />
               ) : null
             }
           />

@@ -35,7 +35,12 @@ import Modal from "@/components/common/Modal/Modal";
 import "./ContabilidadPage.css";
 
 // ─────────────────────────────────────────────────────────────
-const hoyISO = () => new Date().toISOString().split("T")[0];
+// Fecha de hoy en el calendario local (el mismo que ve el usuario),
+// no en UTC — así el panel/filtros no se descuadran una zona atrás.
+const hoyISO = () => {
+  const a = new Date();
+  return `${a.getFullYear()}-${String(a.getMonth() + 1).padStart(2, "0")}-${String(a.getDate()).padStart(2, "0")}`;
+};
 const SEM_ACTUAL = getSemanaISO(new Date());
 
 const TABS = [

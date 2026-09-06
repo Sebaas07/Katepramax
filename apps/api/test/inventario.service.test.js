@@ -259,6 +259,59 @@ describe("inventarioService.registrar", () => {
     );
   });
 
+  it("debería crear el Egreso de compra para una entrada de contado", async () => {
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
+    prisma.stockSede.upsert.mockResolvedValue({});
+    prisma.egreso.create.mockResolvedValue({ id: 9 });
+
+    await inventarioService.registrar(
+      appMock,
+      {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: 10,
+        fecha: "2026-06-02",
+        semana: 23,
+      },
+      usuarioAdmin,
+    );
+
+    expect(prisma.egreso.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        origen: "compra",
+        idReferencia: 1, // id del movimiento creado
+        sedeId: 1,
+        total: 180000, // 10 * precioCosto 18000
+      }),
+      include: expect.anything(),
+    });
+  });
+
+  it("debería NO crear Egreso de compra si la entrada tiene deuda pendiente", async () => {
+    prisma.sede.findUnique.mockResolvedValue(sedeMock);
+    prisma.producto.findUnique.mockResolvedValue(productoMock);
+    prisma.inventario.create.mockResolvedValue(inventarioMock);
+    prisma.stockSede.upsert.mockResolvedValue({});
+    prisma.egreso.create.mockClear();
+
+    await inventarioService.registrar(
+      appMock,
+      {
+        sedeId: 1,
+        productoId: 1,
+        cantidadIngresada: 10,
+        fecha: "2026-06-02",
+        semana: 23,
+        deuda: 50000,
+      },
+      usuarioAdmin,
+    );
+
+    expect(prisma.egreso.create).not.toHaveBeenCalled();
+  });
+
   it("debería lanzar AppError 403 si usuario Entregador intenta registrar", async () => {
     await expect(
       inventarioService.registrar(

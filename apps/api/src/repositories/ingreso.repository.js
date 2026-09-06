@@ -32,20 +32,20 @@ async function eliminar(prisma, id) {
   return prisma.ingreso.delete({ where: { id } });
 }
 
-async function resumenPorSede(prisma, semana) {
+async function resumenPorSede(prisma, semana, sedeId) {
   return prisma.ingreso.groupBy({
     by: ["sedeId"],
-    where: { semana },
+    where: { semana, ...(sedeId ? { sedeId } : {}) },
     _sum:   { efectivo: true, cuentas: true, total: true },
     _count: { id: true },
     orderBy: { sedeId: "asc" },
   });
 }
 
-async function totalesPorDia(prisma, semana) {
+async function totalesPorDia(prisma, semana, sedeId) {
   return prisma.ingreso.groupBy({
     by: ["fecha"],
-    where: { semana },
+    where: { semana, ...(sedeId ? { sedeId } : {}) },
     _sum:  { efectivo: true, cuentas: true, total: true },
     orderBy: { fecha: "asc" },
   });

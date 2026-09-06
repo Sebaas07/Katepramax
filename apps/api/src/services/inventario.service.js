@@ -1,7 +1,8 @@
 const repo = require("../repositories/inventario.repository");
+const egresoRepo = require("../repositories/egreso.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
-const { sedeEsPermitida, rangoDia, fechaValida, sedeWhere, semanaValida } = require("../utils/contabilidad");
+const { sedeEsPermitida, rangoDia, fechaValida, sedeWhere, semanaValida, ORIGENES } = require("../utils/contabilidad");
 
 /**
  * Calcula el delta de stock según el tipo de movimiento.
@@ -44,6 +45,7 @@ async function registrar(app, body, usuario) {
 
   // Proveedor de la compra (opcional) y monto de la deuda pendiente.
   let proveedorId = null;
+  let proveedorNombre = null;
   if (body.proveedorId !== undefined && body.proveedorId !== null) {
     const proveedor = await app.prisma.proveedor.findUnique({
       where: { id: Number(body.proveedorId) },
@@ -53,6 +55,7 @@ async function registrar(app, body, usuario) {
     if (!proveedor.activo)
       throw new AppError(`Proveedor "${proveedor.nombre}" está inactivo`, 422);
     proveedorId = proveedor.id;
+    proveedorNombre = proveedor.nombre;
   }
 
   let deuda = null;
@@ -111,27 +114,54 @@ async function registrar(app, body, usuario) {
     );
   }
 
-  const registro = await repo.crear(app.prisma, {
-    fecha,
-    semana: body.semana,
-    sedeId,
-    productoId: body.productoId,
-    cantidadIngresada: delta,
-    costoUnitario: costoUnitarioRegistro,
-    tipo,
-    nota: body.nota ?? null,
-    proveedorId,
-    deuda,
-  });
+  // Compra de contado: entrada sin deuda pendiente → la mercancía se pagó y
+  // es una salida real de caja, se registra el Egreso de Contabilidad. Si hay
+  // deuda pendiente (> 0), el Egreso se registra al hacer el abono al
+  // proveedor (evita duplicar el mismo costo).
+  const esCompraContado =
+    tipo === "entrada" &&
+    (deuda === null || deuda === undefined || deuda <= 0);
+  const totalCompra = Math.abs(delta) * costoUnitarioRegistro;
+  const generarEgresoCompra = esCompraContado && totalCompra > 0;
 
-  await app.prisma.stockSede.upsert({
-    where: { sedeId_productoId: { sedeId, productoId: body.productoId } },
-    update: { stockActual: { increment: delta } },
-    create: {
+  const registro = await app.prisma.$transaction(async (tx) => {
+    const nuevo = await repo.crear(tx, {
+      fecha,
+      semana: body.semana,
       sedeId,
       productoId: body.productoId,
-      stockActual: Math.max(0, delta),
-    },
+      cantidadIngresada: delta,
+      costoUnitario: costoUnitarioRegistro,
+      tipo,
+      nota: body.nota ?? null,
+      proveedorId,
+      deuda,
+    });
+
+    await tx.stockSede.upsert({
+      where: { sedeId_productoId: { sedeId, productoId: body.productoId } },
+      update: { stockActual: { increment: delta } },
+      create: {
+        sedeId,
+        productoId: body.productoId,
+        stockActual: Math.max(0, delta),
+      },
+    });
+
+    if (generarEgresoCompra) {
+      await egresoRepo.crear(tx, {
+        fecha,
+        semana: Number(body.semana),
+        sedeId,
+        concepto: `Compra de mercancía${proveedorNombre ? ` a "${proveedorNombre}"` : ""}`,
+        total: totalCompra,
+        observacion: `Entrada de inventario ${producto.descripcion} x${Math.abs(delta)} (movimiento #${nuevo.id})`,
+        origen: ORIGENES.COMPRA,
+        idReferencia: nuevo.id,
+      });
+    }
+
+    return nuevo;
   });
 
   await registrarAccion(

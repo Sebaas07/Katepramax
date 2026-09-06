@@ -69,8 +69,15 @@ function mockArqueo() {
       },
     ]),
   };
+  // arqueoSemanal llama a prisma.egreso.groupBy dos veces: una para el total
+  // de egresos y otra (origen "abono-proveedor") para el desglose de pagos a
+  // proveedores. Los abonos a proveedores ahora viven como Egresos.
   prisma.egreso = {
-    groupBy: vi.fn().mockResolvedValue([{ sedeId: 1, _sum: { total: 50000 } }]),
+    groupBy: vi.fn().mockImplementation(({ where }) =>
+      where?.origen === "abono-proveedor"
+        ? Promise.resolve([{ sedeId: 1, _sum: { total: 20000 } }])
+        : Promise.resolve([{ sedeId: 1, _sum: { total: 70000 } }]),
+    ),
   };
   prisma.abono = {
     groupBy: vi

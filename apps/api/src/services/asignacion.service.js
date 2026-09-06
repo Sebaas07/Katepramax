@@ -26,7 +26,7 @@ const repoPedido      = require("../repositories/pedido.repository");
 const ingresoRepo     = require("../repositories/ingreso.repository");
 const AppError        = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
-const { semanaDesdeFecha } = require("../utils/contabilidad");
+const { semanaNegocio, inicioDiaLocal, ORIGENES } = require("../utils/contabilidad");
 
 // Roles que pueden CREAR /asignar pedidos a entregadores
 function esGestion(usuario) {
@@ -354,7 +354,10 @@ const asignacionService = (app) => ({
       }
 
       const fechaConfirmacion = fechaConfirmada ? new Date(fechaConfirmada) : new Date();
-      const sedeIdPedido = asignacion.pedido?.sedeId;
+      const fechaMovimiento   = inicioDiaLocal(fechaConfirmacion);
+      // La sede del cobro es la del cliente (oficina); si el cliente no
+      // tiene sede asignada, se usa la del pedido (bodega).
+      const sedeCobro = asignacion.pedido?.cliente?.sedeId ?? asignacion.pedido?.sedeId;
 
       await this.prisma.$transaction(async (tx) => {
         await tx.asignacionEntrega.update({
@@ -383,16 +386,37 @@ const asignacionService = (app) => ({
 
         // Registra el cobro como Ingreso de Contabilidad, para que la
         // plata que recibe el entregador quede reflejada ahí y no solo
-        // en el pedido/cliente.
-        if ((efectivoIngreso + cuentasIngreso) > 0 && sedeIdPedido != null) {
+        // en el pedido/cliente. Se marca el origen para que el usuario
+        // pueda identificar el registro automático y evitar duplicados.
+        if ((efectivoIngreso + cuentasIngreso) > 0 && sedeCobro != null) {
           await ingresoRepo.crear(tx, {
-            fecha: fechaConfirmacion,
-            semana: semanaDesdeFecha(fechaConfirmacion),
-            sedeId: sedeIdPedido,
+            fecha: fechaMovimiento,
+            semana: semanaNegocio(fechaMovimiento),
+            sedeId: sedeCobro,
             efectivo: efectivoIngreso,
             cuentas: cuentasIngreso,
             total: efectivoIngreso + cuentasIngreso,
+            origen: ORIGENES.ENTREGA,
+            idReferencia: id,
             observacion: `Cobro entrega pedido #${asignacion.pedidoId} (asignación #${id})`,
+          });
+        }
+
+        // El abono a deuda anterior que recibe el entregador es también un
+        // cobro: se registra como Ingreso (efectivo por defecto) para que
+        // aparezca en Contabilidad (ingresos, arqueo y panel) igual que en
+        // el corte de caja.
+        if (abono > 0 && sedeCobro != null) {
+          await ingresoRepo.crear(tx, {
+            fecha: fechaMovimiento,
+            semana: semanaNegocio(fechaMovimiento),
+            sedeId: sedeCobro,
+            efectivo: abono,
+            cuentas: 0,
+            total: abono,
+            origen: ORIGENES.ABONO_DEUDA_ENTREGA,
+            idReferencia: id,
+            observacion: `Abono a deuda anterior del cliente (asignación #${id})`,
           });
         }
       });

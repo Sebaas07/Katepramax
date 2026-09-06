@@ -352,29 +352,35 @@ model Ingreso {
   cuentas       Decimal  @db.Decimal(15, 2)
   total         Decimal  @db.Decimal(15, 2)
   observacion   String?  @db.Text
+  origen        String   @default("manual") @db.VarChar(30)
+  idReferencia  Int?     @map("id_referencia")
   fechaCreacion DateTime @default(now()) @map("creado_en")
 
   sede Sede @relation(fields: [sedeId], references: [id])
 
   @@index([fecha, semana])
   @@index([sedeId])
+  @@index([origen, idReferencia])
   @@map("ingresos")
 }
 
 model Egreso {
-  id          Int      @id @default(autoincrement())
-  fecha       DateTime @db.Date
-  semana      Int
-  concepto    String   @db.VarChar(200)
-  total       Decimal  @default(0) @db.Decimal(15, 2)
-  observacion String?  @db.VarChar(500)
-  creadoEn    DateTime @default(now()) @map("creado_en")
+  id           Int      @id @default(autoincrement())
+  fecha        DateTime @db.Date
+  semana       Int
+  concepto     String   @db.VarChar(200)
+  total        Decimal  @default(0) @db.Decimal(15, 2)
+  observacion  String?  @db.VarChar(500)
+  origen       String   @default("manual") @db.VarChar(30)
+  idReferencia Int?     @map("id_referencia")
+  creadoEn     DateTime @default(now()) @map("creado_en")
 
   sedeId Int  @map("sede_id")
   sede   Sede @relation(fields: [sedeId], references: [id])
 
   @@index([fecha, semana])
   @@index([sedeId])
+  @@index([origen, idReferencia])
   @@map("egresos")
 }
 

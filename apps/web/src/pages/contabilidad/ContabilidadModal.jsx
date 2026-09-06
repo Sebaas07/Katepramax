@@ -185,6 +185,14 @@ const ContabilidadModal = memo(
 
           {modalTipo === "ingreso" && (
             <>
+              <div className="cont-nota-info cont-nota-info--alerta">
+                <span className="material-symbols-outlined">warning</span>
+                <p>
+                  Si este cobro corresponde a una entrega ya confirmada o a un
+                  abono registrado por el entregador, el sistema ya lo generó
+                  automáticamente. Verifica aquí para no duplicarlo.
+                </p>
+              </div>
               <div className={grupoClase}>
                 <Label htmlFor="cont-efectivo">Efectivo (COP)</Label>
                 <input

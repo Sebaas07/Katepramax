@@ -3,8 +3,10 @@
  */
 
 const clienteRepository = require("../repositories/cliente.repository");
+const ingresoRepo = require("../repositories/ingreso.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
+const { semanaNegocio, inicioDiaLocal, ORIGENES } = require("../utils/contabilidad");
 
 function sedeEsPermitida(usuario) {
   return (
@@ -100,9 +102,11 @@ const clienteService = (app) => {
         "telefono",
         "activo",
         "limiteCredito",
-        "saldoDeuda",
         "sedeId",
       ];
+      // saldoDeuda no se edita a mano: solo cambia vía operaciones
+      // (pedido creado/cancelado, entrega, abonos) para mantener la
+      // cartera coherente con los movimientos contables.
       for (const c of permitidos) {
         if (data[c] !== undefined) campos[c] = data[c];
       }
@@ -167,9 +171,39 @@ const clienteService = (app) => {
         );
       }
 
-      const clienteActualizado = await repo.abonar(id, valorAbono);
+      const sedeAbono = existe.sedeId ?? usuario?.sedeId;
+      const fechaAbono = new Date();
+
+      // El abono es dinero que llega a la caja: se modifica la deuda del
+      // cliente y se registra el Ingreso correspondiente en la misma
+      // transacción, para que Contabilidad siempre lo replique.
+      const transaccion = await app.prisma.$transaction(async (tx) => {
+        const clienteActualizado = await tx.cliente.update({
+          where: { id },
+          data: { saldoDeuda: { decrement: valorAbono } },
+          include: { sede: { select: { id: true, nombre: true } } },
+        });
+
+        let ingreso = null;
+        if (sedeAbono != null) {
+          ingreso = await ingresoRepo.crear(tx, {
+            fecha: inicioDiaLocal(fechaAbono),
+            semana: semanaNegocio(fechaAbono),
+            sedeId: sedeAbono,
+            efectivo: valorAbono,
+            cuentas: 0,
+            total: valorAbono,
+            origen: ORIGENES.ABONO_CLIENTE,
+            idReferencia: id,
+            observacion: `Abono de cliente "${existe.nombre}" (#${id})`,
+          });
+        }
+
+        return { clienteActualizado, ingreso };
+      });
+
       await registrarAccion(app, usuario.id, "ABONAR_CLIENTE", `Registró un abono de ${valorAbono} al cliente "${existe.nombre}" (#${id}).`);
-      return clienteActualizado;
+      return transaccion.clienteActualizado;
     },
   };
 };

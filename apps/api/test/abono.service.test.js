@@ -69,6 +69,24 @@ it("debería usar observacion=null si no se pasa", async () => {
      const data = prisma.abono.create.mock.calls[0][0].data;
      expect(data.observacion).toBeNull();
    });
+
+ it("debería crear el Egreso del pago al proveedor (origen abono-proveedor)", async () => {
+     prisma.proveedor.findUnique.mockResolvedValue(proveedorActivo);
+     prisma.sede.findUnique.mockResolvedValue(sedeMock);
+     prisma.abono.create.mockResolvedValue(abonoMock);
+     prisma.egreso.create.mockResolvedValue({ id: 7 });
+
+     await service.registrar(appMock, body, usuarioMock);
+
+     expect(prisma.egreso.create).toHaveBeenCalledWith({
+       data: expect.objectContaining({
+         origen: "abono-proveedor",
+         idReferencia: abonoMock.id,
+         total: 500000,
+       }),
+       include: expect.anything(),
+     });
+   });
  });
 
 // ── obtenerLista ──────────────────────────────────────────────────────────────
@@ -134,6 +152,7 @@ describe("abonoService.editar", () => {
    it("debería pasar solo los campos definidos al repositorio", async () => {
      prisma.abono.findUnique.mockResolvedValue(abonoMock);
      prisma.abono.update.mockResolvedValue({ ...abonoMock, valorPagado: 600000 });
+     prisma.egreso.findFirst.mockResolvedValue(null);
 
      await service.editar(appMock, 1, { valorPagado: 600000 }, usuarioMock);
 
@@ -145,11 +164,25 @@ describe("abonoService.editar", () => {
    it("debería permitir actualizar observacion a string vacío", async () => {
      prisma.abono.findUnique.mockResolvedValue(abonoMock);
      prisma.abono.update.mockResolvedValue(abonoMock);
+     prisma.egreso.findFirst.mockResolvedValue(null);
 
      await service.editar(appMock, 1, { observacion: "" }, usuarioMock);
 
      const data = prisma.abono.update.mock.calls[0][0].data;
      expect(data.observacion).toBe("");
+   });
+
+   it("debería sincronizar el total del Egreso si cambia el valorPagado", async () => {
+     prisma.abono.findUnique.mockResolvedValue(abonoMock);
+     prisma.abono.update.mockResolvedValue({ ...abonoMock, valorPagado: 600000 });
+     prisma.egreso.findFirst.mockResolvedValue({ id: 7, total: 500000 });
+
+     await service.editar(appMock, 1, { valorPagado: 600000 }, usuarioMock);
+
+     expect(prisma.egreso.update).toHaveBeenCalledWith({
+       where: { id: 7 },
+       data: expect.objectContaining({ total: 600000 }),
+     });
    });
  });
 
@@ -162,13 +195,17 @@ describe("abonoService.borrar", () => {
      await expect(service.borrar(appMock, 999, usuarioMock)).rejects.toMatchObject({ statusCode: 404 });
    });
 
-   it("debería llamar repo.eliminar si existe", async () => {
+   it("debería llamar repo.eliminar y borrar el Egreso asociado si existe", async () => {
      prisma.abono.findUnique.mockResolvedValue(abonoMock);
      prisma.abono.delete.mockResolvedValue(abonoMock);
+     prisma.egreso.deleteMany.mockResolvedValue({ count: 1 });
 
      await service.borrar(appMock, 1, usuarioMock);
 
      expect(prisma.abono.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+     expect(prisma.egreso.deleteMany).toHaveBeenCalledWith({
+       where: expect.objectContaining({ origen: "abono-proveedor", idReferencia: 1 }),
+     });
    });
  });
 

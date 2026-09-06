@@ -37,10 +37,10 @@ async function eliminar(prisma, id) {
 }
 
 // Total pagado a cada proveedor en una semana
-async function resumenPorProveedor(prisma, semana) {
+async function resumenPorProveedor(prisma, semana, sedeId) {
   return prisma.abono.groupBy({
     by:      ["proveedorId"],
-    where:   { semana },
+    where:   { semana, ...(sedeId ? { sedeId } : {}) },
     _sum:    { valorPagado: true },
     _count:  { id: true },
     orderBy: { proveedorId: "asc" },
@@ -48,10 +48,10 @@ async function resumenPorProveedor(prisma, semana) {
 }
 
 // Total pagado por sede en una semana (para el Arqueo)
-async function resumenPorSede(prisma, semana) {
+async function resumenPorSede(prisma, semana, sedeId) {
   return prisma.abono.groupBy({
     by:      ["sedeId"],
-    where:   { semana },
+    where:   { semana, ...(sedeId ? { sedeId } : {}) },
     _sum:    { valorPagado: true },
     orderBy: { sedeId: "asc" },
   });

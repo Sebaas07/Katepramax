@@ -1,6 +1,7 @@
 const repo     = require("../repositories/abono.repository");
+const egresoRepo = require("../repositories/egreso.repository");
 const AppError = require("../errors/AppError");
-const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere } = require("../utils/contabilidad");
+const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere, ORIGENES } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
 
 async function registrar(app, body, usuario) {
@@ -20,24 +21,42 @@ async function registrar(app, body, usuario) {
   const sede = await app.prisma.sede.findUnique({ where: { id: sedeId } });
   if (!sede) throw new AppError(`Sede ${sedeId} no encontrada`, 404);
 
-  const nuevo = await repo.crear(app.prisma, {
-    fecha: fechaValida(body.fecha),
-    semana: semanaValida(body.semana),
-    proveedorId: body.proveedorId,
-    sedeId,
-    valorPagado: numeroPositivo(body.valorPagado, "valor de abono"),
-    observacion: body.observacion === undefined ? null : sanitizarTexto(body.observacion) || null,
-    comprobante: body.comprobante === undefined ? null : sanitizarTexto(body.comprobante, 50) || null,
+  // El pago a un proveedor es una salida real de caja: se registra el abono
+  // (detalle operativo) y el Egreso correspondiente en la misma transacción
+  // para que Contabilidad siempre refleje el pago.
+  const resultado = await app.prisma.$transaction(async (tx) => {
+    const nuevo = await repo.crear(tx, {
+      fecha: fechaValida(body.fecha),
+      semana: semanaValida(body.semana),
+      proveedorId: body.proveedorId,
+      sedeId,
+      valorPagado: numeroPositivo(body.valorPagado, "valor de abono"),
+      observacion: body.observacion === undefined ? null : sanitizarTexto(body.observacion) || null,
+      comprobante: body.comprobante === undefined ? null : sanitizarTexto(body.comprobante, 50) || null,
+    });
+
+    const egreso = await egresoRepo.crear(tx, {
+      fecha: fechaValida(body.fecha),
+      semana: semanaValida(body.semana),
+      sedeId,
+      concepto: `Abono a proveedor "${proveedor.nombre}"`,
+      total: numeroPositivo(body.valorPagado, "valor de abono"),
+      observacion: body.observacion === undefined ? `Abono a ${proveedor.nombre}` : sanitizarTexto(body.observacion) || `Abono a ${proveedor.nombre}`,
+      origen: ORIGENES.ABONO_PROVEEDOR,
+      idReferencia: nuevo.id,
+    });
+
+    return { nuevo, egreso };
   });
 
   await registrarAccion(
     app,
     usuario.id,
     "CREAR_ABONO",
-    `Registró un abono de ${nuevo.valorPagado} a "${proveedor.nombre}" (sede ${sedeId}).`,
+    `Registró un abono de ${resultado.nuevo.valorPagado} a "${proveedor.nombre}" (sede ${sedeId}).`,
   );
 
-  return nuevo;
+  return resultado.nuevo;
 }
 
 async function obtenerLista(app, query, usuario) {
@@ -84,7 +103,25 @@ async function editar(app, id, body, usuario) {
   if (body.valorPagado !== undefined) data.valorPagado = numeroPositivo(body.valorPagado, "valor de abono");
   if (body.observacion !== undefined) data.observacion = sanitizarTexto(body.observacion);
   if (body.comprobante !== undefined) data.comprobante = body.comprobante === null ? null : sanitizarTexto(body.comprobante, 50);
-  const actualizado = await repo.actualizar(app.prisma, id, data);
+
+  // Mantiene sincronizado el Egreso automático (origen abono-proveedor).
+  const actualizado = await app.prisma.$transaction(async (tx) => {
+    const abono = await repo.actualizar(tx, id, data);
+    const egreso = await tx.egreso.findFirst({
+      where: { origen: ORIGENES.ABONO_PROVEEDOR, idReferencia: id },
+    });
+    if (egreso) {
+      await tx.egreso.update({
+        where: { id: egreso.id },
+        data: {
+          ...(data.valorPagado !== undefined && { total: data.valorPagado }),
+          ...(data.observacion !== undefined && { observacion: data.observacion || null }),
+        },
+      });
+    }
+    return abono;
+  });
+
   await registrarAccion(
     app,
     usuario.id,
@@ -100,14 +137,23 @@ async function borrar(app, id, usuario) {
   }
 
   await obtenerPorId(app, id, usuario);
-  const resultado = await repo.eliminar(app.prisma, id);
+
+  // Elimina también el Egreso automático asociado para no dejar un egreso
+  // huérfano en Contabilidad.
+  await app.prisma.$transaction(async (tx) => {
+    await tx.egreso.deleteMany({
+      where: { origen: ORIGENES.ABONO_PROVEEDOR, idReferencia: id },
+    });
+    await repo.eliminar(tx, id);
+  });
+
   await registrarAccion(
     app,
     usuario.id,
     "ELIMINAR_ABONO",
     `Eliminó el abono #${id}.`,
   );
-  return resultado;
+  return { mensaje: "Abono eliminado correctamente" };
 }
 
 async function resumenPorProveedor(app, semana, usuario) {

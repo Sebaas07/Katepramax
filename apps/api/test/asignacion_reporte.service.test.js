@@ -234,9 +234,13 @@ function mockArqueoBase() {
     ]),
   };
   prisma.egreso = {
-    groupBy: vi.fn().mockResolvedValue([
-      { sedeId: 1, _sum: { total: 50000 } },
-    ]),
+    // arqueoSemanal llama a groupBy dos veces: total de egresos y el desglose
+    // de pagos a proveedores (origen "abono-proveedor"), que viven como Egresos.
+    groupBy: vi.fn().mockImplementation(({ where }) =>
+      where?.origen === "abono-proveedor"
+        ? Promise.resolve([{ sedeId: 1, _sum: { total: 20000 } }])
+        : Promise.resolve([{ sedeId: 1, _sum: { total: 70000 } }]),
+    ),
   };
   prisma.abono = {
     groupBy: vi.fn().mockResolvedValue([

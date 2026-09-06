@@ -12,6 +12,8 @@ const ingresoBase = {
     cuentas:     { type: "number" },
     total:       { type: "number" },
     observacion: { type: "string", nullable: true },
+    origen:      { type: "string" },
+    idReferencia: { type: "integer", nullable: true },
     fechaCreacion: { type: "string", format: "date-time" },
     sede:        { type: "object", properties: { id: { type: "integer" }, nombre: { type: "string" } } },
   },

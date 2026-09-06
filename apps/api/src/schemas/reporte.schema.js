@@ -67,6 +67,7 @@ const cobrosPorEntregadorSchema = {
         fechaInicio: { type: "string" },
         fechaFin:    { type: "string" },
         total:       { type: "number" },
+        totalAbonos: { type: "number" },
         totalDomicilios: { type: "number" },
         pedidos:     { type: "integer" },
         detalle: {
@@ -78,6 +79,7 @@ const cobrosPorEntregadorSchema = {
               entregador:     { type: "string" },
               pedidos:        { type: "integer" },
               total:          { type: "number" },
+              abonos:         { type: "number" },
               efectivo:       { type: "number" },
               cuentas:        { type: "number" },
               valorDomicilio: { type: "number" },

@@ -478,6 +478,15 @@
   margin-top: 1px;
 }
 
+.cont-nota-info--alerta {
+  background: rgba(244, 180, 70, 0.08);
+  border-color: rgba(244, 180, 70, 0.45);
+}
+
+.cont-nota-info--alerta .material-symbols-outlined {
+  color: #f4b446;
+}
+
 /* ─── Valores cartera (variación) ────────────────────────────*/
 .cont-val-positivo { color: #4ade80; font-weight: 600; }
 .cont-val-negativo { color: var(--error); font-weight: 600; }
