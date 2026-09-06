@@ -27,6 +27,7 @@ import PedidosPage from "@/pages/pedidos/PedidosPage/PedidosPage";
 import ClientesPage from "@/pages/clientes/ClientePage/ClientePage";
 import CarteraClientesPage from "@/pages/clientes/CarteraClientesPage/CarteraClientesPage";
 import ProveedoresPage from "@/pages/proveedores/ProveedoresPage/ProveedoresPage";
+import CarteraProveedoresPage from "@/pages/proveedores/CarteraProveedoresPage/CarteraProveedoresPage";
 import DistribucionPage from "@/pages/distribucion/DistribucionPage/DistribucionPage";
 import ContabilidadPage from "@/pages/contabilidad/ContabilidadPage/ContabilidadPage";
 
@@ -113,6 +114,7 @@ const AppRouter = () => (
         <Route element={<RequireRole roles={ROLES.CONSULTA} />}>
           <Route path="/inventario" element={<InventarioPage />} />{" "}
           <Route path="/proveedores" element={<ProveedoresPage />} />
+          <Route path="/proveedores/cartera" element={<CarteraProveedoresPage />} />
         </Route>
 
         {/* Distribución / entregas: Admin, AdminBogota, Oficinista y Bodega */}

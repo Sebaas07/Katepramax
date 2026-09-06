@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import proveedoresService from "@/services/proveedores.service";
+import inventarioService from "@/services/inventario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
 import "./ProveedoresPage.css";
 
 const ProveedoresPage = () => {
-  const { esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
+  const { esAdmin, esBodega, esOficinista, isAuthenticated, isSessionChecked } = useAuth();
   const puedeGestionar = esAdmin || esBodega;
+  const puedeAbonar = esAdmin || esBodega || esOficinista;
+  const navigate = useNavigate();
 
   const [proveedores, setProveedores] = useState([]);
+  const [deudaProveedores, setDeudaProveedores] = useState([]);
   const [filtros, setFiltros] = useState({ activo: "" });
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -115,6 +120,7 @@ const ProveedoresPage = () => {
 
   const columnasProveedores = useMemo(() => [
     { campo: "nombre", label: "Nombre", tipo: "texto" },
+    { campo: "saldoDeuda", label: "Saldo deuda", tipo: "moneda" },
     { campo: "activo", label: "Estado", tipo: "booleano" },
   ], []);
 
@@ -147,11 +153,36 @@ const ProveedoresPage = () => {
     return base;
   }, [esAdmin, puedeGestionar, abrirEditarProveedor, abrirEliminarProveedor, handleReactivarProveedor]);
 
+  const cargarDeuda = useCallback(async () => {
+    try {
+      const data = await inventarioService.obtenerDeudaProveedores();
+      setDeudaProveedores(Array.isArray(data) ? data : []);
+    } catch {
+      setDeudaProveedores([]);
+    }
+  }, []);
+
+  // Fila por proveedor con su saldo de deuda
+  const proveedoresConDeuda = useMemo(() => {
+    if (deudaProveedores.length === 0) return proveedores;
+    const saldoPorProveedor = new Map(
+      deudaProveedores.map((d) => [Number(d.proveedorId), Number(d.saldoPendiente ?? 0)]),
+    );
+    return proveedores.map((p) => ({
+      ...p,
+      saldoDeuda: saldoPorProveedor.get(Number(p.id)) ?? 0,
+    }));
+  }, [proveedores, deudaProveedores]);
+
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
     const id = window.setTimeout(() => { void recargarProveedores(); }, 0);
-    return () => window.clearTimeout(id);
-  }, [recargarProveedores, isSessionChecked, isAuthenticated]);
+    const idDeuda = window.setTimeout(() => { void cargarDeuda(); }, 0);
+    return () => {
+      window.clearTimeout(id);
+      window.clearTimeout(idDeuda);
+    };
+  }, [recargarProveedores, cargarDeuda, isSessionChecked, isAuthenticated]);
 
   // Stats
   const totalActivos   = proveedores.filter((p) => p.activo).length;
@@ -188,6 +219,18 @@ const ProveedoresPage = () => {
             <button className="btn-primary" onClick={abrirNuevoProveedor} type="button">
               <span className="material-symbols-outlined" aria-hidden="true">add</span>
               Nuevo Proveedor
+            </button>
+          )}
+
+          {/* Carrera de proveedores: ver y abonar deuda */}
+          {puedeAbonar && (
+            <button
+              className="btn-secondary"
+              onClick={() => navigate("/proveedores/cartera")}
+              type="button"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">account_balance_wallet</span>
+              Cartera Proveedores
             </button>
           )}
         </div>
@@ -237,7 +280,7 @@ const ProveedoresPage = () => {
         ) : proveedores.length > 0 ? (
           <TablaGenerica
             columnas={columnasProveedores}
-            datos={proveedores}
+            datos={proveedoresConDeuda}
             filasPorPagina={10}
             mostrarBuscador
             buscarEnCampos={["nombre"]}

@@ -1,0 +1,91 @@
+.cp-page {
+  min-height: 100vh;
+}
+
+.cp-spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+}
+
+.cp-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--outline-variant);
+  border-top-color: var(--secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.cp-abono-info {
+  font-family: var(--font-label);
+  font-size: 14px;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.cp-abono-saldo {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+  margin: 0 0 0.5rem 0;
+}
+
+.cp-header-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cp-volver {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cp-volver:hover {
+  border-color: var(--aged-gold-border);
+  color: var(--aged-gold);
+  background: var(--aged-gold-dim);
+}
+
+.cp-volver .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.cp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.875rem;
+  padding: 4rem 2rem;
+  color: var(--on-surface-variant);
+  font-family: var(--font-label);
+  font-size: 13px;
+  text-align: center;
+}
+
+.cp-empty .material-symbols-outlined {
+  font-size: 48px;
+  color: #4ade80;
+  opacity: 0.5;
+}

@@ -8,6 +8,7 @@ import Modal from "@/components/common/Modal/Modal";
 import ProveedorSelect from "@/components/common/ProveedorSelect/ProveedorSelect";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
 import { formatCOP } from "@/utils/formatters";
+import { bodegasVisibles } from "@/utils/bodegas";
 import "./ProductosPage.css";
 
 const DEPARTAMENTOS = [
@@ -159,6 +160,13 @@ const ProductosPage = () => {
   const [productos, setProductos] = useState([]);
   const [sedes, setSedes] = useState([]);
   const [cargandoSedes, setCargandoSedes] = useState(false);
+
+  // Bodegas que el rol puede asignar al crear/editar un producto (Admin ve
+  // todas; Bodega solo la suya; Oficinista todas las de su ciudad).
+  const bodegasVisiblesMemo = useMemo(
+    () => bodegasVisibles(sedes, usuario),
+    [sedes, usuario],
+  );
   const [cargando, setCargando] = useState(false);
   const [errorProductos, setErrorProductos] = useState(null);
   const [filtroSede, setFiltroSede] = useState("");
@@ -613,9 +621,9 @@ const ProductosPage = () => {
         )}
 
         <div className="filters">
-          {esAdmin && (
+          {bodegasVisiblesMemo.length > 0 && (
             <div className="filter-group">
-              <label htmlFor="filtro-sede">Sede</label>
+              <label htmlFor="filtro-sede">Bodega</label>
               <select
                 id="filtro-sede"
                 value={filtroSede}
@@ -623,7 +631,7 @@ const ProductosPage = () => {
                 className="filter-select"
               >
                 <option value="">Todas</option>
-                {sedes.map((sede) => (
+                {bodegasVisiblesMemo.map((sede) => (
                   <option key={sede.id} value={sede.id}>
                     {sede.nombre}
                   </option>
@@ -941,10 +949,10 @@ const ProductosPage = () => {
             </div>
           </div>
 
-          {esAdmin && (
+          {bodegasVisiblesMemo.length > 0 && (
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="prod-sede">Sede *</label>
+                <label htmlFor="prod-sede">Bodega *</label>
                 <select
                   id="prod-sede"
                   name="sedeId"
@@ -953,7 +961,7 @@ const ProductosPage = () => {
                   className="form-control"
                 >
                   <option value="">— Selecciona —</option>
-                  {sedes.map((sede) => (
+                  {bodegasVisiblesMemo.map((sede) => (
                     <option key={sede.id} value={sede.id}>
                       {sede.nombre}
                     </option>
@@ -1142,9 +1150,9 @@ const ProductosPage = () => {
           </div>
 
           <div className="form-row">
-            {esAdmin && (
+            {bodegasVisiblesMemo.length > 0 && (
               <div className="form-group">
-                <label htmlFor="edit-sede">Sede</label>
+                <label htmlFor="edit-sede">Bodega</label>
                 <select
                   id="edit-sede"
                   name="sedeId"
@@ -1152,7 +1160,7 @@ const ProductosPage = () => {
                   onChange={handleCambioForm}
                   className="form-control"
                 >
-                  {sedes.map((sede) => (
+                  {bodegasVisiblesMemo.map((sede) => (
                     <option key={sede.id} value={sede.id}>
                       {sede.nombre}
                     </option>

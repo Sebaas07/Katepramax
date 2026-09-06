@@ -355,6 +355,17 @@ const ContabilidadPage = () => {
     }));
   }, [proveedores, mapProveedor, deudaProveedores]);
 
+  // El catálogo GET /proveedores devuelve [{ id, nombre, ... }]; el selector de
+  // abonos en ContabilidadModal espera [{ proveedorId, proveedor }].
+  const proveedoresSelect = useMemo(
+    () =>
+      catalogoProveedores.map((p) => ({
+        proveedorId: Number(p.id),
+        proveedor: p.nombre,
+      })),
+    [catalogoProveedores],
+  );
+
   const totalIngresoForm = useMemo(
     () => (parseFloat(form.efectivo) || 0) + (parseFloat(form.cuentas) || 0),
     [form.efectivo, form.cuentas],
@@ -787,7 +798,7 @@ const ContabilidadPage = () => {
         totalIngresoForm={totalIngresoForm}
         esAdmin={esAdmin}
         sedes={sedes}
-        proveedores={catalogoProveedores}
+        proveedores={proveedoresSelect}
         errores={erroresForm}
         cargando={cargando}
       />

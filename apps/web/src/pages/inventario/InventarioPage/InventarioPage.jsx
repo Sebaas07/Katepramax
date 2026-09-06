@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import inventarioService from "@/services/inventario.service";
 import contabilidadService from "@/services/contabilidad.service";
 import { formatCOP } from "@/utils/formatters";
+import { bodegasVisibles } from "@/utils/bodegas";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
@@ -46,6 +47,13 @@ const InventarioPage = () => {
   const [productos, setProductos] = useState([]);
   const [sedes, setSedes] = useState([]);
   const [proveedores, setProveedores] = useState([]);
+
+  // Bodegas que el rol puede usar al filtrar/registrar (Admin todas; Bodega la
+  // suya; Oficinista todas las de su ciudad).
+  const bodegasVisiblesMemo = useMemo(
+    () => bodegasVisibles(sedes, usuario),
+    [sedes, usuario],
+  );
   const [movimientos, setMovimientos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [guardandoMov, setGuardandoMov] = useState(false);
@@ -308,9 +316,9 @@ const InventarioPage = () => {
           <>
             {/* Filtros */}
             <div className="inv-filtros">
-              {esAdmin && (
+              {bodegasVisiblesMemo.length > 0 && (
                 <div className="filter-group">
-                  <label htmlFor="mov-filtro-sede">Sede</label>
+                  <label htmlFor="mov-filtro-sede">Bodega</label>
                   <select
                     id="mov-filtro-sede"
                     value={filtrosMov.sedeId}
@@ -323,7 +331,7 @@ const InventarioPage = () => {
                     className="filter-select"
                   >
                     <option value="">Todas</option>
-                    {sedes.map((sede) => (
+                    {bodegasVisiblesMemo.map((sede) => (
                       <option key={sede.id} value={sede.id}>
                         {sede.nombre}
                       </option>
@@ -547,10 +555,10 @@ const InventarioPage = () => {
             />
           </div>
 
-          {/* Sede */}
-          {esAdmin && (
+          {/* Bodega */}
+          {bodegasVisiblesMemo.length > 0 && (
             <div className="form-group">
-              <label htmlFor="mov-sede">Sede *</label>
+              <label htmlFor="mov-sede">Bodega *</label>
               <select
                 id="mov-sede"
                 name="sedeId"
@@ -559,7 +567,7 @@ const InventarioPage = () => {
                 className="form-control"
               >
                 <option value="">— Selecciona —</option>
-                {sedes.map((sede) => (
+                {bodegasVisiblesMemo.map((sede) => (
                   <option key={sede.id} value={sede.id}>
                     {sede.nombre}
                   </option>
