@@ -197,6 +197,14 @@ const clienteService = (app) => {
             idReferencia: id,
             observacion: `Abono de cliente "${existe.nombre}" (#${id})`,
           });
+        } else {
+          // Cliente sin sede y usuario sin sede (Admin sin sede propia):
+          // no hay dónde registrar el Ingreso. Se deja constancia para que
+          // el dinero recibido no desaparezca sin rastro de Contabilidad.
+          console.warn(
+            `[contabilidad] No se registró Ingreso por abono del cliente "${existe.nombre}" (#${id}): ` +
+            `no se pudo determinar la sede.`,
+          );
         }
 
         return { clienteActualizado, ingreso };

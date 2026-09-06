@@ -1,11 +1,13 @@
 import { memo, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { formatCOP, formatFecha, getSemanaISO, getRangoSemana } from "@/utils/formatters";
+import { formatCOP, formatFecha, getSemanaISO, getRangoSemana, hoyISO } from "@/utils/formatters";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
 import reporteService from "@/services/reporte.service";
+import contabilidadService from "@/services/contabilidad.service";
 import TarjetaKpi from "./TarjetaKpi";
 import { EmptyState, Spinner } from "./ContabilidadUI";
 import CorteCajaTicket from "./CorteCajaTicket";
+import ArqueoSemanalTab from "./ArqueoSemanalTab";
 
 /**
  * CierreCajaTab
@@ -109,14 +111,14 @@ const BloqueCierre = ({ titulo, subtitulo, icono, corte, cargando }) => {
 };
 
 const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
-  const HOY = new Date().toISOString().split("T")[0];
+  const HOY = hoyISO();
   const SEM_ACTUAL = getSemanaISO(new Date());
 
   const [fechaDia, setFechaDia] = useState(HOY);
   const [semanaSel, setSemanaSel] = useState(String(SEM_ACTUAL));
   const [corte, setCorte] = useState(null);
+  const [arqueo, setArqueo] = useState(null);
   const [datosKey, setDatosKey] = useState(null);
-  const [cargando, setCargando] = useState(true);
 
   const esDiario = modo !== "semanal";
   const semanaNum = parseInt(semanaSel, 10) || SEM_ACTUAL;
@@ -129,26 +131,49 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
     let activo = true;
     const sede = esAdmin ? sedeId || undefined : undefined;
 
-    setCargando(true);
-    const params = esDiario
-      ? { desde: fechaDia, hasta: fechaDia, sedeId: sede }
-      : { desde: rangoSemana.inicio, hasta: rangoSemana.fin, sedeId: sede };
+    const cargar = esDiario
+      ? reporteService.obtenerCorteCaja({ desde: fechaDia, hasta: fechaDia, sedeId: sede })
+      : // Cierre semanal = arqueo semanal unificado (misma fuente y los mismos
+        // totales en todo el tab), más los bloques de cartera e inventario.
+        Promise.all([
+          contabilidadService.obtenerArqueo(semanaNum, sede),
+          contabilidadService.obtenerCartera({ semana: semanaNum, ...(sede ? { sedeId: sede } : {}) }),
+          contabilidadService.obtenerInventarioSemanal(semanaNum),
+        ]).then(([reporte, carteraSem, invSem]) => {
+          const arq = reporte ? { ...reporte, carteraSemana: carteraSem, inventarioSemana: invSem } : null;
+          const totalEgr = arq?.egresos?.totales?.totalEgresos ?? 0;
+          return arq
+            ? {
+                reporte: arq,
+                corte: {
+                  desde: arq.desde,
+                  hasta: arq.hasta,
+                  recaudo: arq.recaudo,
+                  egresos: { ...arq.egresos, total: Number(totalEgr) },
+                  ganancia: Number(arq.ganancia),
+                },
+              }
+            : { reporte: null, corte: null };
+        });
 
-    reporteService
-      .obtenerCorteCaja(params)
+    cargar
       .then((data) => {
         if (!activo) return;
-        setCorte(data);
+        if (esDiario) {
+          setCorte(data);
+          setArqueo(null);
+        } else {
+          setArqueo(data?.reporte ?? null);
+          setCorte(data?.corte ?? null);
+        }
         setDatosKey(claveActual);
       })
       .catch((err) => {
         if (!activo) return;
         toast.error("Error al cargar el cierre de caja: " + (err?.message || "desconocido"));
         setCorte(null);
+        setArqueo(null);
         setDatosKey(claveActual);
-      })
-      .finally(() => {
-        if (activo) setCargando(false);
       });
 
     return () => {
@@ -157,6 +182,7 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
   }, [
     esDiario,
     fechaDia,
+    semanaNum,
     rangoSemana.inicio,
     rangoSemana.fin,
     sedeId,
@@ -232,7 +258,7 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
         </button>
       </div>
 
-      {cargando || datosKey !== claveActual ? (
+      {datosKey !== claveActual ? (
         <Spinner texto="Calculando cierre de caja..." />
       ) : !corte ? (
         <EmptyState
@@ -261,6 +287,18 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
               cargando={false}
             />
           </div>
+
+          {!esDiario && arqueo && (
+            <div className="cont-cierre-arqueo">
+              <ArqueoSemanalTab
+                arqueo={arqueo}
+                filtroSemana={semanaSel}
+                onFiltroSemanaChange={setSemanaSel}
+                sedes={[]}
+                mostrarFiltro={false}
+              />
+            </div>
+          )}
         </div>
       )}
 

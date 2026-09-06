@@ -6,7 +6,7 @@
  *  GET /api/v1/reportes/panel-general     (Admin, AdminBogota, Bodega y Oficinista)
  *
  * Reglas de negocio cubiertas:
- *  - Arqueo agrega ingresos + egresos + abonos + saldo neto por sede (solo oficinas)
+ *  - Arqueo agrega ingresos + egresos + abonos + saldo neto por sede (todas las sedes)
  *  - Panel General es snapshot de un día (ingresos, egresos, cartera, stock)
  */
 const { buildApp } = require("../src/app");
@@ -58,26 +58,28 @@ function mockSesion(mock) {
   prisma.sesion.findFirst.mockResolvedValue(mock);
 }
 
-/** Configura todos los groupBy que arqueoSemanal necesita */
+/** Configura todos los findMany que arqueoSemanal necesita */
 function mockArqueo() {
   prisma.sede.findMany.mockResolvedValue(sedes);
   prisma.ingreso = {
-    groupBy: vi.fn().mockResolvedValue([
+    findMany: vi.fn().mockResolvedValue([
       {
         sedeId: 1,
-        _sum: { efectivo: 300000, cuentas: 100000, total: 400000 },
+        fecha: new Date("2026-09-13T00:00:00.000Z"),
+        efectivo: 300000,
+        cuentas: 100000,
+        total: 400000,
+        origen: "entrega",
       },
     ]),
   };
-  // arqueoSemanal llama a prisma.egreso.groupBy dos veces: una para el total
-  // de egresos y otra (origen "abono-proveedor") para el desglose de pagos a
-  // proveedores. Los abonos a proveedores ahora viven como Egresos.
+  // arqueoSemanal lee los egresos por rango de fechas; el desglose de pagos a
+  // proveedores (origen "abono-proveedor") se separa por fila.
   prisma.egreso = {
-    groupBy: vi.fn().mockImplementation(({ where }) =>
-      where?.origen === "abono-proveedor"
-        ? Promise.resolve([{ sedeId: 1, _sum: { total: 20000 } }])
-        : Promise.resolve([{ sedeId: 1, _sum: { total: 70000 } }]),
-    ),
+    findMany: vi.fn().mockResolvedValue([
+      { sedeId: 1, fecha: new Date("2026-09-13T00:00:00.000Z"), total: 50000, concepto: "Arriendo", origen: "manual" },
+      { sedeId: 1, fecha: new Date("2026-09-13T00:00:00.000Z"), total: 20000, concepto: "Abono proveedor", origen: "abono-proveedor" },
+    ]),
   };
   prisma.abono = {
     groupBy: vi
@@ -87,7 +89,7 @@ function mockArqueo() {
   prisma.inventario = {
     groupBy: vi
       .fn()
-      .mockResolvedValue([{ semana: 18, _sum: { costoUnitario: 150000 } }]),
+      .mockResolvedValue([{ sedeId: 1, _sum: { cantidadIngresada: 2, costoUnitario: 150000 } }]),
     aggregate: vi.fn().mockResolvedValue({ _sum: { costoUnitario: 150000 } }),
     findMany: vi.fn().mockResolvedValue([
       { cantidadIngresada: 2, costoUnitario: 75000 },
@@ -144,10 +146,38 @@ describe("GET /api/v1/reportes/arqueo-semanal", () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.semana).toBe(18);
-    // El response schema declara ingresos.porSede como array con campos tipados
+    // El response schema declara los totales y el desglose por sede: se serializan
     expect(body.ingresos.porSede[0].total).toBe(400000);
+    expect(body.ingresos.totales.total).toBe(400000);
+    expect(body.ingresos.totales.efectivo).toBe(300000);
+    expect(body.egresos.totales.totalEgresos).toBe(70000);
+    expect(body.egresos.porSede[0].operativo).toBe(50000);
+    expect(body.saldoNeto.porSede[0].saldoNeto).toBe(330000);
     expect(body.cartera).toBe(500000);
     expect(body.costoInventario).toBe(150000);
+  });
+
+  it("debería incluir los datos del cierre semanal (recaudo, ganancia, porDia)", async () => {
+    mockSesion(sesionAdminMock);
+    mockArqueo();
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/reportes/arqueo-semanal?semana=18",
+      headers: authAdmin(),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    // recaudo: ingreso único no abono → efectivo 300000 + transferencia 100000
+    expect(body.recaudo.total).toBe(400000);
+    expect(body.recaudo.efectivo).toBe(300000);
+    expect(body.recaudo.transferencia).toBe(100000);
+    expect(body.recaudo.pedidosEntregados).toBe(1);
+    // ganancia = ingresos 400000 − egresos (50000 + 20000) = 330000
+    expect(body.ganancia).toBe(330000);
+    expect(body.egresos.porConcepto).toHaveLength(2);
+    expect(body.porDia).toHaveLength(1);
+    expect(body.porDia[0].fecha).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("debería retornar saldo neto correcto (ingresos - egresos)", async () => {
@@ -168,9 +198,9 @@ describe("GET /api/v1/reportes/arqueo-semanal", () => {
   it("debería incluir todas las sedes aunque no tengan datos", async () => {
     mockSesion(sesionAdminMock);
     mockArqueo();
-    // groupBy devuelve solo sede 1; sede 2 debe aparecer con ceros
-    prisma.ingreso = { groupBy: vi.fn().mockResolvedValue([]) };
-    prisma.egreso = { groupBy: vi.fn().mockResolvedValue([]) };
+    // findMany devuelve solo sede 1; sede 2 debe aparecer con ceros
+    prisma.ingreso = { findMany: vi.fn().mockResolvedValue([]) };
+    prisma.egreso = { findMany: vi.fn().mockResolvedValue([]) };
     prisma.abono = { groupBy: vi.fn().mockResolvedValue([]) };
 
     const res = await app.inject({
@@ -182,6 +212,49 @@ describe("GET /api/v1/reportes/arqueo-semanal", () => {
     const body = res.json();
     expect(body.ingresos.porSede).toHaveLength(2);
     expect(body.ingresos.porSede.find((s) => s.sedeId === 2).total).toBe(0);
+  });
+
+  it("debería incluir en los totales los movimientos de bodegas", async () => {
+    mockSesion(sesionAdminMock);
+    // El arqueo/panel trabajan con todas las sedes (oficinas y bodegas)
+    prisma.sede.findMany.mockResolvedValue([
+      ...sedes,
+      { id: 3, nombre: "Bodega Norte", tipo: "Bodega", activo: true },
+    ]);
+    prisma.ingreso = {
+      findMany: vi.fn().mockResolvedValue([
+        { sedeId: 1, fecha: new Date("2026-09-13T00:00:00.000Z"), efectivo: 300000, cuentas: 100000, total: 400000, origen: "entrega" },
+      ]),
+    };
+    // Egreso contabilizado desde una bodega (no oficina)
+    prisma.egreso = {
+      findMany: vi.fn().mockResolvedValue([
+        { sedeId: 3, fecha: new Date("2026-09-13T00:00:00.000Z"), total: 100000, concepto: "Abono proveedor", origen: "abono-proveedor" },
+      ]),
+    };
+    prisma.abono = { groupBy: vi.fn().mockResolvedValue([]) };
+    prisma.inventario = {
+      groupBy:  vi.fn().mockResolvedValue([]),
+      aggregate: vi.fn().mockResolvedValue({ _sum: { costoUnitario: 0 } }),
+      findMany:  vi.fn().mockResolvedValue([]),
+    };
+    prisma.cliente = {
+      ...prisma.cliente,
+      aggregate: vi.fn().mockResolvedValue({ _sum: { saldoDeuda: 0 } }),
+    };
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/reportes/arqueo-semanal?semana=18",
+      headers: authAdmin(),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    // La bodega aparece con su fila y su egreso entra en los totales
+    expect(body.egresos.porSede).toHaveLength(3);
+    expect(body.egresos.porSede.find((s) => s.sedeId === 3).totalEgresos).toBe(100000);
+    expect(body.egresos.totales.totalEgresos).toBe(100000);
+    expect(body.egresos.totales.proveedores).toBe(100000);
   });
 });
 
@@ -249,13 +322,66 @@ describe("GET /api/v1/reportes/panel-general", () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.fecha).toBe("2026-05-05");
-    // El response schema declara ingresos/egresos como { type: "object" } sin propiedades,
-    // Fastify los serializa como {} — verificamos los campos con tipos declarados
+    // El response schema declara ingresos/egresos con sus campos: se serializan completos
+    expect(body.ingresos.total).toBe(250000);
+    expect(body.ingresos.efectivo).toBe(200000);
+    expect(body.ingresos.porSede).toHaveLength(2);
+    expect(body.ingresos.porSede[0].total).toBe(250000);
+    expect(body.egresos.total).toBe(30000);
+    expect(body.egresos.porSede[0].total).toBe(30000);
     expect(body.cartera).toBe(800000);
     expect(typeof body.totalStockUnidades).toBe("number");
     expect(body.pedidosPendientes).toBe(0);
     expect(body.entregasEnRuta).toBe(0);
     expect(body.alertasInventario).toBe(0);
+  });
+
+  it("debería incluir en los totales los movimientos de bodegas", async () => {
+    mockSesion(sesionAdminMock);
+    prisma.sede.findMany.mockResolvedValue([
+      ...sedes,
+      { id: 3, nombre: "Bodega Norte", tipo: "Bodega", activo: true },
+    ]);
+    prisma.ingreso = {
+      groupBy: vi.fn().mockResolvedValue([
+        { sedeId: 1, _sum: { efectivo: 200000, cuentas: 50000, total: 250000 } },
+      ]),
+    };
+    prisma.egreso = {
+      groupBy: vi
+        .fn()
+        .mockResolvedValue([{ sedeId: 3, _sum: { total: 120000 } }]),
+    };
+    prisma.cliente = {
+      ...prisma.cliente,
+      aggregate: vi.fn().mockResolvedValue({ _sum: { saldoDeuda: 800000 } }),
+    };
+    prisma.stockSede = {
+      ...prisma.stockSede,
+      aggregate: vi.fn().mockResolvedValue({ _sum: { stockActual: 500 } }),
+      findMany:  vi.fn().mockResolvedValue([]),
+    };
+    prisma.pedido = {
+      ...prisma.pedido,
+      count: vi.fn().mockResolvedValue(0),
+    };
+    prisma.asignacionEntrega = {
+      ...prisma.asignacionEntrega,
+      count: vi.fn().mockResolvedValue(0),
+    };
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/reportes/panel-general?fecha=2026-05-05",
+      headers: authAdmin(),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    // La bodega aparece con su fila y su egreso entra en el total
+    expect(body.egresos.porSede).toHaveLength(3);
+    expect(body.egresos.porSede.find((s) => s.sedeId === 3).total).toBe(120000);
+    expect(body.egresos.total).toBe(120000);
+    expect(body.ingresos.total).toBe(250000);
   });
 
   it("debería retornar 200 para Bodega", async () => {

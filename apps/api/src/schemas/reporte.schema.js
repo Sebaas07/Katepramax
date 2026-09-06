@@ -4,19 +4,49 @@ const sedeResumen = {
   properties: { sede: { type: "string" }, sedeId: { type: "integer" } },
 };
 
+// Resumen numérico por sede: campos `campos` numéricos + sedeResumen.
+const porSedeNumerico = (campos) => ({
+  type: "array",
+  items: {
+    ...sedeResumen,
+    properties: {
+      ...sedeResumen.properties,
+      ...Object.fromEntries(campos.map((c) => [c, { type: "number" }])),
+    },
+  },
+});
+
 const arqueoSemanalSchema = {
-  summary: "Arqueo semanal completo: ingresos, egresos, abonos y saldo neto",
-  description: "Equivale a la hoja 'Arqueo Semanal' del Excel. Solo Admin.",
+  summary: "Arqueo/cierre semanal unificado (movimientos por rango + corte de caja)",
+  description:
+    "Lee los movimientos (ingresos/egresos) dentro del rango de fechas de la " +
+    "semana de negocio de Bogotá (medianoche UTC = día comercial). Incluye los " +
+    "bloques por sede (ingresos/egresos/saldo neto), cartera, inventario y el " +
+    "detalle del cierre (recaudo, egresos por concepto, ganancia, porDia) para " +
+    "que Cierre Semanal y Arqueo Semanal sean exactamente el mismo reporte. Solo Admin.",
   tags: ["Reportes"], security: [{ bearerAuth: [] }],
-  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer", minimum: 1, maximum: 53 } }, additionalProperties: false },
+  querystring: {
+    type: "object",
+    required: ["semana"],
+    properties: {
+      semana: { type: "integer", minimum: 1, maximum: 53 },
+      sedeId: { type: "integer" },
+    },
+    additionalProperties: false,
+  },
   response: {
     200: {
       type: "object",
       properties: {
         semana:   { type: "integer" },
-        ingresos: { type: "object", properties: { porSede: { type: "array", items: { ...sedeResumen, properties: { ...sedeResumen.properties, efectivo: { type: "number" }, cuentas: { type: "number" }, total: { type: "number" } } } }, totales: { type: "object" } } },
-        egresos:  { type: "object", properties: { porSede: { type: "array", items: { ...sedeResumen, properties: { ...sedeResumen.properties, operativo: { type: "number" }, proveedores: { type: "number" }, totalEgresos: { type: "number" } } } }, totales: { type: "object" } } },
-        saldoNeto: { type: "object", properties: { porSede: { type: "array" }, total: { type: "number" } } },
+        desde:    { type: "string" },
+        hasta:    { type: "string" },
+        ingresos: { type: "object", properties: { porSede: { type: "array", items: { ...sedeResumen, properties: { ...sedeResumen.properties, efectivo: { type: "number" }, transferencia: { type: "number" }, abonos: { type: "number" }, total: { type: "number" } } } }, totales: { type: "object", properties: { efectivo: { type: "number" }, transferencia: { type: "number" }, abonos: { type: "number" }, total: { type: "number" } } } } },
+        egresos:  { type: "object", properties: { porSede: { type: "array", items: { ...sedeResumen, properties: { ...sedeResumen.properties, operativo: { type: "number" }, proveedores: { type: "number" }, totalEgresos: { type: "number" } } } }, totales: { type: "object", properties: { operativo: { type: "number" }, proveedores: { type: "number" }, totalEgresos: { type: "number" } } }, porConcepto: { type: "array", items: { type: "object", properties: { concepto: { type: "string" }, total: { type: "number" } } } } } },
+        saldoNeto: { type: "object", properties: { porSede: { type: "array", items: { ...sedeResumen, properties: { ...sedeResumen.properties, ingresos: { type: "number" }, egresos: { type: "number" }, saldoNeto: { type: "number" } } } }, total: { type: "number" } } },
+        recaudo:   { type: "object", properties: { total: { type: "number" }, efectivo: { type: "number" }, transferencia: { type: "number" }, abonosDeuda: { type: "number" }, sinClasificar: { type: "number" }, pedidosEntregados: { type: "integer" } } },
+        ganancia:  { type: "number" },
+        porDia:    { type: "array", items: { type: "object", properties: { fecha: { type: "string" }, recaudado: { type: "number" }, egresos: { type: "number" }, ganancia: { type: "number" } } } },
         cartera:   { type: "number" },
         costoInventario: { type: "number" },
       },
@@ -34,8 +64,8 @@ const panelGeneralSchema = {
       type: "object",
       properties: {
         fecha:       { type: "string" },
-        ingresos:    { type: "object" },
-        egresos:     { type: "object" },
+        ingresos:    { type: "object", properties: { porSede: porSedeNumerico(["efectivo", "cuentas", "total"]), efectivo: { type: "number" }, cuentas: { type: "number" }, total: { type: "number" } }, additionalProperties: true },
+        egresos:     { type: "object", properties: { porSede: porSedeNumerico(["total"]), total: { type: "number" } }, additionalProperties: true },
         cartera:     { type: "number" },
         totalStockUnidades: { type: "integer" },
         ventasHoy:          { type: "number" },

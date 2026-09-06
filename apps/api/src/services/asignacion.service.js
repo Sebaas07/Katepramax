@@ -388,36 +388,53 @@ const asignacionService = (app) => ({
         // plata que recibe el entregador quede reflejada ahí y no solo
         // en el pedido/cliente. Se marca el origen para que el usuario
         // pueda identificar el registro automático y evitar duplicados.
-        if ((efectivoIngreso + cuentasIngreso) > 0 && sedeCobro != null) {
-          await ingresoRepo.crear(tx, {
-            fecha: fechaMovimiento,
-            semana: semanaNegocio(fechaMovimiento),
-            sedeId: sedeCobro,
-            efectivo: efectivoIngreso,
-            cuentas: cuentasIngreso,
-            total: efectivoIngreso + cuentasIngreso,
-            origen: ORIGENES.ENTREGA,
-            idReferencia: id,
-            observacion: `Cobro entrega pedido #${asignacion.pedidoId} (asignación #${id})`,
-          });
+        if ((efectivoIngreso + cuentasIngreso) > 0) {
+          if (sedeCobro != null) {
+            await ingresoRepo.crear(tx, {
+              fecha: fechaMovimiento,
+              semana: semanaNegocio(fechaMovimiento),
+              sedeId: sedeCobro,
+              efectivo: efectivoIngreso,
+              cuentas: cuentasIngreso,
+              total: efectivoIngreso + cuentasIngreso,
+              origen: ORIGENES.ENTREGA,
+              idReferencia: id,
+              observacion: `Cobro entrega pedido #${asignacion.pedidoId} (asignación #${id})`,
+            });
+          } else {
+            // Sin sede (cliente y pedido sin sedeId) no hay dónde registrar
+            // el Ingreso: se deja constancia para que no desaparezca sin
+            // rastro de Contabilidad.
+            console.warn(
+              `[contabilidad] No se registró Ingreso por cobro de la entrega #${id} (pedido #${asignacion.pedidoId}): ` +
+              `no se pudo determinar la sede (cliente y pedido sin sedeId).`,
+            );
+          }
         }
 
         // El abono a deuda anterior que recibe el entregador es también un
         // cobro: se registra como Ingreso (efectivo por defecto) para que
         // aparezca en Contabilidad (ingresos, arqueo y panel) igual que en
         // el corte de caja.
-        if (abono > 0 && sedeCobro != null) {
-          await ingresoRepo.crear(tx, {
-            fecha: fechaMovimiento,
-            semana: semanaNegocio(fechaMovimiento),
-            sedeId: sedeCobro,
-            efectivo: abono,
-            cuentas: 0,
-            total: abono,
-            origen: ORIGENES.ABONO_DEUDA_ENTREGA,
-            idReferencia: id,
-            observacion: `Abono a deuda anterior del cliente (asignación #${id})`,
-          });
+        if (abono > 0) {
+          if (sedeCobro != null) {
+            await ingresoRepo.crear(tx, {
+              fecha: fechaMovimiento,
+              semana: semanaNegocio(fechaMovimiento),
+              sedeId: sedeCobro,
+              efectivo: abono,
+              cuentas: 0,
+              total: abono,
+              origen: ORIGENES.ABONO_DEUDA_ENTREGA,
+              idReferencia: id,
+              observacion: `Abono a deuda anterior del cliente (asignación #${id})`,
+            });
+          } else {
+            console.warn(
+              `[contabilidad] No se registró Ingreso por abono a deuda anterior en la entrega #${id} ` +
+              `(pedido #${asignacion.pedidoId}): no se pudo determinar la sede.`,
+            );
+          }
         }
       });
 

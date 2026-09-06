@@ -191,9 +191,11 @@ const contabilidadApi = {
   },
 
   // ── REPORTES ──────────────────────────────────────────────────
-  // Backend: GET /reportes/arqueo-semanal?semana=N → solo Admin
-  obtenerArqueo: async (semana) => {
-    const r = await clienteApi.get(`/reportes/arqueo-semanal?semana=${semana}`);
+  // Backend: GET /reportes/arqueo-semanal?semana=N&sedeId= → solo Admin
+  obtenerArqueo: async (semana, sedeId) => {
+    const params = new URLSearchParams({ semana });
+    if (sedeId) params.append("sedeId", sedeId);
+    const r = await clienteApi.get(`/reportes/arqueo-semanal?${params.toString()}`);
     return r.data;
   },
 

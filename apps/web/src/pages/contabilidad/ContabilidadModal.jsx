@@ -1,6 +1,6 @@
 import Modal from "@/components/common/Modal/Modal";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
-import { formatCOP } from "@/utils/formatters";
+import { formatCOP, hoyISO } from "@/utils/formatters";
 import {
   esCampoNumerico,
   esCampoTexto,
@@ -9,8 +9,6 @@ import {
   sanitizarTextoInput,
 } from "@/utils/contabilidadForm";
 import { memo } from "react";
-
-const hoyISO = () => new Date().toISOString().split("T")[0];
 
 // Sugerencias para el autocompletar del campo "Concepto" de egresos. Es
 // texto libre (el usuario puede escribir cualquier cosa), esto solo ayuda

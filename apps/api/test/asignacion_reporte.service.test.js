@@ -229,18 +229,17 @@ const sedes = [
 function mockArqueoBase() {
   prisma.sede.findMany.mockResolvedValue(sedes);
   prisma.ingreso = {
-    groupBy: vi.fn().mockResolvedValue([
-      { sedeId: 1, _sum: { efectivo: 300000, cuentas: 100000, total: 400000 } },
+    findMany: vi.fn().mockResolvedValue([
+      { sedeId: 1, fecha: new Date("2026-09-13T00:00:00.000Z"), efectivo: 300000, cuentas: 100000, total: 400000, origen: "entrega" },
     ]),
   };
   prisma.egreso = {
-    // arqueoSemanal llama a groupBy dos veces: total de egresos y el desglose
-    // de pagos a proveedores (origen "abono-proveedor"), que viven como Egresos.
-    groupBy: vi.fn().mockImplementation(({ where }) =>
-      where?.origen === "abono-proveedor"
-        ? Promise.resolve([{ sedeId: 1, _sum: { total: 20000 } }])
-        : Promise.resolve([{ sedeId: 1, _sum: { total: 70000 } }]),
-    ),
+    // arqueoSemanal lee los egresos por rango de fechas; el desglose de pagos a
+    // proveedores (origen "abono-proveedor") se separa por fila.
+    findMany: vi.fn().mockResolvedValue([
+      { sedeId: 1, fecha: new Date("2026-09-13T00:00:00.000Z"), total: 50000, concepto: "Arriendo", origen: "manual" },
+      { sedeId: 1, fecha: new Date("2026-09-13T00:00:00.000Z"), total: 20000, concepto: "Abono proveedor", origen: "abono-proveedor" },
+    ]),
   };
   prisma.abono = {
     groupBy: vi.fn().mockResolvedValue([
@@ -264,7 +263,7 @@ describe("reporteService.arqueoSemanal", () => {
   it("debería calcular saldoNeto.total correctamente", async () => {
     mockArqueoBase();
 
-    const result = await reporteSvc.arqueoSemanal(appMock, 18);
+    const result = await reporteSvc.arqueoSemanal(appMock, { semana: 18 });
 
     // ingresos=400000, egresos=(50000+20000)=70000, saldo=330000
     expect(result.saldoNeto.total).toBe(330000);
@@ -272,9 +271,9 @@ describe("reporteService.arqueoSemanal", () => {
 
   it("debería incluir sede sin datos con valores en cero", async () => {
     mockArqueoBase();
-    // sede 2 no tiene datos en ningún groupBy
+    // sede 2 no tiene datos en ningún findMany
 
-    const result = await reporteSvc.arqueoSemanal(appMock, 18);
+    const result = await reporteSvc.arqueoSemanal(appMock, { semana: 18 });
 
     const sede2ing = result.ingresos.porSede.find((s) => s.sedeId === 2);
     expect(sede2ing.total).toBe(0);
@@ -284,7 +283,7 @@ describe("reporteService.arqueoSemanal", () => {
   it("debería retornar la cartera del aggregate de clientes", async () => {
     mockArqueoBase();
 
-    const result = await reporteSvc.arqueoSemanal(appMock, 18);
+    const result = await reporteSvc.arqueoSemanal(appMock, { semana: 18 });
 
     expect(result.cartera).toBe(500000);
   });
@@ -292,7 +291,7 @@ describe("reporteService.arqueoSemanal", () => {
   it("debería retornar costoInventario del aggregate de inventario", async () => {
     mockArqueoBase();
 
-    const result = await reporteSvc.arqueoSemanal(appMock, 18);
+    const result = await reporteSvc.arqueoSemanal(appMock, { semana: 18 });
 
     expect(result.costoInventario).toBe(150000);
   });
@@ -300,9 +299,34 @@ describe("reporteService.arqueoSemanal", () => {
   it("debería incluir el número de semana en la respuesta", async () => {
     mockArqueoBase();
 
-    const result = await reporteSvc.arqueoSemanal(appMock, 18);
+    const result = await reporteSvc.arqueoSemanal(appMock, { semana: 18 });
 
     expect(result.semana).toBe(18);
+  });
+
+  it("debería clasificar ingresos por efectivo/transferencia/abonos y el recaudo", async () => {
+    mockArqueoBase();
+
+    const result = await reporteSvc.arqueoSemanal(appMock, { semana: 18 });
+
+    const sede1 = result.ingresos.porSede.find((s) => s.sedeId === 1);
+    expect(sede1.efectivo).toBe(300000);
+    expect(sede1.transferencia).toBe(100000);
+    expect(sede1.abonos).toBe(0);
+    expect(result.recaudo.total).toBe(400000);
+    expect(result.recaudo.pedidosEntregados).toBe(1);
+    expect(result.ganancia).toBe(330000);
+  });
+
+  it("debería separar abonos a proveedores en los egresos por sede", async () => {
+    mockArqueoBase();
+
+    const result = await reporteSvc.arqueoSemanal(appMock, { semana: 18 });
+
+    const sede1 = result.egresos.porSede.find((s) => s.sedeId === 1);
+    expect(sede1.operativo).toBe(50000);
+    expect(sede1.proveedores).toBe(20000);
+    expect(sede1.totalEgresos).toBe(70000);
   });
 });
 
@@ -378,12 +402,16 @@ describe("reporteService.corteCaja", () => {
       .rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it("debería calcular ganancia = recaudo total - egresos", async () => {
-    prisma.asignacionEntrega = {
+  it("debería calcular ganancia = recaudo total - egresos desde los movimientos", async () => {
+    prisma.ingreso = {
       findMany: vi.fn().mockResolvedValue([
-        { montoCobrado: 50000, montoEfectivo: null, montoTransferencia: null, abonoDeuda: 0, metodoPago: "Efectivo", fechaConfirmada: new Date("2026-05-05T14:00:00Z") },
-        { montoCobrado: 30000, montoEfectivo: null, montoTransferencia: null, abonoDeuda: 10000, metodoPago: "Transferencia", fechaConfirmada: new Date("2026-05-05T15:00:00Z") },
-        { montoCobrado: 20000, montoEfectivo: 12000, montoTransferencia: 8000, abonoDeuda: 0, metodoPago: "Mixto", fechaConfirmada: new Date("2026-05-05T16:00:00Z") },
+        // Cobro en efectivo de una entrega.
+        { fecha: new Date("2026-05-05T00:00:00Z"), total: 50000, efectivo: 50000, cuentas: 0, origen: "entrega" },
+        // Transferencia de una entrega (el abono se registra en su propio movimiento).
+        { fecha: new Date("2026-05-05T00:00:00Z"), total: 30000, efectivo: 0, cuentas: 30000, origen: "entrega" },
+        { fecha: new Date("2026-05-05T00:00:00Z"), total: 10000, efectivo: 10000, cuentas: 0, origen: "abono-deuda-entrega" },
+        // Entrega mixta (efectivo + transferencia).
+        { fecha: new Date("2026-05-05T00:00:00Z"), total: 20000, efectivo: 12000, cuentas: 8000, origen: "entrega" },
       ]),
     };
     prisma.egreso = {
@@ -399,11 +427,12 @@ describe("reporteService.corteCaja", () => {
       usuarioAdmin,
     );
 
-    // recaudo: 50000 (efectivo) + 30000+10000 (transferencia+abono) + 20000 (mixto) = 110000
+    // recaudo: 50000 + 30000 + 10000 (abono) + 20000 (mixto) = 110000
     expect(result.recaudo.total).toBe(110000);
     expect(result.recaudo.efectivo).toBe(50000 + 12000);
     expect(result.recaudo.transferencia).toBe(30000 + 8000);
     expect(result.recaudo.abonosDeuda).toBe(10000);
+    expect(result.recaudo.sinClasificar).toBe(0);
     expect(result.recaudo.pedidosEntregados).toBe(3);
 
     expect(result.egresos.total).toBe(40000);
@@ -420,11 +449,11 @@ describe("reporteService.corteCaja", () => {
     expect(result.porDia[0].ganancia).toBe(70000);
   });
 
-  it("debería sumar los pagos Parcial/Credito como sinClasificar", async () => {
-    prisma.asignacionEntrega = {
+  it("debería usar el canal/abono tal como quedó registrado en el movimiento", async () => {
+    prisma.ingreso = {
       findMany: vi.fn().mockResolvedValue([
-        { montoCobrado: 15000, montoEfectivo: null, montoTransferencia: null, abonoDeuda: 0, metodoPago: "Parcial", fechaConfirmada: new Date("2026-05-06T10:00:00Z") },
-        { montoCobrado: 0, montoEfectivo: null, montoTransferencia: null, abonoDeuda: 0, metodoPago: "Credito", fechaConfirmada: new Date("2026-05-06T11:00:00Z") },
+        { fecha: new Date("2026-05-06T00:00:00Z"), total: 15000, efectivo: 15000, cuentas: 0, origen: "manual" },
+        { fecha: new Date("2026-05-06T00:00:00Z"), total: 8000, efectivo: 0, cuentas: 8000, origen: "manual" },
       ]),
     };
     prisma.egreso = { findMany: vi.fn().mockResolvedValue([]) };
@@ -435,16 +464,20 @@ describe("reporteService.corteCaja", () => {
       usuarioAdmin,
     );
 
-    expect(result.recaudo.sinClasificar).toBe(15000);
-    expect(result.recaudo.total).toBe(15000);
-    expect(result.ganancia).toBe(15000);
+    // Ya no hay "sin clasificar": la distribución efectivo/cuentas la define el
+    // movimiento (un "Parcial/Crédito" solo genera ingreso si cobró algo).
+    expect(result.recaudo.sinClasificar).toBe(0);
+    expect(result.recaudo.efectivo).toBe(15000);
+    expect(result.recaudo.transferencia).toBe(8000);
+    expect(result.recaudo.total).toBe(23000);
+    expect(result.ganancia).toBe(23000);
   });
 
   it("debería armar el desglose por día en un rango de varios días (quincena/mes)", async () => {
-    prisma.asignacionEntrega = {
+    prisma.ingreso = {
       findMany: vi.fn().mockResolvedValue([
-        { montoCobrado: 10000, montoEfectivo: null, montoTransferencia: null, abonoDeuda: 0, metodoPago: "Efectivo", fechaConfirmada: new Date("2026-05-01T10:00:00Z") },
-        { montoCobrado: 20000, montoEfectivo: null, montoTransferencia: null, abonoDeuda: 0, metodoPago: "Efectivo", fechaConfirmada: new Date("2026-05-15T10:00:00Z") },
+        { fecha: new Date("2026-05-01T00:00:00Z"), total: 10000, efectivo: 10000, cuentas: 0, origen: "entrega" },
+        { fecha: new Date("2026-05-15T00:00:00Z"), total: 20000, efectivo: 20000, cuentas: 0, origen: "entrega" },
       ]),
     };
     prisma.egreso = {
@@ -465,8 +498,28 @@ describe("reporteService.corteCaja", () => {
     expect(result.ganancia).toBe(25000);
   });
 
+  it("debería filtrar los movimientos por el rango [gte, lt) del día solicitado", async () => {
+    prisma.ingreso = { findMany: vi.fn().mockResolvedValue([]) };
+    prisma.egreso = { findMany: vi.fn().mockResolvedValue([]) };
+
+    await reporteSvc.corteCaja(
+      appMock,
+      { desde: "2026-05-05", hasta: "2026-05-05" },
+      usuarioAdmin,
+    );
+
+    expect(prisma.ingreso.findMany.mock.calls[0][0].where.fecha).toEqual({
+      gte: new Date("2026-05-05T00:00:00.000Z"),
+      lt: new Date("2026-05-06T00:00:00.000Z"),
+    });
+    expect(prisma.egreso.findMany.mock.calls[0][0].where.fecha).toEqual({
+      gte: new Date("2026-05-05T00:00:00.000Z"),
+      lt: new Date("2026-05-06T00:00:00.000Z"),
+    });
+  });
+
   it("debería filtrar por sedeId cuando lo pasa un Admin", async () => {
-    prisma.asignacionEntrega = { findMany: vi.fn().mockResolvedValue([]) };
+    prisma.ingreso = { findMany: vi.fn().mockResolvedValue([]) };
     prisma.egreso = { findMany: vi.fn().mockResolvedValue([]) };
 
     await reporteSvc.corteCaja(
@@ -475,12 +528,12 @@ describe("reporteService.corteCaja", () => {
       usuarioAdmin,
     );
 
-    expect(prisma.asignacionEntrega.findMany.mock.calls[0][0].where.pedido).toEqual({ sedeId: 2 });
+    expect(prisma.ingreso.findMany.mock.calls[0][0].where.sedeId).toBe(2);
     expect(prisma.egreso.findMany.mock.calls[0][0].where.sedeId).toBe(2);
   });
 
   it("debería forzar la sede del usuario si no es Admin", async () => {
-    prisma.asignacionEntrega = { findMany: vi.fn().mockResolvedValue([]) };
+    prisma.ingreso = { findMany: vi.fn().mockResolvedValue([]) };
     prisma.egreso = { findMany: vi.fn().mockResolvedValue([]) };
 
     await reporteSvc.corteCaja(
@@ -489,7 +542,7 @@ describe("reporteService.corteCaja", () => {
       usuarioBodega,
     );
 
-    expect(prisma.asignacionEntrega.findMany.mock.calls[0][0].where.pedido).toEqual({ sedeId: 1 });
+    expect(prisma.ingreso.findMany.mock.calls[0][0].where.sedeId).toBe(1);
     expect(prisma.egreso.findMany.mock.calls[0][0].where.sedeId).toBe(1);
   });
 });

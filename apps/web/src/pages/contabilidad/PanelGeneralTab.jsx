@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import TarjetaKpi from "./TarjetaKpi";
 import ChartTooltip from "@/components/common/ChartTooltip/ChartTooltip";
-import { formatCOP, formatFecha } from "@/utils/formatters";
+import { formatCOP, formatFecha, fechaVisual } from "@/utils/formatters";
 
 const toNumber = (v) => Number(v ?? 0);
 
@@ -20,8 +20,8 @@ const TICK_TEMA = { fill: "var(--on-surface-variant)", fontSize: 12 };
 const AXIS_TEMA = { stroke: "var(--outline-variant)" };
 
 const labelDia = (fechaStr) => {
-  if (!fechaStr) return "—";
-  const d = new Date(fechaStr);
+  const d = fechaVisual(fechaStr);
+  if (!d) return "—";
   return d.toLocaleDateString("es-CO", { weekday: "short", day: "numeric" });
 };
 
@@ -36,9 +36,9 @@ const PanelGeneralTab = ({
 }) => {
   const panelSedes = useMemo(() => {
     if (!panelGeneral) return [];
-    return (panelGeneral._sedes ?? [])
-      .filter((s) => s.tipo === "Oficina")
-      .map((s) => {
+    // Todas las sedes (oficinas y bodegas): los movimientos de contabilidad
+    // pueden vivir en unas u otras, y los totales deben sumar igual que las filas.
+    return (panelGeneral._sedes ?? []).map((s) => {
         const ing = (panelGeneral.ingresos?.porSede ?? []).find(
           (r) => r.sedeId === s.id,
         );

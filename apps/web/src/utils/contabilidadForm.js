@@ -1,10 +1,9 @@
-import { getSemanaISO } from "./formatters";
+import { getSemanaISO, hoyISO } from "./formatters";
 
 export const MAX_OBSERVACION = 500;
 export const MAX_CONCEPTO = 200;
 export const MAX_COMPROBANTE = 50;
 
-const HOY = () => new Date().toISOString().split("T")[0];
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
 const NUMERIC_FIELDS = ["efectivo", "cuentas", "total", "saldoDia", "valorAbono"];
 const TEXT_FIELDS = ["observacion", "observaciones", "concepto"];
@@ -62,7 +61,7 @@ export const numeroPositivo = (valor) => {
 export const validarFechaFormulario = (fecha) => {
   if (!fecha) return "La fecha es obligatoria.";
   if (!FECHA_RE.test(fecha)) return "Ingresa una fecha válida.";
-  if (fecha > HOY()) return "La fecha no puede ser futura.";
+  if (fecha > hoyISO()) return "La fecha no puede ser futura.";
   return "";
 };
 

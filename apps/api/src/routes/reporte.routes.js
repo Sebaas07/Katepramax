@@ -5,7 +5,7 @@ const { adminGestion, consultaBodega, gestion } = require("../middlewares/auth.m
 /**
  * reporte.routes.js
  *
- * GET /reportes/arqueo-semanal    → Admin + AdminBogota + Oficinista (solo oficinas; cada quien su sede)
+ * GET /reportes/arqueo-semanal    → Admin + AdminBogota + Oficinista (oficinas y bodegas; cada quien su scope)
  * GET /reportes/panel-general     → Admin + AdminBogota + Bodega + Oficinista (filtro de sede automático)
  * GET /reportes/cobros-entregador → Admin + AdminBogota + Bodega + Oficinista (reporte de entregas)
  * GET /reportes/corte-caja        → Admin + AdminBogota + Bodega + Oficinista
