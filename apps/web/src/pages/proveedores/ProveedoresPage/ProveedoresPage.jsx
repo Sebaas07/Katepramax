@@ -125,7 +125,13 @@ const ProveedoresPage = () => {
   ], []);
 
   const acciones = useMemo(() => (proveedor) => {
-    const base = [];
+    const base = [
+      {
+        label: "Ver historial",
+        icon: "history",
+        onClick: () => navigate(`/proveedores/cartera/historial/${proveedor.id}`),
+      },
+    ];
     // Admin y Bodega pueden editar
     if (puedeGestionar) {
       base.push({
@@ -151,7 +157,7 @@ const ProveedoresPage = () => {
       });
     }
     return base;
-  }, [esAdmin, puedeGestionar, abrirEditarProveedor, abrirEliminarProveedor, handleReactivarProveedor]);
+  }, [esAdmin, puedeGestionar, navigate, abrirEditarProveedor, abrirEliminarProveedor, handleReactivarProveedor]);
 
   const cargarDeuda = useCallback(async () => {
     try {
@@ -225,7 +231,7 @@ const ProveedoresPage = () => {
           {/* Carrera de proveedores: ver y abonar deuda */}
           {puedeAbonar && (
             <button
-              className="btn-secondary"
+              className="btn-primary"
               onClick={() => navigate("/proveedores/cartera")}
               type="button"
             >

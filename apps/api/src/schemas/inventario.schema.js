@@ -41,6 +41,17 @@ const inventarioBase = {
     },
   },
 };
+
+// Item del historial por proveedor: inventarioBase + total y estado calculados
+const historialEntrada = {
+  ...inventarioBase,
+  properties: {
+    ...inventarioBase.properties,
+    total: { type: "number" },
+    estado: { type: "string" },
+  },
+};
+
 // POST /api/inventario
 const crearInventario = {
   summary: "Registrar entrada de inventario para un producto en una sede",
@@ -211,6 +222,65 @@ const resumenDeudaProveedores = {
   },
 };
 
+// GET /api/inventario/historial-proveedor/:proveedorId
+const historialProveedor = {
+  summary: "Historial de entradas de inventario de un proveedor",
+  tags: ["Inventario"],
+  security: [{ bearerAuth: [] }],
+  params: {
+    type: "object",
+    required: ["proveedorId"],
+    properties: { proveedorId: { type: "integer" } },
+  },
+  querystring: {
+    type: "object",
+    properties: {
+      desde: { type: "string", format: "date" },
+      hasta: { type: "string", format: "date" },
+      sedeId: { type: "integer" },
+    },
+    additionalProperties: false,
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        proveedor: {
+          type: "object",
+          properties: {
+            id: { type: "integer" },
+            nombre: { type: "string" },
+            activo: { type: "boolean" },
+          },
+        },
+        resumen: {
+          type: "object",
+          properties: {
+            periodo: {
+              type: "object",
+              properties: {
+                totalEntradas: { type: "integer" },
+                montoTotal: { type: "number" },
+                deudaRegistrada: { type: "number" },
+              },
+            },
+            global: {
+              type: "object",
+              properties: {
+                deudaRegistrada: { type: "number" },
+                totalAbonado: { type: "number" },
+                saldoPendiente: { type: "number" },
+              },
+            },
+          },
+        },
+        entradas: { type: "array", items: historialEntrada },
+      },
+    },
+    404: { type: "object", properties: { error: { type: "string" } } },
+  },
+};
+
 module.exports = {
   crearInventario,
   listarInventario,
@@ -219,4 +289,5 @@ module.exports = {
   eliminarInventario,
   resumenSemanal,
   resumenDeudaProveedores,
+  historialProveedor,
 };

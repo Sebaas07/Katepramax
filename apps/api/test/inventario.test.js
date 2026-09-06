@@ -5,6 +5,7 @@
  *  POST   /api/v1/inventario                  (Admin y Bodega)
  *  GET    /api/v1/inventario                  (Admin y Bodega)
  *  GET    /api/v1/inventario/resumen-semanal  (Admin y Bodega)
+ *  GET    /api/v1/inventario/historial-proveedor/:proveedorId (Admin y Bodega)
  *  GET    /api/v1/inventario/:id              (Admin y Bodega)
  *  PATCH  /api/v1/inventario/:id              (Admin y Bodega)
  *  DELETE /api/v1/inventario/:id              (solo Admin)
@@ -540,6 +541,107 @@ describe("GET /api/v1/inventario/deuda-proveedores", () => {
         saldoPendiente: 75000,
       }),
     ]);
+  });
+});
+
+// ── GET /api/v1/inventario/historial-proveedor/:proveedorId ──────────────────
+
+describe("GET /api/v1/inventario/historial-proveedor/:proveedorId", () => {
+  it("debería retornar 401 sin token", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario/historial-proveedor/3",
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("debería retornar 400 si el proveedorId no es un número", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario/historial-proveedor/abc",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("debería retornar 404 si el proveedor no existe", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.proveedor.findUnique.mockResolvedValue(null);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario/historial-proveedor/999",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("debería retornar 200 con el historial del proveedor", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.proveedor.findUnique.mockResolvedValue({
+      id: 3,
+      nombre: "Cemex",
+      activo: true,
+    });
+    prisma.inventario.findMany.mockResolvedValue([
+      {
+        ...inventarioMock,
+        id: 1,
+        proveedorId: 3,
+        deuda: 120000,
+        proveedor: { id: 3, nombre: "Cemex" },
+      },
+    ]);
+    prisma.inventario.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { deuda: 120000 } },
+    ]);
+    prisma.abono.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { valorPagado: 45000 } },
+    ]);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario/historial-proveedor/3",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.proveedor.nombre).toBe("Cemex");
+    expect(body.resumen.global.saldoPendiente).toBe(75000);
+    expect(body.entradas).toHaveLength(1);
+    expect(body.entradas[0]).toMatchObject({
+      id: 1,
+      total: 1800000, // cantidadIngresada 10 * costoUnitario 180000
+      deuda: 120000,
+      estado: "pendiente",
+    });
+  });
+
+  it("debería pasar desde/hasta al filtro de fecha", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
+    prisma.proveedor.findUnique.mockResolvedValue({
+      id: 3,
+      nombre: "Cemex",
+      activo: true,
+    });
+    prisma.inventario.findMany.mockResolvedValue([]);
+    prisma.inventario.groupBy.mockResolvedValue([]);
+    prisma.abono.groupBy.mockResolvedValue([]);
+
+    await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario/historial-proveedor/3?desde=2026-05-01&hasta=2026-05-31",
+      headers: { authorization: `Bearer ${tokenAdmin}` },
+    });
+
+    const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
+    expect(callWhere.fecha.gte).toEqual(new Date("2026-05-01T00:00:00.000Z"));
+    expect(callWhere.fecha.lt).toEqual(new Date("2026-06-01T00:00:00.000Z"));
   });
 });
 

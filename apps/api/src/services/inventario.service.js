@@ -66,6 +66,13 @@ async function registrar(app, body, usuario) {
   const fecha = fechaValida(body.fecha);
 
   const tipo = body.tipo ?? "entrada";
+
+  // La deuda pendiente solo aplica a entradas de inventario: un saldo o un
+  // ajuste no generan cuentas por pagar a proveedores.
+  if (deuda !== null && tipo !== "entrada") {
+    throw new AppError("La deuda solo aplica a entradas de inventario.", 400);
+  }
+
   const cantidad = Number(body.cantidadIngresada);
   if (!Number.isFinite(cantidad)) {
     throw new AppError("La cantidad debe ser un número válido.", 400);
@@ -426,6 +433,110 @@ async function resumenDeudaProveedores(app, query, usuario) {
     .sort((a, b) => b.saldoPendiente - a.saldoPendiente);
 }
 
+// Historial de entradas de inventario registradas a nombre de un proveedor.
+// El saldo pendiente se totaliza a nivel del proveedor (deuda registrada menos
+// lo abonado) para ser consistente con la Cartera de Proveedores, ya que los
+// abonos no se atribuyen a entradas individuales.
+async function historialProveedor(app, params, query, usuario) {
+  if (!sedeEsPermitida(usuario)) {
+    throw new AppError("No tienes permiso para ver el historial de proveedores.", 403);
+  }
+
+  const prisma = app.prisma;
+  const proveedorId = Number(params.proveedorId);
+  if (!Number.isInteger(proveedorId) || proveedorId <= 0) {
+    throw new AppError("Proveedor inválido.", 400);
+  }
+
+  const proveedor = await prisma.proveedor.findUnique({
+    where: { id: proveedorId },
+  });
+  if (!proveedor) {
+    throw new AppError(`Proveedor ${proveedorId} no encontrado`, 404);
+  }
+
+  const whereSede = sedeWhere(usuario);
+  if (usuario.rol === "Admin" && query.sedeId) {
+    whereSede.sedeId = Number(query.sedeId);
+  }
+
+  // Listado de entradas del proveedor, con rango de fechas opcional
+  const whereEntradas = { ...whereSede, proveedorId, tipo: "entrada" };
+  if (query.desde || query.hasta) {
+    whereEntradas.fecha = {};
+    if (query.desde) whereEntradas.fecha.gte = fechaValida(query.desde);
+    if (query.hasta) whereEntradas.fecha.lt = rangoDia(query.hasta).lt;
+  }
+
+  const [entradas, deudas, abonos] = await Promise.all([
+    repo.historial(prisma, whereEntradas),
+    prisma.inventario.groupBy({
+      by: ["proveedorId"],
+      where: { ...whereSede, proveedorId },
+      _sum: { deuda: true },
+    }),
+    prisma.abono.groupBy({
+      by: ["proveedorId"],
+      where: { ...whereSede, proveedorId },
+      _sum: { valorPagado: true },
+    }),
+  ]);
+
+  const deudaRegistradaGlobal = Number(deudas[0]?._sum?.deuda ?? 0);
+  const totalAbonadoGlobal = Number(abonos[0]?._sum?.valorPagado ?? 0);
+  const saldoPendiente = Math.max(0, deudaRegistradaGlobal - totalAbonadoGlobal);
+
+  const resumenPeriodo = entradas.reduce(
+    (acc, e) => {
+      const cantidad = Number(e.cantidadIngresada) || 0;
+      const costo = Number(e.costoUnitario) || 0;
+      acc.montoTotal += cantidad * costo;
+      acc.deudaRegistrada += e.deuda == null ? 0 : Number(e.deuda);
+      return acc;
+    },
+    { totalEntradas: entradas.length, montoTotal: 0, deudaRegistrada: 0 },
+  );
+
+  const estadoEntrada = (deuda) => {
+    const d = deuda == null ? 0 : Number(deuda);
+    if (d <= 0 || saldoPendiente <= 0) return "pagado";
+    return "pendiente";
+  };
+
+  return {
+    proveedor: {
+      id: proveedor.id,
+      nombre: proveedor.nombre,
+      activo: proveedor.activo,
+    },
+    resumen: {
+      periodo: resumenPeriodo,
+      global: {
+        deudaRegistrada: deudaRegistradaGlobal,
+        totalAbonado: totalAbonadoGlobal,
+        saldoPendiente,
+      },
+    },
+    entradas: entradas.map((e) => ({
+      id: e.id,
+      fecha: e.fecha,
+      semana: e.semana,
+      sedeId: e.sedeId,
+      sede: e.sede,
+      productoId: e.productoId,
+      producto: e.producto,
+      cantidadIngresada: e.cantidadIngresada,
+      costoUnitario: Number(e.costoUnitario ?? 0),
+      total:
+        (Number(e.cantidadIngresada) || 0) * (Number(e.costoUnitario) || 0),
+      deuda: e.deuda == null ? null : Number(e.deuda),
+      nota: e.nota ?? null,
+      creadoEn: e.creadoEn,
+      estado: estadoEntrada(e.deuda),
+    })),
+  };
+}
+
 module.exports = {
   registrar,
   obtenerLista,
@@ -434,4 +545,5 @@ module.exports = {
   borrar,
   resumenSemanal,
   resumenDeudaProveedores,
+  historialProveedor,
 };

@@ -12,6 +12,10 @@ async function inventarioRoutes(app) {
     { schema: schemas.resumenDeudaProveedores, ...consultaBodega },
     ctrl.resumenDeudaProveedores,
   );
+  app.get("/inventario/historial-proveedor/:proveedorId",
+    { schema: schemas.historialProveedor, ...consultaBodega },
+    ctrl.historialProveedor,
+  );
 
   // Lectura — Bodega solo ve información de su sede
   app.get(   "/inventario",     { schema: schemas.listarInventario,   ...consultaBodega    }, ctrl.listar);

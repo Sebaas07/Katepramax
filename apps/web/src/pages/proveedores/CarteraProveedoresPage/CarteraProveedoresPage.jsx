@@ -4,9 +4,24 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import inventarioService from "@/services/inventario.service";
 import contabilidadService from "@/services/contabilidad.service";
+import { getSemanaISO, formatCOP } from "@/utils/formatters";
+import { MAX_COMPROBANTE, sanitizarTextoInput } from "@/utils/contabilidadForm";
+import { obtenerSedeUsuario } from "@/utils/permisos";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
+import DatePicker from "@/components/common/DatePicker/DatePicker";
 import "./CarteraProveedoresPage.css";
+
+const hoyISO = () => new Date().toISOString().split("T")[0];
+
+const parseMaybeNumber = (valor) => {
+  const numero = Number(
+    String(valor ?? "")
+      .replace(/\./g, "")
+      .replace(",", "."),
+  );
+  return Number.isFinite(numero) ? numero : 0;
+};
 
 const Spinner = () => (
   <div className="cc-spinner-wrap">
@@ -27,6 +42,10 @@ const CarteraProveedoresPage = () => {
   const [modalAbonoAbierto, setModalAbonoAbierto] = useState(false);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null);
   const [montoAbono, setMontoAbono] = useState("");
+  const [fechaAbono, setFechaAbono] = useState(hoyISO());
+  const [comprobanteAbono, setComprobanteAbono] = useState("");
+  const [observacionAbono, setObservacionAbono] = useState("");
+  const [erroresAbono, setErroresAbono] = useState({});
 
   const cargarProveedores = useCallback(async () => {
     setCargando(true);
@@ -56,28 +75,48 @@ const CarteraProveedoresPage = () => {
   const abrirModalAbono = (proveedor) => {
     setProveedorSeleccionado(proveedor);
     setMontoAbono("");
+    setFechaAbono(hoyISO());
+    setComprobanteAbono("");
+    setObservacionAbono("");
+    setErroresAbono({});
     setModalAbonoAbierto(true);
   };
 
   const handleAbonar = async () => {
     if (!proveedorSeleccionado) return;
-    const valor = parseFloat(montoAbono);
-    if (isNaN(valor) || valor <= 0) {
-      toast.error("Ingresa un monto válido mayor a 0.");
+    const valor = parseMaybeNumber(montoAbono);
+    if (!fechaAbono) {
+      setErroresAbono({ fecha: "Selecciona la fecha." });
+      return;
+    }
+    if (valor <= 0) {
+      setErroresAbono({ valorAbono: "Ingresa un valor de abono mayor a cero." });
       return;
     }
     if (valor > Number(proveedorSeleccionado.saldoPendiente)) {
-      toast.error("El abono no puede ser mayor al saldo pendiente del proveedor.");
+      setErroresAbono({ valorAbono: "El abono no puede ser mayor al saldo pendiente del proveedor." });
+      return;
+    }
+    const sedeId = obtenerSedeUsuario();
+    if (!sedeId) {
+      setErroresAbono({ sedeIdError: "No se pudo determinar la sede del usuario." });
       return;
     }
 
     setGuardando(true);
     try {
       await contabilidadService.registrarPagoProveedor({
-        fecha: new Date().toISOString().split("T")[0],
+        fecha: fechaAbono,
+        semana: getSemanaISO(new Date(`${fechaAbono}T00:00:00`)),
+        sedeId,
         proveedorId: proveedorSeleccionado.proveedorId,
         valorPagado: valor,
-        observacion: "Abono desde cartera de proveedores",
+        comprobante: comprobanteAbono
+          ? sanitizarTextoInput(comprobanteAbono, MAX_COMPROBANTE)
+          : undefined,
+        observacion: observacionAbono
+          ? sanitizarTextoInput(observacionAbono, 500)
+          : "Abono desde cartera de proveedores",
       });
       toast.success("Abono registrado correctamente.");
       setModalAbonoAbierto(false);
@@ -98,7 +137,14 @@ const CarteraProveedoresPage = () => {
   ];
 
   const accionesProveedor = (proveedor) => {
-    const acciones = [];
+    const acciones = [
+      {
+        label: "Ver historial",
+        icon: "history",
+        onClick: () =>
+          navigate(`/proveedores/cartera/historial/${proveedor.proveedorId}`),
+      },
+    ];
     if (puedeAbonar && Number(proveedor.saldoPendiente) > 0) {
       acciones.push({
         label: "Abonar",
@@ -151,7 +197,7 @@ const CarteraProveedoresPage = () => {
         isOpen={modalAbonoAbierto}
         onClose={() => setModalAbonoAbierto(false)}
         titulo="Registrar Abono"
-        textoBotonConfirmar={guardando ? "Guardando..." : "Abonar"}
+        textoBotonConfirmar={guardando ? "Guardando..." : "Guardar"}
         onConfirmar={handleAbonar}
         mostrarCancelar
       >
@@ -168,19 +214,81 @@ const CarteraProveedoresPage = () => {
               )}
             </strong>
           </p>
+
           <div className="form-group">
-            <label htmlFor="cp-monto">Monto del abono (COP) *</label>
+            <label htmlFor="cc-fecha" className="cont-modal-label">
+              Fecha <span style={{ color: "var(--aged-gold)", marginLeft: 4 }}>*</span>
+            </label>
+            <DatePicker
+              id="cc-fecha"
+              name="fecha"
+              max={hoyISO()}
+              value={fechaAbono}
+              onChange={(e) => setFechaAbono(e.target.value)}
+              className={`form-control ${erroresAbono.fecha ? "cont-input--error" : ""}`}
+            />
+            {erroresAbono.fecha && (
+              <span className="cont-modal-error" role="alert">{erroresAbono.fecha}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="cc-valor" className="cont-modal-label">
+              Valor del Abono (COP) <span style={{ color: "var(--aged-gold)", marginLeft: 4 }}>*</span>
+            </label>
             <input
-              id="cp-monto"
+              id="cc-valor"
               type="number"
-              name="montoAbono"
-              value={montoAbono}
-              onChange={(e) => setMontoAbono(e.target.value)}
-              className="form-control"
-              min="0"
+              name="valorAbono"
+              min="1"
               step="1000"
               placeholder="0"
+              value={montoAbono}
+              onChange={(e) => setMontoAbono(e.target.value)}
+              className={`form-control ${erroresAbono.valorAbono ? "cont-input--error" : ""}`}
               autoFocus
+            />
+            {montoAbono && (
+              <span className="cont-input-hint">{formatCOP(parseMaybeNumber(montoAbono))}</span>
+            )}
+            {erroresAbono.valorAbono && (
+              <span className="cont-modal-error" role="alert">{erroresAbono.valorAbono}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="cc-comprobante" className="cont-modal-label">
+              Nº de comprobante de pago
+            </label>
+            <input
+              id="cc-comprobante"
+              type="text"
+              name="comprobante"
+              placeholder="Número del recibo o comprobante..."
+              value={comprobanteAbono}
+              onChange={(e) =>
+                setComprobanteAbono(sanitizarTextoInput(e.target.value, MAX_COMPROBANTE))
+              }
+              className="form-control"
+              maxLength={MAX_COMPROBANTE}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="cc-observacion" className="cont-modal-label">
+              Observación
+            </label>
+            <input
+              id="cc-observacion"
+              type="text"
+              name="observacion"
+              placeholder="Concepto del abono..."
+              value={observacionAbono}
+              onChange={(e) =>
+                setObservacionAbono(sanitizarTextoInput(e.target.value, 500))
+              }
+              className="form-control"
+              maxLength={500}
             />
           </div>
         </div>

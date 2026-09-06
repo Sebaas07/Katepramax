@@ -35,4 +35,14 @@ async function resumenDeudaProveedores(request, reply) {
   return reply.send(resumen);
 }
 
-module.exports = { crear, listar, obtenerPorId, editar, eliminar, resumenSemanal, resumenDeudaProveedores };
+async function historialProveedor(request, reply) {
+  const historial = await svc.historialProveedor(
+    request.server,
+    request.params,
+    request.query,
+    request.user,
+  );
+  return reply.send(historial);
+}
+
+module.exports = { crear, listar, obtenerPorId, editar, eliminar, resumenSemanal, resumenDeudaProveedores, historialProveedor };

@@ -735,3 +735,219 @@ describe("inventarioService.resumenDeudaProveedores", () => {
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 });
+
+// ── historialProveedor ────────────────────────────────────────────────────────
+
+describe("inventarioService.historialProveedor", () => {
+  const proveedorMock = { id: 3, nombre: "Cemex", activo: true };
+
+  const entradasMock = [
+    {
+      id: 1,
+      fecha: new Date("2026-05-10"),
+      semana: 20,
+      sedeId: 1,
+      productoId: 1,
+      cantidadIngresada: 10,
+      costoUnitario: 18000,
+      tipo: "entrada",
+      deuda: 120000,
+      nota: null,
+      creadoEn: new Date("2026-05-10"),
+      sede: { id: 1, nombre: "Sede Principal" },
+      producto: { codigo: 1, descripcion: "Cemento Gris 50kg", precioCosto: 18000 },
+      proveedor: { id: 3, nombre: "Cemex" },
+    },
+    {
+      id: 2,
+      fecha: new Date("2026-05-12"),
+      semana: 20,
+      sedeId: 1,
+      productoId: 2,
+      cantidadIngresada: 5,
+      costoUnitario: 20000,
+      tipo: "entrada",
+      deuda: null,
+      nota: "Pagada de contado",
+      creadoEn: new Date("2026-05-12"),
+      sede: { id: 1, nombre: "Sede Principal" },
+      producto: { codigo: 2, descripcion: "Hierro 3/8", precioCosto: 20000 },
+      proveedor: { id: 3, nombre: "Cemex" },
+    },
+  ];
+
+  it("debería lanzar AppError 403 si el rol no tiene permisos", async () => {
+    await expect(
+      inventarioService.historialProveedor(
+        appMock,
+        { proveedorId: 3 },
+        {},
+        { id: 3, rol: "Entregador", sedeId: 1 },
+      ),
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("debería lanzar AppError 400 si el proveedorId no es válido", async () => {
+    await expect(
+      inventarioService.historialProveedor(
+        appMock,
+        { proveedorId: "abc" },
+        {},
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("debería lanzar AppError 404 si el proveedor no existe", async () => {
+    prisma.proveedor.findUnique.mockResolvedValue(null);
+
+    await expect(
+      inventarioService.historialProveedor(
+        appMock,
+        { proveedorId: 999 },
+        {},
+        usuarioAdmin,
+      ),
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("debería calcular totales por entrada y totalizar el saldo del proveedor", async () => {
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.inventario.findMany.mockResolvedValue(entradasMock);
+    prisma.inventario.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { deuda: 170000 } },
+    ]);
+    prisma.abono.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { valorPagado: 45000 } },
+    ]);
+
+    const result = await inventarioService.historialProveedor(
+      appMock,
+      { proveedorId: 3 },
+      {},
+      usuarioAdmin,
+    );
+
+    expect(result.proveedor).toEqual({
+      id: 3,
+      nombre: "Cemex",
+      activo: true,
+    });
+    expect(result.resumen.periodo).toEqual({
+      totalEntradas: 2,
+      montoTotal: 280000, // 10*18000 + 5*20000
+      deudaRegistrada: 120000, // 120000 + 0
+    });
+    expect(result.resumen.global).toEqual({
+      deudaRegistrada: 170000,
+      totalAbonado: 45000,
+      saldoPendiente: 125000,
+    });
+
+    expect(result.entradas).toHaveLength(2);
+    expect(result.entradas[0]).toMatchObject({
+      id: 1,
+      total: 180000,
+      deuda: 120000,
+      estado: "pendiente",
+    });
+    expect(result.entradas[1]).toMatchObject({
+      id: 2,
+      total: 100000,
+      deuda: null,
+      estado: "pagado",
+    });
+  });
+
+  it("debería marcar las entradas como pagadas si el saldo global es 0", async () => {
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.inventario.findMany.mockResolvedValue(entradasMock);
+    prisma.inventario.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { deuda: 120000 } },
+    ]);
+    prisma.abono.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { valorPagado: 120000 } },
+    ]);
+
+    const result = await inventarioService.historialProveedor(
+      appMock,
+      { proveedorId: 3 },
+      {},
+      usuarioAdmin,
+    );
+
+    expect(result.resumen.global.saldoPendiente).toBe(0);
+    expect(result.entradas[0].estado).toBe("pagado");
+  });
+
+  it("debería filtrar por rango de fechas (desde/hasta)", async () => {
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.inventario.findMany.mockResolvedValue(entradasMock);
+    prisma.inventario.groupBy.mockResolvedValue([]);
+    prisma.abono.groupBy.mockResolvedValue([]);
+
+    await inventarioService.historialProveedor(
+      appMock,
+      { proveedorId: 3 },
+      { desde: "2026-05-01", hasta: "2026-05-31" },
+      usuarioAdmin,
+    );
+
+    const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
+    expect(callWhere.proveedorId).toBe(3);
+    expect(callWhere.tipo).toBe("entrada");
+    expect(callWhere.fecha.gte).toEqual(new Date("2026-05-01T00:00:00.000Z"));
+    expect(callWhere.fecha.lt).toEqual(new Date("2026-06-01T00:00:00.000Z"));
+  });
+
+  it("no debería agregar filtro de fecha si no se pasan desde/hasta", async () => {
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.inventario.findMany.mockResolvedValue(entradasMock);
+    prisma.inventario.groupBy.mockResolvedValue([]);
+    prisma.abono.groupBy.mockResolvedValue([]);
+
+    await inventarioService.historialProveedor(
+      appMock,
+      { proveedorId: 3 },
+      {},
+      usuarioAdmin,
+    );
+
+    const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
+    expect(callWhere.fecha).toBeUndefined();
+  });
+
+  it("Bodega solo ve entradas de su propia sede aunque pase sedeId", async () => {
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.inventario.findMany.mockResolvedValue(entradasMock);
+    prisma.inventario.groupBy.mockResolvedValue([]);
+    prisma.abono.groupBy.mockResolvedValue([]);
+
+    await inventarioService.historialProveedor(
+      appMock,
+      { proveedorId: 3 },
+      { sedeId: 99 },
+      usuarioBodega, // sedeId: 1
+    );
+
+    const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
+    expect(callWhere.sedeId).toBe(1);
+  });
+
+  it("Admin puede filtrar por sedeId", async () => {
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.inventario.findMany.mockResolvedValue(entradasMock);
+    prisma.inventario.groupBy.mockResolvedValue([]);
+    prisma.abono.groupBy.mockResolvedValue([]);
+
+    await inventarioService.historialProveedor(
+      appMock,
+      { proveedorId: 3 },
+      { sedeId: 2 },
+      usuarioAdmin,
+    );
+
+    const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
+    expect(callWhere.sedeId).toBe(2);
+  });
+});

@@ -83,6 +83,13 @@ const inventarioApi = {
     return response.data;
   },
 
+  // Backend: GET /inventario/historial-proveedor/:proveedorId → Admin, Bodega
+  // Historial de entradas de inventario de un proveedor con resumen y saldos.
+  historialProveedor: async (proveedorId, filtros = {}) => {
+    const response = await clienteApi.get(`/inventario/historial-proveedor/${proveedorId}`, { params: filtros });
+    return response.data;
+  },
+
   // Backend: GET /productos?stockBajo=true → Admin, Bodega
   obtenerStockBajo: async () => {
     const response = await clienteApi.get("/productos", { params: { stockBajo: true, activo: true } });

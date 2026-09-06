@@ -313,6 +313,16 @@ const inventarioService = {
     }
   },
 
+  // Backend: GET /inventario/historial-proveedor/:proveedorId → Admin, Bodega
+  obtenerHistorialProveedor: async (proveedorId, filtros = {}) => {
+    try {
+      return await inventarioApi.historialProveedor(proveedorId, filtros);
+    } catch (e) {
+      console.error("inventarioService.obtenerHistorialProveedor:", e);
+      throw new Error(getApiErrorMessage(e), { cause: e });
+    }
+  },
+
   // ─── Stock Bajo ───────────────────────────────────────────────────────────
   obtenerStockBajo: async () => {
     const response = await inventarioApi.obtenerStockBajo();

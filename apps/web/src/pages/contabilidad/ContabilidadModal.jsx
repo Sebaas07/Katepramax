@@ -157,7 +157,7 @@ const ContabilidadModal = memo(
                 />
                 <ErrorField mensaje={errores.fecha} />
               </div>
-              {(modalTipo === "abono" || esAdmin) && (
+              {esAdmin && modalTipo !== "abono" && (
                 <div className={grupoClase}>
                   <Label htmlFor="cont-sede" requerido>
                     Sede

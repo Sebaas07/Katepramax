@@ -61,6 +61,15 @@ async function buscarPorId(prisma, id) {
   return prisma.inventario.findUnique({ where: { id }, include: INCLUDE });
 }
 
+// Historial de entradas de inventario de un proveedor (o cualquier filtro where).
+async function historial(prisma, where) {
+  return prisma.inventario.findMany({
+    where,
+    include: INCLUDE,
+    orderBy: [{ fecha: "desc" }, { id: "desc" }],
+  });
+}
+
 async function actualizar(
   prisma,
   id,
@@ -96,6 +105,7 @@ module.exports = {
   upsertDiario,
   listar,
   buscarPorId,
+  historial,
   actualizar,
   eliminar,
   resumenSemanal,
