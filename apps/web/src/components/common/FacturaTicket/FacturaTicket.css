@@ -21,8 +21,9 @@
   background: #fff;
   color: #000;
   font-family: "Courier New", "Courier", monospace;
-  font-size: 9px;
-  line-height: 1.3;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
   letter-spacing: 0;
   border-radius: 4px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
@@ -36,21 +37,21 @@
 }
 
 .factura-ticket__razon {
-  font-size: 13px;
+  font-size: 16px;
   letter-spacing: 1px;
 }
 
 .factura-ticket__sede {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .factura-ticket__titulo {
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 1px;
 }
 
 .factura-ticket__folio {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .factura-ticket__sep {
@@ -96,7 +97,7 @@
   justify-content: space-between;
   align-items: baseline;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .factura-ticket__qr {
@@ -108,11 +109,11 @@
 
 .factura-ticket__qr-texto {
   text-align: center;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .factura-ticket__url {
-  font-size: 7px;
+  font-size: 9px;
   overflow-wrap: anywhere;
 }
 
@@ -168,6 +169,21 @@
     visibility: visible !important;
   }
 
+  /* Las impresoras térmicas son 1-bit: no imprimen grises, solo negro
+   * o nada. El navegador antialiasa/suaviza el texto (bordes en gris),
+   * y al rasterizar para la térmica esos grises se "trituran" con un
+   * patrón de puntos (dithering), dejando letras carcomidas o
+   * ilegibles. Forzamos negro puro, sin "ahorro de tinta" del
+   * navegador, y engrosamos el trazo para que sobreviva el dithering. */
+  .factura-ticket,
+  .factura-ticket * {
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    -webkit-font-smoothing: none !important;
+    text-rendering: optimizeLegibility !important;
+  }
+
   .factura-ticket {
     width: 100% !important;
     max-width: 100% !important;
@@ -175,5 +191,6 @@
     border-radius: 0 !important;
     padding: 2mm 3mm !important;
     margin: 0 !important;
+    font-weight: 700 !important;
   }
 }
