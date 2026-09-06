@@ -134,27 +134,24 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
     const cargar = esDiario
       ? reporteService.obtenerCorteCaja({ desde: fechaDia, hasta: fechaDia, sedeId: sede })
       : // Cierre semanal = arqueo semanal unificado (misma fuente y los mismos
-        // totales en todo el tab), más los bloques de cartera e inventario.
-        Promise.all([
-          contabilidadService.obtenerArqueo(semanaNum, sede),
-          contabilidadService.obtenerCartera({ semana: semanaNum, ...(sede ? { sedeId: sede } : {}) }),
-          contabilidadService.obtenerInventarioSemanal(semanaNum),
-        ]).then(([reporte, carteraSem, invSem]) => {
-          const arq = reporte ? { ...reporte, carteraSemana: carteraSem, inventarioSemana: invSem } : null;
-          const totalEgr = arq?.egresos?.totales?.totalEgresos ?? 0;
-          return arq
-            ? {
-                reporte: arq,
-                corte: {
-                  desde: arq.desde,
-                  hasta: arq.hasta,
-                  recaudo: arq.recaudo,
-                  egresos: { ...arq.egresos, total: Number(totalEgr) },
-                  ganancia: Number(arq.ganancia),
-                },
-              }
-            : { reporte: null, corte: null };
-        });
+        // totales en todo el tab).
+        contabilidadService
+          .obtenerArqueo(semanaNum, sede)
+          .then((reporte) => {
+            const arq = reporte ?? null;
+            return arq
+              ? {
+                  reporte: arq,
+                  corte: {
+                    desde: arq.desde,
+                    hasta: arq.hasta,
+                    recaudo: arq.recaudo,
+                    egresos: { ...arq.egresos, total: Number(arq.egresos?.totales?.totalEgresos ?? 0) },
+                    ganancia: Number(arq.ganancia),
+                  },
+                }
+              : { reporte: null, corte: null };
+          });
 
     cargar
       .then((data) => {
@@ -294,7 +291,6 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
                 arqueo={arqueo}
                 filtroSemana={semanaSel}
                 onFiltroSemanaChange={setSemanaSel}
-                sedes={[]}
                 mostrarFiltro={false}
               />
             </div>
