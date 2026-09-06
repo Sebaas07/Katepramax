@@ -16,8 +16,9 @@
   background: #fff;
   color: #000;
   font-family: "Courier New", "Courier", monospace;
-  font-size: 9px;
-  line-height: 1.3;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
   letter-spacing: 0;
   border-radius: 4px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
@@ -31,17 +32,17 @@
 }
 
 .ticket-razon {
-  font-size: 13px;
+  font-size: 16px;
   letter-spacing: 1px;
 }
 
 .ticket-titulo {
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 1px;
 }
 
 .ticket-subtitulo {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .ticket-sep {
@@ -65,11 +66,11 @@
 
 .ticket-linea--sub {
   padding-left: 6px;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .ticket-linea--sub strong {
-  font-weight: normal;
+  font-weight: 600;
 }
 
 .ticket-total {
@@ -77,7 +78,7 @@
   justify-content: space-between;
   align-items: baseline;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 /* ── Impresión POS ────────────────────────────────────────────
@@ -114,6 +115,21 @@
     visibility: visible !important;
   }
 
+  /* Las impresoras térmicas son 1-bit: no imprimen grises, solo negro
+   * o nada. El navegador antialiasa/suaviza el texto (bordes en gris),
+   * y al rasterizar para la térmica esos grises se "trituran" con un
+   * patrón de puntos (dithering), dejando letras carcomidas o
+   * ilegibles. Forzamos negro puro, sin "ahorro de tinta" del
+   * navegador, y engrosamos el trazo para que sobreviva el dithering. */
+  .ticket-58,
+  .ticket-58 * {
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    -webkit-font-smoothing: none !important;
+    text-rendering: optimizeLegibility !important;
+  }
+
   .ticket-58 {
     width: 100% !important;
     max-width: 100% !important;
@@ -121,5 +137,6 @@
     border-radius: 0 !important;
     padding: 2mm 3mm !important;
     margin: 0 !important;
+    font-weight: 700 !important;
   }
 }
