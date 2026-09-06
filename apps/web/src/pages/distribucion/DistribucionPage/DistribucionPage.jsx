@@ -26,6 +26,7 @@ const KpiCard = ({ icono, valor, label, color }) => (
 // ─── Tabs disponibles ─────────────────────────────────────────
 const TABS = [
   { key: "flujo",     label: "Flujo del día",    icon: "timeline"        },
+  { key: "pendientes",label: "Pendientes",        icon: "pending_actions" },
   { key: "asignados", label: "Asignados",         icon: "delivery_dining" },
   { key: "entregados",label: "Entregados hoy",    icon: "check_circle"    },
   { key: "fallidos",  label: "Fallidos",          icon: "cancel"          },
@@ -67,6 +68,7 @@ const DistribucionPage = () => {
   // ── Pedidos filtrados por tab ──────────────────────────────
   const pedidosPorTab = {
     flujo:      pedidos,
+    pendientes: pedidos.filter((p) => p.estado === "Pendiente"),
     asignados:  pedidos.filter((p) => p.estado === "Asignado"),
     entregados: pedidos.filter((p) => p.estado === "Entregado"),
     fallidos:   pedidos.filter((p) =>
@@ -122,34 +124,6 @@ const DistribucionPage = () => {
         <KpiCard icono="check_circle"      valor={entregados} label="Entregados"  color="#4ade80"           />
         <KpiCard icono="cancel"            valor={fallidos}   label="Fallidos"    color="var(--error)"      />
         <KpiCard icono="do_not_disturb_on" valor={cancelados} label="Cancelados"  color="var(--outline)"    />
-      </div>
-
-      {/* Pipeline visual */}
-      <div className="dist-pipeline">
-        {[
-          { label: "Pendiente",  count: pendientes,  color: "var(--aged-gold)",  icon: "pending_actions"   },
-          { label: "Asignado",   count: asignados,   color: "var(--primary)",    icon: "delivery_dining"   },
-          { label: "En Ruta",    count: enRuta,      color: "#ddb7ff",           icon: "local_shipping"    },
-          { label: "Entregado",  count: entregados,  color: "#4ade80",           icon: "check_circle"      },
-        ].map((etapa, i, arr) => (
-          <div key={etapa.label} className="dist-pipeline__etapa-wrap">
-            <div
-              className="dist-pipeline__etapa"
-              style={{ "--etapa-color": etapa.color }}
-            >
-              <span className="material-symbols-outlined dist-pipeline__icono">
-                {etapa.icon}
-              </span>
-              <span className="dist-pipeline__count">{etapa.count}</span>
-              <span className="dist-pipeline__label">{etapa.label}</span>
-            </div>
-            {i < arr.length - 1 && (
-              <span className="material-symbols-outlined dist-pipeline__flecha">
-                arrow_forward
-              </span>
-            )}
-          </div>
-        ))}
       </div>
 
       {/* Tabs + Tabla */}
