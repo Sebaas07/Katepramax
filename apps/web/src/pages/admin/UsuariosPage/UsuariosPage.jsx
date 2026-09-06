@@ -359,9 +359,9 @@ const UsuariosPage = () => {
 
     if (!usuario) {
       nuevosErrores.usuario = "El nombre de usuario es obligatorio.";
-    } else if (!/^[a-zA-Z0-9_]{5,10}$/.test(usuario)) {
+    } else if (!/^[a-zA-Z0-9_]{5,15}$/.test(usuario)) {
       nuevosErrores.usuario =
-        "Usa de 5 a 10 caracteres: letras, números y guión bajo.";
+        "Usa de 5 a 15 caracteres: letras, números y guión bajo.";
     }
 
     if (form.telefono && !/^\d{10}$/.test(form.telefono)) {
