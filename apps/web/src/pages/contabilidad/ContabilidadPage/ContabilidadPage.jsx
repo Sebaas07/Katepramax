@@ -22,7 +22,6 @@ import EgresosTab from "../EgresosTab";
 //import CarteraTab from "../CarteraTab";
 import ProveedoresTab from "../ProveedoresTab";
 import PanelGeneralTab from "../PanelGeneralTab";
-import GananciaGastoTab from "../GananciaGastoTab";
 import CobrosEntregadorTab from "../CobrosEntregadorTab";
 import CierreCajaTab from "../CierreCajaTab";
 
@@ -45,7 +44,6 @@ const TABS = [
   { key: "cierre-diario", label: "Cierre Diario", icon: "today" },
   { key: "cierre-semanal", label: "Cierre Semanal", icon: "date_range" },
   { key: "panel", label: "Panel General", icon: "dashboard" },
-  { key: "ganancia", label: "Ganancia / Gasto", icon: "point_of_sale" },
 ];
 
 const FORM_VACIO = {
@@ -89,8 +87,6 @@ const ContabilidadPage = () => {
   const [resumenSedeAbonos, setResumenSedeAbonos] = useState([]);
   const [deudaProveedores, setDeudaProveedores] = useState([]);
   const [panelGeneral, setPanelGeneral] = useState(null);
-  const [corteCaja, setCorteCaja] = useState(null);
-  const [corteKey, setCorteKey] = useState(null);
   const [cobrosEntregador, setCobrosEntregador] = useState(null);
 
   // ── Filtros ───────────────────────────────────────────────
@@ -99,8 +95,6 @@ const ContabilidadPage = () => {
     esAdmin ? "" : sedeIdUsuario ? String(sedeIdUsuario) : "",
   );
   const [filtroPanelF, setFiltroPanelFecha] = useState(hoyISO());
-  const [periodoGanancia, setPeriodoGanancia] = useState("dia");
-  const [fechaGanancia, setFechaGanancia] = useState(hoyISO());
   const [fechaInicioCobros, setFechaInicioCobros] = useState(
     () => getRangoSemana(SEM_ACTUAL).inicio,
   );
@@ -144,7 +138,7 @@ const ContabilidadPage = () => {
 
   // ── Carga de datos ────────────────────────────────────────
   const cargarDatos = useCallback(async () => {
-    if (tab === "ganancia" || esTabCierre) {
+    if (esTabCierre) {
       setCargando(false);
       return;
     }
@@ -190,14 +184,8 @@ const ContabilidadPage = () => {
         setResumenSedeAbonos(resSede);
         setDeudaProveedores(saldosDeuda);
       } else if (tab === "panel") {
-        const [panel, totIngDia, totEgrDia] = await Promise.all([
-          contabilidadService.obtenerPanelGeneral(filtroPanelF),
-          contabilidadService.obtenerTotalesDiaIngresos(semanaNum),
-          contabilidadService.obtenerTotalesDiaEgresos(semanaNum),
-        ]);
+        const panel = await contabilidadService.obtenerPanelGeneral(filtroPanelF);
         setPanelGeneral(panel);
-        setTotalesDiaIng(totIngDia);
-        setTotalesDiaEgr(totEgrDia);
       } else if (tab === "cobros") {
         const sede = esAdmin ? (filtroSedeId ? parseInt(filtroSedeId, 10) : undefined) : undefined;
         const data = await reporteService.obtenerCobrosEntregador({
@@ -241,49 +229,7 @@ const ContabilidadPage = () => {
     return () => window.clearTimeout(id);
   }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
-  // ── Corte de caja (Ganancia / Gasto) ──────────────────────
-  const rangoGanancia = useMemo(() => {
-    const [anio, mes, dia] = fechaGanancia.split("-").map(Number);
-    if (periodoGanancia === "dia") {
-      return { desde: fechaGanancia, hasta: fechaGanancia };
-    }
-    if (periodoGanancia === "quincena") {
-      const ultimoDiaMes = new Date(anio, mes, 0).getDate();
-      const pad = (n) => String(n).padStart(2, "0");
-      return dia <= 15
-        ? { desde: `${anio}-${pad(mes)}-01`, hasta: `${anio}-${pad(mes)}-15` }
-        : { desde: `${anio}-${pad(mes)}-16`, hasta: `${anio}-${pad(mes)}-${pad(ultimoDiaMes)}` };
-    }
-    const ultimoDiaMes = new Date(anio, mes, 0).getDate();
-    const pad = (n) => String(n).padStart(2, "0");
-    return { desde: `${anio}-${pad(mes)}-01`, hasta: `${anio}-${pad(mes)}-${pad(ultimoDiaMes)}` };
-  }, [periodoGanancia, fechaGanancia]);
-
-  const claveCorte = `${periodoGanancia}|${fechaGanancia}|${filtroSedeId || ""}`;
-
-  useEffect(() => {
-    if (!isSessionChecked || !isAuthenticated) return;
-    if (tab !== "ganancia") return;
-    let activo = true;
-    reporteService
-      .obtenerCorteCaja({ ...rangoGanancia, sedeId: filtroSedeId || undefined })
-      .then((data) => {
-        if (activo) {
-          setCorteCaja(data);
-          setCorteKey(claveCorte);
-        }
-      })
-      .catch((err) => {
-        if (!activo) return;
-        toast.error("Error al cargar el corte de caja: " + (err?.message || "desconocido"));
-        setCorteCaja(null);
-        setCorteKey(claveCorte);
-      });
-    return () => {
-      activo = false;
-    };
-  }, [tab, rangoGanancia, filtroSedeId, isSessionChecked, isAuthenticated, claveCorte]);
-
+  // ── Corte de caja (Cierre Diario / Semanal) ────────────────
   const mapSede = useCallback(
     (items) =>
       items.map((i) => ({
@@ -552,15 +498,13 @@ const ContabilidadPage = () => {
   const subtituloHeader =
     tab === "panel"
       ? formatFecha(filtroPanelF)
-      : tab === "ganancia"
-        ? `${formatFecha(rangoGanancia.desde)}${rangoGanancia.desde !== rangoGanancia.hasta ? ` — ${formatFecha(rangoGanancia.hasta)}` : ""}`
-        : tab === "cierre-diario"
-          ? "Cierre de caja del día"
-          : tab === "cierre-semanal"
-            ? "Cierre de caja de la semana"
-            : tab === "cobros"
-              ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
-              : `Semana ${filtroSemana || SEM_ACTUAL}`;
+      : tab === "cierre-diario"
+        ? "Cierre de caja del día"
+        : tab === "cierre-semanal"
+          ? "Cierre de caja de la semana"
+          : tab === "cobros"
+            ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
+            : `Semana ${filtroSemana || SEM_ACTUAL}`;
 
   return (
     <div className="cont-page">
@@ -589,7 +533,6 @@ const ContabilidadPage = () => {
             </div>
           )}
           {tab !== "panel" &&
-            tab !== "ganancia" &&
             tab !== "cobros" &&
             !esTabCierre && (
             <div className="filter-group">
@@ -736,19 +679,6 @@ const ContabilidadPage = () => {
             <PanelGeneralTab
               panelGeneral={{ ...panelGeneral, _sedes: sedes }}
               fecha={filtroPanelF}
-              totalesDiaIngresos={totalesDiaIng}
-              totalesDiaEgresos={totalesDiaEgr}
-            />
-          )}
-
-          {tab === "ganancia" && (
-            <GananciaGastoTab
-              periodo={periodoGanancia}
-              onPeriodoChange={setPeriodoGanancia}
-              fechaReferencia={fechaGanancia}
-              onFechaReferenciaChange={setFechaGanancia}
-              corte={corteCaja}
-              cargando={corteKey !== claveCorte}
             />
           )}
         </div>

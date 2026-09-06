@@ -1,38 +1,13 @@
 import { useMemo } from "react";
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
 import TarjetaKpi from "./TarjetaKpi";
-import ChartTooltip from "@/components/common/ChartTooltip/ChartTooltip";
-import { formatCOP, formatFecha, fechaVisual } from "@/utils/formatters";
+import { formatCOP, formatFecha } from "@/utils/formatters";
 
 const toNumber = (v) => Number(v ?? 0);
 
-const TICK_TEMA = { fill: "var(--on-surface-variant)", fontSize: 12 };
-const AXIS_TEMA = { stroke: "var(--outline-variant)" };
-
-const labelDia = (fechaStr) => {
-  const d = fechaVisual(fechaStr);
-  if (!d) return "—";
-  return d.toLocaleDateString("es-CO", { weekday: "short", day: "numeric" });
-};
-
 // Backend: GET /reportes/panel-general → { fecha, ingresos: { total, efectivo, cuentas, porSede }, egresos: { total, porSede }, cartera, totalStockUnidades }
-// Backend: GET /ingresos/totales-dia   → [{ fecha, efectivo, cuentas, total }]
-// Backend: GET /egresos/totales-dia    → [{ fecha, total }]
 const PanelGeneralTab = ({
   panelGeneral,
   fecha,
-  totalesDiaIngresos,
-  totalesDiaEgresos,
 }) => {
   const panelSedes = useMemo(() => {
     if (!panelGeneral) return [];
@@ -58,44 +33,6 @@ const PanelGeneralTab = ({
         };
       });
   }, [panelGeneral]);
-
-  const chartSedes = useMemo(
-    () =>
-      panelSedes.map((s) => ({
-        sede: s.sede,
-        Ingresos: s.ingresos,
-        Egresos: s.egresos,
-        "Saldo Neto": s.saldoNeto,
-      })),
-    [panelSedes],
-  );
-
-  // Fusionar totales por día de ingresos y egresos en un solo array para el LineChart
-  const chartDiario = useMemo(() => {
-    if (!totalesDiaIngresos?.length && !totalesDiaEgresos?.length) return [];
-    const mapa = {};
-    (totalesDiaIngresos ?? []).forEach((d) => {
-      const key = d.fecha?.slice(0, 10) ?? d.fecha;
-      mapa[key] = {
-        key,
-        dia: labelDia(d.fecha),
-        Ingresos: toNumber(d.total),
-        Egresos: 0,
-      };
-    });
-    (totalesDiaEgresos ?? []).forEach((d) => {
-      const key = d.fecha?.slice(0, 10) ?? d.fecha;
-      if (mapa[key]) mapa[key].Egresos = toNumber(d.total);
-      else
-        mapa[key] = {
-          key,
-          dia: labelDia(d.fecha),
-          Ingresos: 0,
-          Egresos: toNumber(d.total),
-        };
-    });
-    return Object.values(mapa).sort((a, b) => (a.key ?? "").localeCompare(b.key ?? ""));
-  }, [totalesDiaIngresos, totalesDiaEgresos]);
 
   const saldoNeto =
     toNumber(panelGeneral?.ingresos?.total) -
@@ -141,114 +78,6 @@ const PanelGeneralTab = ({
           )}
           subtitulo="Total acumulado por sedes"
         />
-      </div>
-
-      <div className="panel-charts">
-        <section className="panel-section">
-          <h3 className="panel-section__title">
-            <span className="material-symbols-outlined">bar_chart</span>
-            Resultado por sede
-          </h3>
-          <div className="panel-chart-wrap" style={{ height: 320 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartSedes}
-                margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
-              >
-                <XAxis dataKey="sede" tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
-                <YAxis tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
-                <Tooltip content={<ChartTooltip formato={formatCOP} />} />
-                <Legend wrapperStyle={{ color: "var(--on-surface-variant)", fontSize: 12 }} />
-                <Bar
-                  dataKey="Ingresos"
-                  fill="var(--secondary)"
-                  radius={[6, 6, 0, 0]}
-                />
-                <Bar
-                  dataKey="Egresos"
-                  fill="var(--error)"
-                  radius={[6, 6, 0, 0]}
-                />
-                <Bar
-                  dataKey="Saldo Neto"
-                  fill="#4ade80"
-                  radius={[6, 6, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-        <section className="panel-section">
-          <h3 className="panel-section__title">
-            <span className="material-symbols-outlined">payments</span>
-            Ingresos por metodo de pago
-          </h3>
-          <div className="panel-chart-wrap" style={{ height: 280 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={[
-                  {
-                    metodo: "Efectivo",
-                    valor: toNumber(panelGeneral.ingresos?.efectivo),
-                  },
-                  {
-                    metodo: "Cuentas",
-                    valor: toNumber(panelGeneral.ingresos?.cuentas),
-                  },
-                ]}
-                margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
-              >
-                <XAxis dataKey="metodo" tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
-                <YAxis tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
-                <Tooltip content={<ChartTooltip formato={formatCOP} />} />
-                <Legend wrapperStyle={{ color: "var(--on-surface-variant)", fontSize: 12 }} />
-                <Bar
-                  dataKey="valor"
-                  name="Valor"
-                  fill="var(--aged-gold)"
-                  radius={[6, 6, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-        {chartDiario.length > 0 && (
-          <section className="panel-section">
-            <h3 className="panel-section__title">
-              <span className="material-symbols-outlined">show_chart</span>
-              Evolución diaria de la semana
-            </h3>
-            <div className="panel-chart-wrap" style={{ height: 280 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={chartDiario}
-                  margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
-                >
-                  <XAxis dataKey="dia" tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
-                  <YAxis tick={TICK_TEMA} axisLine={AXIS_TEMA} tickLine={false} />
-                  <Tooltip content={<ChartTooltip formato={formatCOP} />} />
-                  <Legend wrapperStyle={{ color: "var(--on-surface-variant)", fontSize: 12 }} />
-                  <Line
-                    type="monotone"
-                    dataKey="Ingresos"
-                    stroke="#4ade80"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="Egresos"
-                    stroke="var(--error)"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
-        )}
       </div>
 
       <section className="panel-section">
