@@ -171,7 +171,7 @@ const ProductosPage = () => {
   const [errorProductos, setErrorProductos] = useState(null);
   const [filtroSede, setFiltroSede] = useState("");
   const [filtroDepto, setFiltroDepto] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("true");
+  const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroStockBajo, setFiltroStockBajo] = useState(false);
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
@@ -665,9 +665,9 @@ const ProductosPage = () => {
               onChange={(e) => setFiltroEstado(e.target.value)}
               className="filter-select"
             >
+              <option value="">Todos</option>
               <option value="true">Activos</option>
               <option value="false">Inactivos</option>
-              <option value="">Todos</option>
             </select>
           </div>
 
