@@ -455,13 +455,14 @@ const ContabilidadPage = () => {
       }
       setModalOpen(false);
       setItemEditar(null);
-      if (!itemEditar) {
-        // Tras un alta, el filtro pasa a la semana del registro creado: el
-        // alta computa la semana desde la fecha del formulario y puede diferir
-        // de la semana en pantalla (p. ej. tras el reinicio del periodo el 7
-        // de septiembre). Se deja que el efecto recargue con la semana nueva.
-        setFiltroSemana(String(payload.semana ?? SEM_ACTUAL));
+      const semanaGuardada = String(payload.semana ?? SEM_ACTUAL);
+      if (semanaGuardada !== filtroSemana) {
+        // Semana distinta a la de pantalla (p. ej. tras el reinicio del
+        // periodo el 7 de septiembre): el efecto recarga con la semana nueva.
+        setFiltroSemana(semanaGuardada);
       } else {
+        // Misma semana: recarga explícita. setState con un valor igual no
+        // dispara el efecto, por eso la tabla se quedaba sin actualizar.
         await cargarDatos();
       }
     } catch (err) {
@@ -469,7 +470,7 @@ const ContabilidadPage = () => {
     } finally {
       setCargando(false);
     }
-  }, [modalTipo, itemEditar, form, cargarDatos]);
+  }, [modalTipo, itemEditar, form, cargarDatos, filtroSemana]);
 
   const handleEliminar = useCallback(async () => {
     if (!itemEliminar) return;
