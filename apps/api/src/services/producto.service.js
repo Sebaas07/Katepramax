@@ -2,6 +2,7 @@ const repo = require("../repositories/producto.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
 const { generarSku } = require("./sku.service");
+const { resolverFamiliaSede } = require("../utils/contabilidad");
 
 const DECIMAL_FIELDS = [
   "precioCosto",
@@ -136,6 +137,14 @@ async function obtenerLista(app, query, usuario) {
 
   const sede = sedeWhere(usuario);
   if (sede.sedeId != null) filtros.sedeId = sede.sedeId;
+
+  // Admin que filtra por una sede puntual: resuelve su familia (bodega +
+  // oficinas ligadas) para traer los productos con stock de esa familia.
+  if (usuario?.rol === "Admin" && query.sedeId) {
+    const ids = (await resolverFamiliaSede(app.prisma, query.sedeId)).map((s) => s.id);
+    if (ids.length === 1)      filtros.sedeId = ids[0];
+    else if (ids.length > 1)   filtros.sedeIds = ids;
+  }
 
   const lista = await repo.listar(app.prisma, filtros);
   return sanitizeProductos(lista);

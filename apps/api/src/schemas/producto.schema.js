@@ -10,7 +10,10 @@ const stockSedeItem = {
     stockActual: { type: "integer" },
     sede: {
       type: "object",
-      properties: { nombre: { type: "string" } },
+      properties: {
+        nombre: { type: "string" },
+        tipo: { type: "string" },
+      },
     },
   },
 };
@@ -82,6 +85,7 @@ const listarProductos = {
       descripcion: { type: "string" },
       activo: { type: "string", enum: ["true", "false"] },
       proveedorId: { type: "integer" },
+      sedeId: { type: "string" },
       skip: { type: "integer", minimum: 0, default: 0 },
       take: { type: "integer", minimum: 1, maximum: 200, default: 50 },
     },

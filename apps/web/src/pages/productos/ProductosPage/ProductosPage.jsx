@@ -218,6 +218,8 @@ const ProductosPage = () => {
     try {
       const data = await inventarioService.obtenerProductos({
         ...(filtroEstado !== "" ? { activo: filtroEstado } : {}),
+        // Admin filtra por la bodega elegida (la familia la resuelve el back).
+        ...(esAdmin && filtroSede ? { sedeId: filtroSede } : {}),
         take: 200,
       });
       setProductos(Array.isArray(data) ? data : []);
@@ -228,7 +230,7 @@ const ProductosPage = () => {
     } finally {
       setCargando(false);
     }
-  }, [filtroEstado]);
+  }, [filtroEstado, filtroSede, esAdmin]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -491,6 +493,13 @@ const ProductosPage = () => {
 
   const datosTabla = useMemo(() => {
     const veResumenGlobal = esAdmin || esAdminBogota;
+    // El tipo de cada sede se resuelve desde el catálogo (siempre lo trae),
+    // con respaldo al campo embebido en stockSedes.
+    const tipoPorSede = new Map(
+      (Array.isArray(sedes) ? sedes : []).map((s) => [String(s.id), s.tipo]),
+    );
+    const esBodega = (s) =>
+      (s.sede?.tipo ?? tipoPorSede.get(String(s.sedeId))) === "Bodega";
 
     return productosFiltrados.map((producto) => ({
       ...producto,
@@ -517,7 +526,7 @@ const ProductosPage = () => {
       sedes: (() => {
         if (!veResumenGlobal) return "—";
         const bodegas = Array.isArray(producto.stockSedes)
-          ? producto.stockSedes.filter((s) => s.sede?.tipo === "Bodega")
+          ? producto.stockSedes.filter(esBodega)
           : [];
         return bodegas.length
           ? bodegas
@@ -529,7 +538,7 @@ const ProductosPage = () => {
           : "—";
       })(),
     }));
-  }, [productosFiltrados, esAdmin, esAdminBogota]);
+  }, [productosFiltrados, esAdmin, esAdminBogota, sedes]);
 
   const totalProductos = productosNormalizados.length;
   const productosStockBajo = productosNormalizados.filter(
