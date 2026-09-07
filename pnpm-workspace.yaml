@@ -10,3 +10,9 @@ allowBuilds:
 # (default "install" en v11). Las imágenes Docker y el entorno local ya
 # dejan node_modules resuelto.
 verifyDepsBeforeRun: false
+
+overrides:
+  "brace-expansion@>=5.0.0 <5.0.9": "5.0.9"
+  "deepmerge-ts@<8.0.0": "8.0.0"
+  "fast-uri@<4.1.4": "4.1.4"
+  "find-my-way@<9.7.0": "9.7.0"
