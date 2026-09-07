@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import pedidosService from "@/services/pedidos.service";
 import FacturaTicket from "@/components/common/FacturaTicket/FacturaTicket";
 import "./FacturaValidacionPage.css";
@@ -26,7 +26,10 @@ const FacturaValidacionPage = () => {
         const data = await pedidosService.obtenerFactura(tokenFactura);
         if (activo && data) setFactura(data);
       } catch (e) {
-        if (activo) setError(e?.response?.data?.error || e?.message || "Error al cargar.");
+        if (activo)
+          setError(
+            e?.response?.data?.error || e?.message || "Error al cargar.",
+          );
       } finally {
         if (activo) setCargando(false);
       }
@@ -53,10 +56,7 @@ const FacturaValidacionPage = () => {
             receipt_long
           </span>
           <h1>Documento no encontrado</h1>
-          <p>{error || "El documento no existe o fue eliminado."}</p>
-          <Link to="/" className="factura-publica__btn">
-            Volver a Katepramax
-          </Link>
+          <p>{"Factura no encontrada."}</p>
         </div>
       </div>
     );
@@ -83,7 +83,7 @@ const FacturaValidacionPage = () => {
           <div className="factura-print-area">
             <FacturaTicket factura={factura} />
           </div>,
-          document.body
+          document.body,
         )}
 
         <button
@@ -93,10 +93,6 @@ const FacturaValidacionPage = () => {
         >
           Imprimir recibo
         </button>
-
-        <Link to="/" className="factura-publica__link">
-          Ir a Katepramax
-        </Link>
       </div>
     </div>
   );
