@@ -69,6 +69,17 @@ it("debería usar observacion=null si no se pasa", async () => {
      const data = prisma.abono.create.mock.calls[0][0].data;
      expect(data.observacion).toBeNull();
    });
+
+   it("Oficinista fuerza la sede de su bodega al registrar (aunque envíe la oficina)", async () => {
+     prisma.proveedor.findUnique.mockResolvedValue(proveedorActivo);
+     prisma.sede.findUnique.mockResolvedValue({ id: 5, nombre: "Villavicencio", tipo: "Bodega", bodegaId: null });
+     prisma.abono.create.mockResolvedValue({ ...abonoMock, sedeId: 5 });
+
+     await service.registrar(appMock, { ...body, sedeId: 3 }, { rol: "Oficinista", sedeId: 3, sedeOperativa: 3 });
+
+     const data = prisma.abono.create.mock.calls[0][0].data;
+     expect(data.sedeId).toBe(5);
+   });
  });
 
 // ── obtenerLista ──────────────────────────────────────────────────────────────
@@ -99,6 +110,16 @@ describe("abonoService.obtenerLista", () => {
 
      const filtros = prisma.abono.findMany.mock.calls[0][0].where;
      expect(filtros.proveedorId).toBe(2);
+   });
+
+   it("Oficinista lista los abonos de la bodega que alimenta su oficina", async () => {
+     prisma.sede.findUnique.mockResolvedValue({ id: 3, nombre: "Villavicencio Centro", tipo: "Oficina", bodegaId: 5 });
+     prisma.abono.findMany.mockResolvedValue([]);
+
+     await service.obtenerLista(appMock, {}, { rol: "Oficinista", sedeId: 3, sedeOperativa: 3 });
+
+     const filtros = prisma.abono.findMany.mock.calls[0][0].where;
+     expect(filtros.sedeId).toBe(5);
    });
  });
 

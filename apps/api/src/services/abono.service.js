@@ -1,6 +1,6 @@
 const repo     = require("../repositories/abono.repository");
 const AppError = require("../errors/AppError");
-const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere } = require("../utils/contabilidad");
+const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeDeuda } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
 
 async function registrar(app, body, usuario) {
@@ -12,9 +12,11 @@ async function registrar(app, body, usuario) {
   if (!proveedor) throw new AppError(`Proveedor ${body.proveedorId} no encontrado`, 404);
   if (!proveedor.activo) throw new AppError(`Proveedor "${proveedor.nombre}" está inactivo`, 422);
 
+  // La deuda se registra en la bodega, así que el abono se aplica sobre la
+  // bodega que alimenta al usuario (sus oficinas comparten la deuda).
   let sedeId = Number(body.sedeId);
-  if (usuario.rol !== "Admin" && sedeId !== usuario.sedeId) {
-    throw new AppError("No puedes registrar abonos en otra sede.", 403);
+  if (usuario.rol !== "Admin") {
+    sedeId = await sedeDeuda(app, usuario);
   }
 
   const sede = await app.prisma.sede.findUnique({ where: { id: sedeId } });
@@ -51,7 +53,7 @@ async function obtenerLista(app, query, usuario) {
   if (query.fecha)       filtros.fecha       = rangoDia(query.fecha);
 
   if (usuario.rol !== "Admin") {
-    filtros.sedeId = usuario.sedeId;
+    filtros.sedeId = await sedeDeuda(app, usuario);
   } else if (query.sedeId) {
     filtros.sedeId = Number(query.sedeId);
   }
@@ -67,8 +69,11 @@ async function obtenerPorId(app, id, usuario) {
   const abono = await repo.buscarPorId(app.prisma, id);
   if (!abono) throw new AppError(`Abono ${id} no encontrado`, 404);
 
-  if (usuario.rol !== "Admin" && abono.sedeId !== usuario.sedeId) {
-    throw new AppError("No tienes permiso para ver este abono.", 403);
+  if (usuario.rol !== "Admin") {
+    const permitidas = new Set([usuario.sedeId, await sedeDeuda(app, usuario)]);
+    if (!permitidas.has(abono.sedeId)) {
+      throw new AppError("No tienes permiso para ver este abono.", 403);
+    }
   }
 
   return abono;
@@ -111,8 +116,8 @@ async function borrar(app, id, usuario) {
 }
 
 async function resumenPorProveedor(app, semana, usuario) {
-  const where = sedeWhere(usuario);
-  const filas = await repo.resumenPorProveedor(app.prisma, semanaValida(semana), where.sedeId);
+  const sedeId = await sedeDeuda(app, usuario);
+  const filas = await repo.resumenPorProveedor(app.prisma, semanaValida(semana), sedeId);
   const proveedores = await app.prisma.proveedor.findMany({ select: { id: true, nombre: true } });
   const mapa = Object.fromEntries(proveedores.map((p) => [p.id, p.nombre]));
   return filas.map((f) => ({
@@ -124,10 +129,10 @@ async function resumenPorProveedor(app, semana, usuario) {
 }
 
 async function resumenPorSede(app, semana, usuario) {
-  const where = sedeWhere(usuario);
-  const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), where.sedeId);
-  const sedes = usuario.rol !== "Admin" && usuario.sedeId != null
-    ? [{ id: usuario.sedeId, nombre: `Sede ${usuario.sedeId}` }]
+  const sedeId = await sedeDeuda(app, usuario);
+  const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), sedeId);
+  const sedes = usuario.rol !== "Admin" && sedeId != null
+    ? [{ id: sedeId, nombre: (await app.prisma.sede.findUnique({ where: { id: sedeId }, select: { nombre: true } }))?.nombre ?? `Sede ${sedeId}` }]
     : await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapa  = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
   return filas.map((f) => ({

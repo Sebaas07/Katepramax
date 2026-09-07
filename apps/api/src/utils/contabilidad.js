@@ -84,6 +84,28 @@ function sedeWhere(usuario) {
   return {};
 }
 
+// Sede donde vive la deuda de proveedores de un usuario. La deuda se registra
+// en la bodega (entradas de inventario) y todas las oficinas ligadas a esa
+// bodega la comparten, así que los abonos y la deuda se leen/escriben sobre la
+// bodega. Admin → null (acceso total, sin filtro).
+async function sedeDeuda(app, usuario) {
+  if (usuario?.rol === "Admin") return null;
+  const sedeId = usuario.sedeOperativa ?? usuario.sedeId;
+  if (sedeId == null) return null;
+  const sede = await app.prisma.sede.findUnique({
+    where:     { id: sedeId },
+    select:    { id: true, tipo: true, bodegaId: true },
+  });
+  if (sede?.tipo === "Oficina" && sede.bodegaId != null) return sede.bodegaId;
+  return sede?.id ?? sedeId;
+}
+
+// Filtro Prisma de sede para lecturas de deuda/abonos de proveedores.
+async function sedeWhereDeuda(app, usuario) {
+  const sedeId = await sedeDeuda(app, usuario);
+  return sedeId == null ? {} : { sedeId };
+}
+
 module.exports = {
   MAX_OBSERVACION,
   MAX_CONCEPTO,
@@ -97,4 +119,6 @@ module.exports = {
   calcularVariacion,
   sedeEsPermitida,
   sedeWhere,
+  sedeDeuda,
+  sedeWhereDeuda,
 };

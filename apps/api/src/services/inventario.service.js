@@ -1,7 +1,7 @@
 const repo = require("../repositories/inventario.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
-const { sedeEsPermitida, rangoDia, fechaValida, sedeWhere, semanaValida } = require("../utils/contabilidad");
+const { sedeEsPermitida, rangoDia, fechaValida, sedeWhereDeuda, semanaValida } = require("../utils/contabilidad");
 
 /**
  * Calcula el delta de stock según el tipo de movimiento.
@@ -383,7 +383,7 @@ async function resumenDeudaProveedores(app, query, usuario) {
   }
 
   const prisma = app.prisma;
-  const where = sedeWhere(usuario);
+  const where = await sedeWhereDeuda(app, usuario);
   if (usuario.rol === "Admin" && query.sedeId) where.sedeId = Number(query.sedeId);
   if (query.semana) where.semana = semanaValida(query.semana);
 
@@ -455,7 +455,7 @@ async function historialProveedor(app, params, query, usuario) {
     throw new AppError(`Proveedor ${proveedorId} no encontrado`, 404);
   }
 
-  const whereSede = sedeWhere(usuario);
+  const whereSede = await sedeWhereDeuda(app, usuario);
   if (usuario.rol === "Admin" && query.sedeId) {
     whereSede.sedeId = Number(query.sedeId);
   }

@@ -44,9 +44,21 @@ const sesionBodegaMock = {
   usuario: { ...sesionAdminMock.usuario, rol: "Bodega" },
 };
 
+const sesionOficinistaMock = {
+  ...sesionAdminMock,
+  id: 12,
+  usuario: {
+    ...sesionAdminMock.usuario,
+    id: 4,
+    rol: "Oficinista",
+    sedeId: 3,
+    sede: { id: 3, nombre: "Villavicencio Centro", tipo: "Oficina", bodegaId: 5, oficinas: [] },
+  },
+};
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
-let app, tokenAdmin, tokenBodega;
+let app, tokenAdmin, tokenBodega, tokenOficinista;
 
 beforeAll(async () => {
   app = await buildApp();
@@ -55,6 +67,7 @@ beforeAll(async () => {
 
   tokenAdmin  = app.jwt.sign({ sesionId: 10 });
   tokenBodega = app.jwt.sign({ sesionId: 11 });
+  tokenOficinista = app.jwt.sign({ sesionId: 12 });
 }, 15000);
 
 afterAll(async () => { await app.close(); });
@@ -63,9 +76,20 @@ afterAll(async () => { await app.close(); });
 
 function authAdmin()  { return { Authorization: `Bearer ${tokenAdmin}` }; }
 function authBodega() { return { Authorization: `Bearer ${tokenBodega}` }; }
+function authOficinista() { return { Authorization: `Bearer ${tokenOficinista}` }; }
 
 function mockSesion(mock) {
   prisma.sesion.findFirst.mockResolvedValue(mock);
+}
+
+function mockSedesOficinaBodega() {
+  prisma.sede.findUnique.mockImplementation(({ where }) =>
+    Promise.resolve(
+      Number(where.id) === 5
+        ? { id: 5, nombre: "Villavicencio", tipo: "Bodega", bodegaId: null }
+        : { id: 3, nombre: "Villavicencio Centro", tipo: "Oficina", bodegaId: 5 },
+    ),
+  );
 }
 
 // ── POST /api/v1/abonos ───────────────────────────────────────────────────────
@@ -147,6 +171,21 @@ describe("POST /api/v1/abonos", () => {
     });
     expect(res.statusCode).toBe(201);
   });
+
+  it("debería registrar el abono en la bodega para un Oficinista", async () => {
+    mockSesion(sesionOficinistaMock);
+    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    mockSedesOficinaBodega();
+    prisma.abono.create.mockResolvedValue({ ...abonoMock, sedeId: 5 });
+
+    const res = await app.inject({
+      method: "POST", url: "/api/v1/abonos",
+      headers: authOficinista(), payload: { ...payload, sedeId: 3 },
+    });
+    expect(res.statusCode).toBe(201);
+    const data = prisma.abono.create.mock.calls[0][0].data;
+    expect(data.sedeId).toBe(5);
+  });
 });
 
 // ── GET /api/v1/abonos ────────────────────────────────────────────────────────
@@ -183,6 +222,19 @@ describe("GET /api/v1/abonos", () => {
     });
     expect(res.statusCode).toBe(200);
   });
+
+  it("Oficinista lista los abonos de la bodega que alimenta su oficina", async () => {
+    mockSesion(sesionOficinistaMock);
+    mockSedesOficinaBodega();
+    prisma.abono.findMany.mockResolvedValue([{ ...abonoMock, sedeId: 5 }]);
+
+    const res = await app.inject({
+      method: "GET", url: "/api/v1/abonos",
+      headers: authOficinista(),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(prisma.abono.findMany.mock.calls[0][0].where.sedeId).toBe(5);
+  });
 });
 
 // ── GET /api/v1/abonos/:id ────────────────────────────────────────────────────
@@ -216,6 +268,22 @@ describe("GET /api/v1/abonos/:id", () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().id).toBe(1);
+  });
+
+  it("Oficinista ve un abono registrado en su bodega", async () => {
+    mockSesion(sesionOficinistaMock);
+    mockSedesOficinaBodega();
+    prisma.abono.findUnique.mockResolvedValue({
+      ...abonoMock,
+      sedeId: 5,
+      sede: { id: 5, nombre: "Villavicencio" },
+    });
+
+    const res = await app.inject({
+      method: "GET", url: "/api/v1/abonos/1",
+      headers: authOficinista(),
+    });
+    expect(res.statusCode).toBe(200);
   });
 });
 

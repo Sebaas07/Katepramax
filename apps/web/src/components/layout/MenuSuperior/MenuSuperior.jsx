@@ -84,18 +84,8 @@ export default function MenuSuperior() {
           </div>
         )}
 
-        {/* ── Derecha: notificaciones + usuario ── */}
+        {/* ── Derecha: información del usuario ── */}
         <div className="menu-superior__acciones">
-          <button
-            className="menu-superior__icon-btn"
-            type="button"
-            aria-label="Notificaciones"
-          >
-            <span className="material-symbols-outlined" aria-hidden="true">
-              notifications
-            </span>
-          </button>
-
           <div className="menu-superior__usuario">
             <div className="menu-superior__usuario-info d-none d-md-flex">
               <span className="menu-superior__usuario-rol">

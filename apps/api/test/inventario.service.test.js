@@ -691,6 +691,7 @@ describe("inventarioService.resumenDeudaProveedores", () => {
   });
 
   it("debería forzar la sede del usuario para Bodega", async () => {
+    prisma.sede.findUnique.mockResolvedValue({ id: 1, nombre: "Villavicencio", tipo: "Bodega", bodegaId: null });
     prisma.inventario.groupBy.mockResolvedValue([]);
     prisma.abono.groupBy.mockResolvedValue([]);
     prisma.proveedor.findMany.mockResolvedValue([]);
@@ -705,6 +706,24 @@ describe("inventarioService.resumenDeudaProveedores", () => {
     const abonoWhere = prisma.abono.groupBy.mock.calls[0][0].where;
     expect(callWhere.sedeId).toBe(1);
     expect(abonoWhere.sedeId).toBe(1);
+  });
+
+  it("Oficinista filtra por la bodega que alimenta su oficina", async () => {
+    prisma.sede.findUnique.mockResolvedValue({ id: 3, nombre: "Villavicencio Centro", tipo: "Oficina", bodegaId: 5 });
+    prisma.inventario.groupBy.mockResolvedValue([]);
+    prisma.abono.groupBy.mockResolvedValue([]);
+    prisma.proveedor.findMany.mockResolvedValue([]);
+
+    await inventarioService.resumenDeudaProveedores(
+      appMock,
+      {},
+      { id: 4, rol: "Oficinista", sedeId: 3, sedeOperativa: 3 },
+    );
+
+    const callWhere = prisma.inventario.groupBy.mock.calls[0][0].where;
+    const abonoWhere = prisma.abono.groupBy.mock.calls[0][0].where;
+    expect(callWhere.sedeId).toBe(5);
+    expect(abonoWhere.sedeId).toBe(5);
   });
 
   it("no debería permitir saldo negativo (sobreabono)", async () => {
@@ -918,6 +937,7 @@ describe("inventarioService.historialProveedor", () => {
   });
 
   it("Bodega solo ve entradas de su propia sede aunque pase sedeId", async () => {
+    prisma.sede.findUnique.mockResolvedValue({ id: 1, nombre: "Villavicencio", tipo: "Bodega", bodegaId: null });
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
     prisma.inventario.findMany.mockResolvedValue(entradasMock);
     prisma.inventario.groupBy.mockResolvedValue([]);

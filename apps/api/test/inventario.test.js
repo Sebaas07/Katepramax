@@ -52,11 +52,24 @@ const sesionBodegaMock = {
   usuario: { ...sesionAdminMock.usuario, rol: "Bodega" },
 };
 
+const sesionOficinistaMock = {
+  ...sesionAdminMock,
+  id: 12,
+  usuario: {
+    ...sesionAdminMock.usuario,
+    id: 4,
+    rol: "Oficinista",
+    sedeId: 3,
+    sede: { id: 3, nombre: "Villavicencio Centro", tipo: "Oficina", bodegaId: 5, oficinas: [] },
+  },
+};
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
 let app;
 let tokenAdmin;
 let tokenBodega;
+let tokenOficinista;
 
 beforeAll(async () => {
   app = await buildApp();
@@ -65,6 +78,7 @@ beforeAll(async () => {
 
   tokenAdmin = app.jwt.sign({ sesionId: 10 }, { expiresIn: "15m" });
   tokenBodega = app.jwt.sign({ sesionId: 11 }, { expiresIn: "15m" });
+  tokenOficinista = app.jwt.sign({ sesionId: 12 }, { expiresIn: "15m" });
 });
 
 afterAll(async () => {
@@ -541,6 +555,35 @@ describe("GET /api/v1/inventario/deuda-proveedores", () => {
         saldoPendiente: 75000,
       }),
     ]);
+  });
+
+  it("Oficinista ve la deuda de la bodega que alimenta su oficina", async () => {
+    prisma.sesion.findFirst.mockResolvedValue(sesionOficinistaMock);
+    prisma.sede.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve(
+        Number(where.id) === 5
+          ? { id: 5, nombre: "Villavicencio", tipo: "Bodega", bodegaId: null }
+          : { id: 3, nombre: "Villavicencio Centro", tipo: "Oficina", bodegaId: 5 },
+      ),
+    );
+    prisma.inventario.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { deuda: 120000 } },
+    ]);
+    prisma.abono.groupBy.mockResolvedValue([
+      { proveedorId: 3, _sum: { valorPagado: 45000 } },
+    ]);
+    prisma.proveedor.findMany.mockResolvedValue([{ id: 3, nombre: "Cemex" }]);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/inventario/deuda-proveedores",
+      headers: { authorization: `Bearer ${tokenOficinista}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()[0].saldoPendiente).toBe(75000);
+    expect(prisma.inventario.groupBy.mock.calls[0][0].where.sedeId).toBe(5);
+    expect(prisma.abono.groupBy.mock.calls[0][0].where.sedeId).toBe(5);
   });
 });
 
