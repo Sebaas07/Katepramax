@@ -1,5 +1,10 @@
 import entregasApi from "@/api/entregasApi";
 
+const extraerMensajeError = (e) => {
+  const detalle = e.response?.data?.error || e.response?.data?.message;
+  return detalle ? new Error(detalle) : e;
+};
+
 const entregaService = {
   obtenerMisEntregas: async (filtros = {}) => {
     try {
@@ -15,7 +20,7 @@ const entregaService = {
       return await entregasApi.marcarSalida(asignacionId);
     } catch (e) {
       console.error("entregaService.marcarSalida:", e);
-      throw e;
+      throw extraerMensajeError(e);
     }
   },
   confirmarEntrega: async (

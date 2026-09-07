@@ -53,9 +53,11 @@ const pedidosApi = {
     return response.data;
   },
 
-   // Endpoint público (QR de validación de la factura)
-   obtenerFactura: async (pedidoId) => {
-     const response = await clienteApi.get(`/pedidos/${pedidoId}/factura`);
+   // Endpoint público (QR de validación de la factura).
+   // Se consulta por tokenFactura (UUID), nunca por el id secuencial,
+   // para no permitir enumerar facturas.
+   obtenerFactura: async (tokenFactura) => {
+     const response = await clienteApi.get(`/pedidos/factura/${tokenFactura}`);
      return response.data;
    },
 

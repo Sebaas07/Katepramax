@@ -151,9 +151,9 @@ const pedidosService = {
    * Datos de la factura de un pedido (ticket imprimible con QR).
    * Endpoint público: funciona incluso sin sesión iniciada.
    */
-  obtenerFactura: async (pedidoId) => {
-    if (!pedidoId) throw new Error("Se requiere el ID del pedido.");
-    return await pedidosApi.obtenerFactura(pedidoId);
+  obtenerFactura: async (tokenFactura) => {
+    if (!tokenFactura) throw new Error("Se requiere el token de la factura.");
+    return await pedidosApi.obtenerFactura(tokenFactura);
   },
 
   /**

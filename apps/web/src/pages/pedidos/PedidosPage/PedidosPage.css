@@ -281,6 +281,15 @@
   color: var(--on-surface-variant);
 }
 
+.item-stock-alerta {
+  display: block;
+  margin-top: 0.375rem;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--danger, #e5484d);
+}
+
 .item-subtotal {
   display: inline-flex;
   align-items: center;
@@ -436,6 +445,24 @@
   font-size: 13px;
   text-align: left;
   cursor: pointer;
+}
+
+.ped-combobox__opcion--sin-stock {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.ped-combobox__opcion--sin-stock:hover,
+.ped-combobox__opcion--sin-stock:focus-visible {
+  background: transparent;
+}
+
+.ped-combobox__opcion-stock {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--secondary);
+  white-space: nowrap;
 }
 
 .ped-combobox__opcion:hover,

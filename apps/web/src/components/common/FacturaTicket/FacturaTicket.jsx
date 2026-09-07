@@ -11,7 +11,7 @@ const fmtMoneda = (n) =>
  * de venta, papel 58mm — ancho imprimible 48mm).
  *
  * Props:
- *  factura   — datos del comprobante devueltos por GET /pedidos/:id/factura
+ *  factura   — datos del comprobante devueltos por GET /pedidos/factura/:token
  *  mostrarQR — incluye el QR de validación (por defecto true)
  *  url       — URL a codificar en el QR (por defecto se calcula sola)
  *
@@ -19,7 +19,7 @@ const fmtMoneda = (n) =>
  * tener la clase `factura-print-area` (ver @media print en el CSS).
  */
 const FacturaTicket = ({ factura, mostrarQR = true, url }) => {
-  const link = url ?? obtenerUrlFactura(factura.id);
+  const link = url ?? obtenerUrlFactura(factura.tokenFactura);
   const fecha = factura.fecha ? new Date(factura.fecha) : null;
 
   return (

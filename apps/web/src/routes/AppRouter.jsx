@@ -84,8 +84,9 @@ const AppRouter = () => (
       <Route path="/login" element={<LoginPage />} />
     </Route>
 
-    {/* Pública sin restricción de sesión: la valida el QR de la factura */}
-    <Route path="/factura/:id" element={<FacturaValidacionPage />} />
+    {/* Pública sin restricción de sesión: la valida el QR de la factura.
+     * El segmento es el tokenFactura (UUID), no el id secuencial. */}
+    <Route path="/factura/:token" element={<FacturaValidacionPage />} />
 
     {/* Protegidas */}
     <Route element={<RequireAuth />}>

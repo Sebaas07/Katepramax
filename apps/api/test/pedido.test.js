@@ -30,6 +30,7 @@ const creadorMock = {
 
 const pedidoMock = {
   id: 1,
+  tokenFactura: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
   estado: "Pendiente",
   observaciones: null,
   totalRecibido: null,
@@ -403,9 +404,10 @@ describe("PATCH /api/v1/pedidos/:id/estado", () => {
   });
 });
 
-// ── GET /api/v1/pedidos/:id/factura (público, vía QR) ────────────────────────
+// ── GET /api/v1/pedidos/factura/:token (público, vía QR) ─────────────────────
 
-describe("GET /api/v1/pedidos/:id/factura", () => {
+describe("GET /api/v1/pedidos/factura/:token", () => {
+  const token = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
   const pedidoConSede = {
     ...pedidoMock,
     sede: { id: 1, nombre: "Bogotá" },
@@ -416,12 +418,13 @@ describe("GET /api/v1/pedidos/:id/factura", () => {
 
     const res = await app.inject({
       method: "GET",
-      url: "/api/v1/pedidos/1/factura",
+      url: `/api/v1/pedidos/factura/${token}`,
     });
 
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.id).toBe(1);
+    expect(body.tokenFactura).toBe(token);
     expect(body.emisor).toBe("Bogotá");
     expect(body.cliente).toBe("Juan Pérez");
     expect(body.total).toBe(50000);
@@ -450,7 +453,7 @@ describe("GET /api/v1/pedidos/:id/factura", () => {
 
     const res = await app.inject({
       method: "GET",
-      url: "/api/v1/pedidos/1/factura",
+      url: `/api/v1/pedidos/factura/${token}`,
     });
 
     expect(res.statusCode).toBe(200);
@@ -459,12 +462,12 @@ describe("GET /api/v1/pedidos/:id/factura", () => {
     expect(body.totalRecibido).toBe(50000);
   });
 
-  it("debería retornar 404 si el pedido no existe", async () => {
+  it("debería retornar 404 si el token no existe", async () => {
     mockPedidoFindUnique(null);
 
     const res = await app.inject({
       method: "GET",
-      url: "/api/v1/pedidos/999/factura",
+      url: "/api/v1/pedidos/factura/esta-no-es-una-uuid",
     });
 
     expect(res.statusCode).toBe(404);

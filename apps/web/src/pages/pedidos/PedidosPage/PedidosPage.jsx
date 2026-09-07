@@ -145,6 +145,35 @@ const PedidosPage = () => {
     [sedes],
   );
 
+  // Sede elegida en el formulario (Admin elige; los demás usan su propia sede).
+  // Para validar stock se usa la bodega que alimenta esa sede (las oficinas
+  // no tienen stock propio).
+  const formSedeStock = useMemo(() => {
+    const idSede = esAdmin
+      ? formPedido.sedeId
+        ? Number(formPedido.sedeId)
+        : null
+      : sedeIdUsuario ?? null;
+    if (idSede == null) return null;
+    const sede = sedes.find((s) => s.id === idSede);
+    const bodegaId =
+      sede?.tipo === "Oficina" && sede.bodegaId != null
+        ? Number(sede.bodegaId)
+        : idSede;
+    return { sedeId: idSede, bodegaId };
+  }, [esAdmin, formPedido.sedeId, sedeIdUsuario, sedes]);
+
+  const stockDisponibleDe = useCallback(
+    (producto) => {
+      if (!formSedeStock) return null;
+      const registro = (producto.stockSedes ?? []).find(
+        (s) => s.sedeId === formSedeStock.bodegaId,
+      );
+      return registro ? Number(registro.stockActual ?? 0) : 0;
+    },
+    [formSedeStock],
+  );
+
   const cargarDatos = useCallback(async () => {
     setCargando(true);
     setErrorDatos(null);
@@ -379,6 +408,24 @@ const PedidosPage = () => {
       const itemsValidos = formPedido.items.filter(
         (item) => item.productoId && parseInt(item.cantidad) >= 1,
       );
+
+      if (formSedeStock) {
+        for (const item of itemsValidos) {
+          const producto = productos.find(
+            (p) => String(p.codigo) === String(item.productoId),
+          );
+          const disponible = producto ? stockDisponibleDe(producto) : null;
+          if (disponible != null && parseInt(item.cantidad, 10) > disponible) {
+            toast.error(
+              `Stock insuficiente para ${
+                producto.descripcion ?? producto.nombre
+              }. Disponible: ${disponible}.`,
+            );
+            return;
+          }
+        }
+      }
+
       await pedidosService.crearPedido({
         clienteId: formPedido.clienteId,
         sedeId: esAdmin
@@ -527,7 +574,9 @@ const PedidosPage = () => {
     setFacturaSeleccionada(null);
     setModalFacturaAbierto(true);
     try {
-      const factura = await pedidosService.obtenerFactura(pedido.id);
+      const factura = await pedidosService.obtenerFactura(
+        pedido.tokenFactura,
+      );
       setFacturaSeleccionada(factura);
     } catch (err) {
       toast.error("No se pudo cargar el recibo: " + err.message);
@@ -903,22 +952,43 @@ const PedidosPage = () => {
                                 Sin resultados para “{item.busqueda}”
                               </div>
                             ) : (
-                              productosFiltrados.map((p) => (
-                                <button
-                                  type="button"
-                                  key={p.codigo}
-                                  className="ped-combobox__opcion"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => handleSeleccionProducto(index, p.codigo)}
-                                >
-                                  <span className="ped-combobox__opcion-nombre">
-                                    [{p.codigo}] {p.nombre ?? p.descripcion}
-                                  </span>
-                                  <span className="ped-combobox__opcion-sede">
-                                    {p.sede?.nombre ?? nombreSede(p.sedeId)}
-                                  </span>
-                                </button>
-                              ))
+                              productosFiltrados.map((p) => {
+                                const disponible = stockDisponibleDe(p);
+                                const sinStock =
+                                  disponible !== null && disponible <= 0;
+                                return (
+                                  <button
+                                    type="button"
+                                    key={p.codigo}
+                                    className={`ped-combobox__opcion${
+                                      sinStock
+                                        ? " ped-combobox__opcion--sin-stock"
+                                        : ""
+                                    }`}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() =>
+                                      !sinStock &&
+                                      handleSeleccionProducto(index, p.codigo)
+                                    }
+                                    disabled={sinStock}
+                                    aria-disabled={sinStock || undefined}
+                                  >
+                                    <span className="ped-combobox__opcion-nombre">
+                                      [{p.codigo}]{" "}
+                                      {p.nombre ?? p.descripcion}
+                                    </span>
+                                    <span className="ped-combobox__opcion-sede">
+                                      {p.sede?.nombre ??
+                                        nombreSede(p.sedeId)}
+                                    </span>
+                                    {!sinStock && (
+                                      <span className="ped-combobox__opcion-stock">
+                                        {disponible} disp.
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })
                             )}
                           </div>
                         )}
@@ -938,6 +1008,24 @@ const PedidosPage = () => {
                           step="1"
                           placeholder="0"
                         />
+                        {(() => {
+                          if (!prodSel) return null;
+                          const disponible = stockDisponibleDe(prodSel);
+                          if (disponible == null) return null;
+                          const excede =
+                            disponible <= 0 ||
+                            parseInt(item.cantidad, 10) > disponible;
+                          if (!excede) return null;
+                          return (
+                            <span className="item-stock-alerta">
+                              {disponible <= 0
+                                ? "Sin stock en esta sede"
+                                : `Solo hay ${disponible} disponible${
+                                    disponible === 1 ? "" : "s"
+                                  }`}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <div className="item-field--precio">

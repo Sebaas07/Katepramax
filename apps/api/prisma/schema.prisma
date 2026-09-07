@@ -267,6 +267,10 @@ model Pedido {
   creadoEn      DateTime     @default(now()) @map("creado_en")
   actualizadoEn DateTime     @updatedAt @map("actualizado_en")
 
+  // Identificador opaco para consultar la factura de forma pública (QR).
+  // Un UUID aleatorio evita la enumeración de documentos por id secuencial.
+  tokenFactura String? @unique @default(uuid()) @map("token_factura") @db.VarChar(36)
+
   creadoPorId Int @map("creado_por")
 
   sede    Sede    @relation(fields: [sedeId], references: [id])

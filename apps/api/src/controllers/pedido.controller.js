@@ -31,7 +31,10 @@ async function obtenerHistorial(request, reply) {
 }
 
 async function obtenerFactura(request, reply) {
-  const factura = await svc.obtenerFactura(request.server, Number(request.params.id));
+  const factura = await svc.obtenerFactura(
+    request.server,
+    request.params.token,
+  );
   return reply.send(factura);
 }
 

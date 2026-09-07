@@ -26,6 +26,7 @@ const pedidoBase = {
   type: "object",
   properties: {
     id: { type: "integer" },
+    tokenFactura: { type: ["string", "null"] },
     estado: { type: "string" },
     direccion: { type: ["string", "null"] },
     observaciones: { type: ["string", "null"] },
@@ -189,23 +190,33 @@ const cambiarEstadoPedido = {
   },
 };
 
-// GET /api/pedidos/:id/factura — público (QR de validación)
+// GET /api/pedidos/factura/:token — público (QR de validación)
 const obtenerFactura = {
   summary: "Datos de la factura de un pedido (público, vía QR)",
   description:
     "Endpoint público usado por el código QR impreso en el ticket para " +
-    "validar el documento. Expone solo los datos de un comprobante de venta.",
+    "validar el documento. Se consulta con el tokenFactura (UUID) del pedido, " +
+    "nunca con el id secuencial, para evitar la enumeración de facturas. " +
+    "Expone solo los datos de un comprobante de venta.",
   tags: ["Pedidos"],
   params: {
     type: "object",
-    required: ["id"],
-    properties: { id: { type: "integer" } },
+    required: ["token"],
+    properties: {
+      token: {
+        type: "string",
+        minLength: 8,
+        maxLength: 36,
+        description: "tokenFactura (UUID) del pedido",
+      },
+    },
   },
   response: {
     200: {
       type: "object",
       properties: {
         id: { type: "integer" },
+        tokenFactura: { type: "string" },
         estado: { type: "string" },
         fecha: { type: "string", format: "date-time" },
         direccion: { type: ["string", "null"] },

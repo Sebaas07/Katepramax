@@ -430,15 +430,27 @@ async function contarPendientes(app, usuario) {
  * escanea cualquier persona para validar el documento. Por eso solo se
  * exponen los campos de un comprobante, nada de stock ni datos sensibles.
  */
-async function obtenerFactura(app, id) {
-  const pedido = await repo.buscarPorId(app.prisma, id);
-  if (!pedido) throw new AppError(`Pedido ${id} no encontrado`, 404);
+async function obtenerFactura(app, token) {
+  const pedido = await app.prisma.pedido.findUnique({
+    where: { tokenFactura: token },
+    include: {
+      cliente: { select: { nombre: true, telefono: true } },
+      sede: { select: { nombre: true } },
+      creador: { select: { nombreCompleto: true } },
+      detalles: true,
+      asignaciones: {
+        select: { metodoPago: true, fechaConfirmada: true },
+      },
+    },
+  });
+  if (!pedido) throw new AppError("Factura no encontrada", 404);
 
   const total = pedido.detalles.reduce((sum, d) => sum + Number(d.subtotal), 0);
   const entrega = pedido.asignaciones?.[0] ?? null;
 
   return {
     id: pedido.id,
+    tokenFactura: pedido.tokenFactura,
     estado: pedido.estado,
     fecha: pedido.creadoEn,
     direccion: pedido.direccion,

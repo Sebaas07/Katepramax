@@ -51,8 +51,10 @@ async function pedidoRoutes(app) {
   });
 
   // PÚBLICA (sin sesión): la usa el código QR del ticket de factura para
-  // validar el documento. Contiene solo los campos de un comprobante.
-  app.get("/pedidos/:id/factura", {
+  // validar el documento. Se consulta por tokenFactura (UUID opaco) y NO por
+  // el id secuencial, para impedir que se enumeren facturas cambiando el id.
+  // Contiene solo los campos de un comprobante.
+  app.get("/pedidos/factura/:token", {
     schema:  schemas.obtenerFactura,
     handler: ctrl.obtenerFactura,
   });

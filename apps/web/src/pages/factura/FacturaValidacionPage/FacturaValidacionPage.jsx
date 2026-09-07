@@ -11,7 +11,7 @@ import "./FacturaValidacionPage.css";
  * Permite al cliente validar el comprobante e imprimirlo en una impresora POS.
  */
 const FacturaValidacionPage = () => {
-  const { id } = useParams();
+  const { token } = useParams();
   const [factura, setFactura] = useState(null);
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(true);
@@ -19,23 +19,23 @@ const FacturaValidacionPage = () => {
   useEffect(() => {
     let activo = true;
 
-    (async (pedidoId) => {
+    (async (tokenFactura) => {
       try {
         setCargando(true);
         setError("");
-        const data = await pedidosService.obtenerFactura(pedidoId);
+        const data = await pedidosService.obtenerFactura(tokenFactura);
         if (activo && data) setFactura(data);
       } catch (e) {
         if (activo) setError(e?.response?.data?.error || e?.message || "Error al cargar.");
       } finally {
         if (activo) setCargando(false);
       }
-    })(id);
+    })(token);
 
     return () => {
       activo = false;
     };
-  }, [id]);
+  }, [token]);
 
   if (cargando) {
     return (
