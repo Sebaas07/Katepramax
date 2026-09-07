@@ -1,8 +1,7 @@
 const repo     = require("../repositories/abono.repository");
 const egresoRepo = require("../repositories/egreso.repository");
 const AppError = require("../errors/AppError");
-const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeDeuda } = require("../utils/contabilidad");
-const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere, ORIGENES } = require("../utils/contabilidad");
+const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeDeuda, ORIGENES } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
 
 async function registrar(app, body, usuario) {
