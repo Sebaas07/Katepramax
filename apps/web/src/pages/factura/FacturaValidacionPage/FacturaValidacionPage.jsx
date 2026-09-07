@@ -43,7 +43,11 @@ const FacturaValidacionPage = () => {
   if (cargando) {
     return (
       <div className="factura-publica">
-        <div className="factura-publica__carga">Cargando recibo...</div>
+        <div className="factura-publica__carga">
+          <div className="factura-publica__carga-orb" aria-hidden="true" />
+          <strong>Cargando recibo</strong>
+          <span>Validando comprobante…</span>
+        </div>
       </div>
     );
   }
@@ -56,7 +60,7 @@ const FacturaValidacionPage = () => {
             receipt_long
           </span>
           <h1>Documento no encontrado</h1>
-          <p>{"Factura no encontrada."}</p>
+          <p>{error || "Factura no encontrada."}</p>
         </div>
       </div>
     );
@@ -91,6 +95,7 @@ const FacturaValidacionPage = () => {
           className="factura-publica__btn"
           onClick={() => window.print()}
         >
+          <span className="material-symbols-outlined">print</span>
           Imprimir recibo
         </button>
       </div>
