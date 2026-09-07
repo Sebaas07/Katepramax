@@ -21,11 +21,13 @@ const lineaVacia = () => ({
 });
 
 const EnviosPage = () => {
-  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
+  const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } =
+    useAuth();
   const puedeCrear = esAdmin || esBodega;
 
   // Sede operativa: para Bodega (oficina) es la bodega padre; para el resto, sedeId
-  const sedeOperativaId = Number(usuario?.bodegaId ?? usuario?.sedeId ?? 0) || null;
+  const sedeOperativaId =
+    Number(usuario?.bodegaId ?? usuario?.sedeId ?? 0) || null;
 
   // Admin general arranca en "todos"; el resto en "recibidos"
   const [tab, setTab] = useState(esAdmin ? "todos" : "recibidos");
@@ -45,7 +47,10 @@ const EnviosPage = () => {
 
   const [modalConfirmar, setModalConfirmar] = useState(false);
   const [envioActivo, setEnvioActivo] = useState(null);
-  const [formConfirmar, setFormConfirmar] = useState({ detalles: [], observacionRecepcion: "" });
+  const [formConfirmar, setFormConfirmar] = useState({
+    detalles: [],
+    observacionRecepcion: "",
+  });
 
   const [modalCancelar, setModalCancelar] = useState(false);
   const [envioCancelar, setEnvioCancelar] = useState(null);
@@ -53,8 +58,14 @@ const EnviosPage = () => {
   // ── Carga de catálogos ────────────────────────────────────
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    inventarioService.obtenerSedes().then((d) => setSedes(Array.isArray(d) ? d : [])).catch(() => setSedes([]));
-    inventarioService.obtenerProductos().then((d) => setProductos(Array.isArray(d) ? d : [])).catch(() => setProductos([]));
+    inventarioService
+      .obtenerSedes()
+      .then((d) => setSedes(Array.isArray(d) ? d : []))
+      .catch(() => setSedes([]));
+    inventarioService
+      .obtenerProductos()
+      .then((d) => setProductos(Array.isArray(d) ? d : []))
+      .catch(() => setProductos([]));
   }, [isSessionChecked, isAuthenticated]);
 
   // ── Carga de envíos ────────────────────────────────────────
@@ -78,18 +89,29 @@ const EnviosPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    void cargarEnvios();
+    const id = window.setTimeout(() => {
+      void cargarEnvios();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [cargarEnvios, isSessionChecked, isAuthenticated]);
 
-  const mapaSedes = useMemo(() => Object.fromEntries(sedes.map((s) => [s.id, s.nombre])), [sedes]);
+  const mapaSedes = useMemo(
+    () => Object.fromEntries(sedes.map((s) => [s.id, s.nombre])),
+    [sedes],
+  );
 
   // Los envíos entre sedes solo operan entre bodegas
-  const bodegas = useMemo(() => sedes.filter((s) => s.tipo === "Bodega"), [sedes]);
+  const bodegas = useMemo(
+    () => sedes.filter((s) => s.tipo === "Bodega"),
+    [sedes],
+  );
 
   // ── Modal: nuevo envío ─────────────────────────────────────
   const abrirNuevo = () => {
     setFormNuevo({
-      sedeOrigenId: esBodega ? String(sedeOperativaId ?? usuario?.sedeId ?? "") : "",
+      sedeOrigenId: esBodega
+        ? String(sedeOperativaId ?? usuario?.sedeId ?? "")
+        : "",
       sedesDestinoIds: [],
       detalles: [lineaVacia()],
       observaciones: "",
@@ -109,7 +131,9 @@ const EnviosPage = () => {
   const handleCambioLinea = (idx, campo, valor) => {
     setFormNuevo((p) => ({
       ...p,
-      detalles: p.detalles.map((d, i) => (i === idx ? { ...d, [campo]: valor } : d)),
+      detalles: p.detalles.map((d, i) =>
+        i === idx ? { ...d, [campo]: valor } : d,
+      ),
     }));
   };
 
@@ -118,7 +142,10 @@ const EnviosPage = () => {
   };
 
   const quitarLinea = (idx) => {
-    setFormNuevo((p) => ({ ...p, detalles: p.detalles.filter((_, i) => i !== idx) }));
+    setFormNuevo((p) => ({
+      ...p,
+      detalles: p.detalles.filter((_, i) => i !== idx),
+    }));
   };
 
   const handleGuardarEnvio = async () => {
@@ -132,7 +159,9 @@ const EnviosPage = () => {
           .map((d) => ({ productoId: d.productoId, cantidad: d.cantidad })),
         observaciones: formNuevo.observaciones,
       });
-      toast.success("Envío creado. La(s) sede(s) destino ya lo pueden ver como pendiente.");
+      toast.success(
+        "Envío creado. La(s) sede(s) destino ya lo pueden ver como pendiente.",
+      );
       setModalNuevo(false);
       if (tab === "enviados") await cargarEnvios();
     } catch (err) {
@@ -162,7 +191,9 @@ const EnviosPage = () => {
   const handleCambioDetalleConfirmar = (idx, campo, valor) => {
     setFormConfirmar((p) => ({
       ...p,
-      detalles: p.detalles.map((d, i) => (i === idx ? { ...d, [campo]: valor } : d)),
+      detalles: p.detalles.map((d, i) =>
+        i === idx ? { ...d, [campo]: valor } : d,
+      ),
     }));
   };
 
@@ -195,8 +226,14 @@ const EnviosPage = () => {
 
   const datosTabla = envios.map((e) => ({
     ...e,
-    sedeOrigenNombre: e.sedeOrigen?.nombre ?? mapaSedes[e.sedeOrigenId] ?? `Sede ${e.sedeOrigenId}`,
-    sedeDestinoNombre: e.sedeDestino?.nombre ?? mapaSedes[e.sedeDestinoId] ?? `Sede ${e.sedeDestinoId}`,
+    sedeOrigenNombre:
+      e.sedeOrigen?.nombre ??
+      mapaSedes[e.sedeOrigenId] ??
+      `Sede ${e.sedeOrigenId}`,
+    sedeDestinoNombre:
+      e.sedeDestino?.nombre ??
+      mapaSedes[e.sedeDestinoId] ??
+      `Sede ${e.sedeDestinoId}`,
     productosResumen: `${e.detalles?.length ?? 0} producto(s)`,
     creadorNombre: e.creador?.nombreCompleto ?? "—",
   }));
@@ -260,7 +297,9 @@ const EnviosPage = () => {
         </div>
         {puedeCrear && (
           <button type="button" className="btn-primary" onClick={abrirNuevo}>
-            <span className="material-symbols-outlined" aria-hidden="true">add</span>
+            <span className="material-symbols-outlined" aria-hidden="true">
+              add
+            </span>
             Nuevo envío
           </button>
         )}
@@ -273,7 +312,9 @@ const EnviosPage = () => {
             className={tab === "todos" ? "tab-active" : "tab-btn"}
             onClick={() => setTab("todos")}
           >
-            <span className="material-symbols-outlined" aria-hidden="true">list_alt</span>
+            <span className="material-symbols-outlined" aria-hidden="true">
+              list_alt
+            </span>
             Todos los envíos
           </button>
         )}
@@ -282,7 +323,9 @@ const EnviosPage = () => {
           className={tab === "recibidos" ? "tab-active" : "tab-btn"}
           onClick={() => setTab("recibidos")}
         >
-          <span className="material-symbols-outlined" aria-hidden="true">move_to_inbox</span>
+          <span className="material-symbols-outlined" aria-hidden="true">
+            move_to_inbox
+          </span>
           Por confirmar (recibidos)
         </button>
         <button
@@ -290,7 +333,9 @@ const EnviosPage = () => {
           className={tab === "enviados" ? "tab-active" : "tab-btn"}
           onClick={() => setTab("enviados")}
         >
-          <span className="material-symbols-outlined" aria-hidden="true">outbox</span>
+          <span className="material-symbols-outlined" aria-hidden="true">
+            outbox
+          </span>
           Enviados por mí
         </button>
       </div>
@@ -300,7 +345,9 @@ const EnviosPage = () => {
           <Spinner texto="Cargando envíos..." />
         ) : datosTabla.length === 0 ? (
           <div className="env-empty">
-            <span className="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+            <span className="material-symbols-outlined" aria-hidden="true">
+              local_shipping
+            </span>
             <p>
               {tab === "recibidos"
                 ? "No tienes envíos pendientes por confirmar."
@@ -315,7 +362,11 @@ const EnviosPage = () => {
             datos={datosTabla}
             filasPorPagina={10}
             mostrarBuscador
-            buscarEnCampos={["sedeOrigenNombre", "sedeDestinoNombre", "creadorNombre"]}
+            buscarEnCampos={[
+              "sedeOrigenNombre",
+              "sedeDestinoNombre",
+              "creadorNombre",
+            ]}
             paginacion
             renderAcciones={renderAcciones}
           />
@@ -340,11 +391,15 @@ const EnviosPage = () => {
                 id="env-origen"
                 className="form-control"
                 value={formNuevo.sedeOrigenId}
-                onChange={(e) => setFormNuevo((p) => ({ ...p, sedeOrigenId: e.target.value }))}
+                onChange={(e) =>
+                  setFormNuevo((p) => ({ ...p, sedeOrigenId: e.target.value }))
+                }
               >
                 <option value="">— Selecciona —</option>
                 {bodegas.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                  </option>
                 ))}
               </select>
             </div>
@@ -367,7 +422,8 @@ const EnviosPage = () => {
                 ))}
             </div>
             <span className="form-hint">
-              El mismo listado de productos se enviará completo a cada sede seleccionada.
+              El mismo listado de productos se enviará completo a cada sede
+              seleccionada.
             </span>
           </div>
 
@@ -389,7 +445,10 @@ const EnviosPage = () => {
                   />
                   <datalist id={`env-productos-dl-${idx}`}>
                     {productos.map((p) => (
-                      <option key={p.codigo} value={`[${p.codigo}] ${p.descripcion}`} />
+                      <option
+                        key={p.codigo}
+                        value={`[${p.codigo}] ${p.descripcion}`}
+                      />
                     ))}
                   </datalist>
                 </div>
@@ -399,7 +458,9 @@ const EnviosPage = () => {
                   placeholder="Cant."
                   min="1"
                   value={linea.cantidad}
-                  onChange={(e) => handleCambioLinea(idx, "cantidad", e.target.value)}
+                  onChange={(e) =>
+                    handleCambioLinea(idx, "cantidad", e.target.value)
+                  }
                 />
                 {formNuevo.detalles.length > 1 && (
                   <button
@@ -408,13 +469,24 @@ const EnviosPage = () => {
                     onClick={() => quitarLinea(idx)}
                     aria-label="Quitar producto"
                   >
-                    <span className="material-symbols-outlined" aria-hidden="true">close</span>
+                    <span
+                      className="material-symbols-outlined"
+                      aria-hidden="true"
+                    >
+                      close
+                    </span>
                   </button>
                 )}
               </div>
             ))}
-            <button type="button" className="btn-add-item" onClick={agregarLinea}>
-              <span className="material-symbols-outlined" aria-hidden="true">add</span>
+            <button
+              type="button"
+              className="btn-add-item"
+              onClick={agregarLinea}
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                add
+              </span>
               Agregar producto
             </button>
           </div>
@@ -426,7 +498,9 @@ const EnviosPage = () => {
               className="form-control"
               rows={2}
               value={formNuevo.observaciones}
-              onChange={(e) => setFormNuevo((p) => ({ ...p, observaciones: e.target.value }))}
+              onChange={(e) =>
+                setFormNuevo((p) => ({ ...p, observaciones: e.target.value }))
+              }
               placeholder="Ej: reposición mensual, pedido urgente..."
             />
           </div>
@@ -439,19 +513,22 @@ const EnviosPage = () => {
         onClose={() => setModalConfirmar(false)}
         titulo={`Confirmar recepción — ${envioActivo?.sedeOrigen?.nombre ?? ""} → ${envioActivo?.sedeDestino?.nombre ?? ""}`}
         onConfirmar={handleConfirmarRecepcion}
-        textoBotonConfirmar={guardando ? "Confirmando..." : "Confirmar recepción"}
+        textoBotonConfirmar={
+          guardando ? "Confirmando..." : "Confirmar recepción"
+        }
         disabled={guardando}
         maxWidth="640px"
       >
         {envioActivo && (
           <div className="env-form">
             <span className="form-hint">
-              Indica cuánto llegó realmente de cada producto. Si es menos de lo enviado
-              (faltante o unidades dañadas), cuéntanos qué pasó.
+              Indica cuánto llegó realmente de cada producto. Si es menos de lo
+              enviado (faltante o unidades dañadas), cuéntanos qué pasó.
             </span>
 
             {formConfirmar.detalles.map((d, idx) => {
-              const faltante = Number(d.cantidadEnviada) - Number(d.cantidadRecibida || 0);
+              const faltante =
+                Number(d.cantidadEnviada) - Number(d.cantidadRecibida || 0);
               return (
                 <div className="env-confirmar-linea" key={d.envioDetalleId}>
                   <div className="env-confirmar-linea__header">
@@ -459,7 +536,9 @@ const EnviosPage = () => {
                     <span>Enviado: {d.cantidadEnviada}</span>
                   </div>
                   <div className="form-group">
-                    <label htmlFor={`env-recibido-${idx}`}>Cantidad recibida *</label>
+                    <label htmlFor={`env-recibido-${idx}`}>
+                      Cantidad recibida *
+                    </label>
                     <input
                       id={`env-recibido-${idx}`}
                       type="number"
@@ -467,13 +546,22 @@ const EnviosPage = () => {
                       min="0"
                       max={d.cantidadEnviada}
                       value={d.cantidadRecibida}
-                      onChange={(e) => handleCambioDetalleConfirmar(idx, "cantidadRecibida", e.target.value)}
+                      onChange={(e) =>
+                        handleCambioDetalleConfirmar(
+                          idx,
+                          "cantidadRecibida",
+                          e.target.value,
+                        )
+                      }
                     />
                   </div>
                   {faltante > 0 && (
                     <div className="form-group">
                       <label htmlFor={`env-obs-${idx}`}>
-                        Observación * <span className="env-faltante-aviso">faltan {faltante} unidad(es)</span>
+                        Observación *{" "}
+                        <span className="env-faltante-aviso">
+                          faltan {faltante} unidad(es)
+                        </span>
                       </label>
                       <input
                         id={`env-obs-${idx}`}
@@ -481,7 +569,13 @@ const EnviosPage = () => {
                         className="form-control"
                         placeholder="Ej: 2 unidades llegaron dañadas / faltaron en la caja"
                         value={d.observacion}
-                        onChange={(e) => handleCambioDetalleConfirmar(idx, "observacion", e.target.value)}
+                        onChange={(e) =>
+                          handleCambioDetalleConfirmar(
+                            idx,
+                            "observacion",
+                            e.target.value,
+                          )
+                        }
                       />
                     </div>
                   )}
@@ -490,13 +584,20 @@ const EnviosPage = () => {
             })}
 
             <div className="form-group">
-              <label htmlFor="env-obs-general">Observación general (opcional)</label>
+              <label htmlFor="env-obs-general">
+                Observación general (opcional)
+              </label>
               <textarea
                 id="env-obs-general"
                 className="form-control"
                 rows={2}
                 value={formConfirmar.observacionRecepcion}
-                onChange={(e) => setFormConfirmar((p) => ({ ...p, observacionRecepcion: e.target.value }))}
+                onChange={(e) =>
+                  setFormConfirmar((p) => ({
+                    ...p,
+                    observacionRecepcion: e.target.value,
+                  }))
+                }
               />
             </div>
           </div>
@@ -521,7 +622,8 @@ const EnviosPage = () => {
             <span className="form-hint">
               ¿Cancelar el envío hacia{" "}
               <strong>
-                {envioCancelar.sedeDestino?.nombre ?? `sede ${envioCancelar.sedeDestinoId}`}
+                {envioCancelar.sedeDestino?.nombre ??
+                  `sede ${envioCancelar.sedeDestinoId}`}
               </strong>
               ? Se devolverá el stock a su sede de origen.
             </span>

@@ -5,7 +5,7 @@ import usuarioService from "@/services/usuario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
-import { formatFecha } from "@/utils/formatters";
+//import { formatFecha } from "@/utils/formatters";
 import "./LogsPage.css";
 
 const TAKE = 50;
@@ -76,14 +76,11 @@ const LogsPage = () => {
   }, [filtroUsuarioId, filtroAccion, filtroFechaInicio, filtroFechaFin, skip]);
 
   useEffect(() => {
-    const id = window.setTimeout(() => { void cargarLogs(); }, 0);
+    const id = window.setTimeout(() => {
+      void cargarLogs();
+    }, 0);
     return () => window.clearTimeout(id);
   }, [cargarLogs]);
-
-  // Al cambiar cualquier filtro, volver a la primera página
-  useEffect(() => {
-    setSkip(0);
-  }, [filtroUsuarioId, filtroAccion, filtroFechaInicio, filtroFechaFin]);
 
   const logsMapeados = useMemo(
     () =>
@@ -121,7 +118,10 @@ const LogsPage = () => {
           <select
             id="logs-usuario"
             value={filtroUsuarioId}
-            onChange={(e) => setFiltroUsuarioId(e.target.value)}
+            onChange={(e) => {
+              setFiltroUsuarioId(e.target.value);
+              setSkip(0);
+            }}
             className="filter-select"
           >
             <option value="">Todos</option>
@@ -138,12 +138,17 @@ const LogsPage = () => {
           <select
             id="logs-accion"
             value={filtroAccion}
-            onChange={(e) => setFiltroAccion(e.target.value)}
+            onChange={(e) => {
+              setFiltroAccion(e.target.value);
+              setSkip(0);
+            }}
             className="filter-select"
           >
             <option value="">Todas</option>
             {acciones.map((a) => (
-              <option key={a} value={a}>{a}</option>
+              <option key={a} value={a}>
+                {a}
+              </option>
             ))}
           </select>
         </div>
@@ -154,7 +159,10 @@ const LogsPage = () => {
             id="logs-desde"
             value={filtroFechaInicio}
             max={filtroFechaFin || undefined}
-            onChange={(e) => setFiltroFechaInicio(e.target.value)}
+            onChange={(e) => {
+              setFiltroFechaInicio(e.target.value);
+              setSkip(0);
+            }}
             className="filter-select"
           />
         </div>
@@ -165,7 +173,10 @@ const LogsPage = () => {
             id="logs-hasta"
             value={filtroFechaFin}
             min={filtroFechaInicio || undefined}
-            onChange={(e) => setFiltroFechaFin(e.target.value)}
+            onChange={(e) => {
+              setFiltroFechaFin(e.target.value);
+              setSkip(0);
+            }}
             className="filter-select"
           />
         </div>
@@ -183,11 +194,11 @@ const LogsPage = () => {
         <>
           <TablaGenerica
             columnas={[
-              { campo: "fechaFormateada", label: "Fecha",      tipo: "texto" },
-              { campo: "usuarioNombre",   label: "Usuario",    tipo: "texto" },
-              { campo: "rol",             label: "Rol",        tipo: "texto" },
-              { campo: "accion",          label: "Acción",     tipo: "texto" },
-              { campo: "descripcion",     label: "Descripción", tipo: "texto" },
+              { campo: "fechaFormateada", label: "Fecha", tipo: "texto" },
+              { campo: "usuarioNombre", label: "Usuario", tipo: "texto" },
+              { campo: "rol", label: "Rol", tipo: "texto" },
+              { campo: "accion", label: "Acción", tipo: "texto" },
+              { campo: "descripcion", label: "Descripción", tipo: "texto" },
             ]}
             datos={logsMapeados}
             mostrarBuscador
@@ -204,7 +215,9 @@ const LogsPage = () => {
               <span className="material-symbols-outlined">chevron_left</span>
               Anterior
             </button>
-            <span>Página {paginaActual} de {totalPaginas}</span>
+            <span>
+              Página {paginaActual} de {totalPaginas}
+            </span>
             <button
               type="button"
               disabled={skip + TAKE >= total}

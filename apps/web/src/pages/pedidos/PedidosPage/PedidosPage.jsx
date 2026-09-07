@@ -177,7 +177,7 @@ const PedidosPage = () => {
     } finally {
       setCargando(false);
     }
-  }, [esAdmin, puedeGestionarPedidos, puedeAsignarEntregador]);
+  }, [puedeGestionarPedidos, puedeAsignarEntregador]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;

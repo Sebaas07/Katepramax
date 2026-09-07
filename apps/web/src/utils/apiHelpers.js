@@ -36,10 +36,10 @@ export const getApiErrorMessage = (error) => {
 };
 
 // Sin export — no se importa en ningún módulo actualmente
-const isNetworkError = (error) => !error?.response && !!error?.request;
+//const isNetworkError = (error) => !error?.response && !!error?.request;
 
 // Sin export — no se importa en ningún módulo actualmente
-const isServerError = (error) => error?.response?.status >= 500;
+//const isServerError = (error) => error?.response?.status >= 500;
 
 export const normalizeArrayResponse = (data) => {
   if (Array.isArray(data)) return data;

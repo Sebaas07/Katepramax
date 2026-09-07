@@ -159,7 +159,6 @@ const ProductosPage = () => {
 
   const [productos, setProductos] = useState([]);
   const [sedes, setSedes] = useState([]);
-  const [cargandoSedes, setCargandoSedes] = useState(false);
 
   // Bodegas que el rol puede asignar al crear/editar un producto (Admin ve
   // todas; Bodega solo la suya; Oficinista todas las de su ciudad).
@@ -201,15 +200,12 @@ const ProductosPage = () => {
     if (!isSessionChecked || !isAuthenticated) return;
 
     const cargarSedes = async () => {
-      setCargandoSedes(true);
       try {
         const data = await inventarioService.obtenerSedes();
         setSedes(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error al cargar sedes:", err);
         setSedes([]);
-      } finally {
-        setCargandoSedes(false);
       }
     };
 

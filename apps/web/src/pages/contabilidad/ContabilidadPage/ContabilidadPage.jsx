@@ -46,6 +46,12 @@ const TABS = [
   { key: "panel", label: "Panel General", icon: "dashboard" },
 ];
 
+const TAB_A_MODAL_TIPO = {
+  ingresos: "ingreso",
+  egresos: "egreso",
+  proveedores: "abono",
+};
+
 const FORM_VACIO = {
   fecha: hoyISO(),
   sedeId: "",
@@ -344,12 +350,6 @@ const ContabilidadPage = () => {
     },
     [sedeIdUsuario],
   );
-
-  const TAB_A_MODAL_TIPO = {
-    ingresos: "ingreso",
-    egresos: "egreso",
-    proveedores: "abono",
-  };
 
   const abrirNuevo = useCallback(() => {
     setItemEditar(null);

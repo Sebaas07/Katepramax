@@ -14,14 +14,14 @@ import { obtenerSesion } from "@/utils/sessionHelper";
 
 // ── Helpers de rol ────────────────────────────────────────────
 // Sin export — no se importan en ningún módulo actualmente
-const obtenerUsuario = () => obtenerSesion();
-const esRolBodega = () => {
+//const obtenerUsuario = () => obtenerSesion();
+/*const esRolBodega = () => {
   const r = obtenerSesion()?.rol;
   return r === "Bodega" || r === "AdminBogota";
 };
 const esRolEntregador = () => obtenerSesion()?.rol === "Entregador";
 const esRolAdmin = () => obtenerSesion()?.rol === "Admin";
-
+*/
 export const tieneAccesoTotal = () => obtenerSesion()?.rol === "Admin";
 
 // ── Sede ──────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ export const filtrarPorSede = (filtrosBase = {}) => {
   if (usuario.rol === "Admin") return { ...filtrosBase };
 
   if (usuario.rol === "Bodega" || usuario.rol === "AdminBogota") {
-    const { sedeId: _ignorar, ...restoFiltros } = filtrosBase;
+    const {  ...restoFiltros } = filtrosBase;
     return { ...restoFiltros, sedeId: usuario.sedeId };
   }
 
@@ -67,9 +67,10 @@ export const filtrarPorSede = (filtrosBase = {}) => {
  * @param {number} sedeIdDestino
  * @returns {boolean}
  */
+/*
 const puedeVerSede = (sedeIdDestino) => {
   const usuario = obtenerSesion();
   if (!usuario) return false;
   if (usuario.rol === "Admin") return true;
   return Number(usuario.sedeId) === Number(sedeIdDestino);
-};
+};*/

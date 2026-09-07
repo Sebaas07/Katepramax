@@ -43,7 +43,10 @@ const CarteraClientesPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    cargarClientes();
+    const id = window.setTimeout(() => {
+      void cargarClientes();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [isSessionChecked, isAuthenticated, cargarClientes]);
 
   const handleCambioFiltro = (e) => {

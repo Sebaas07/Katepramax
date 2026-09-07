@@ -43,8 +43,8 @@ const IngresosTab = ({
   esAdmin,
   onEditar,
   onEliminar,
-  resumenSemanal,
-  totalesDia,
+  resumenSemanal
+  /*totalesDia,*/
 }) => {
   const usaResumenBackend = Boolean(resumenSemanal?.porSede);
 

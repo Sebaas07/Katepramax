@@ -106,7 +106,8 @@ const InventarioPage = () => {
     setCargando(true);
     try {
       const params = { tipo: TAB_TIPO[activeTab] };
-      if (esAdmin && filtrosMov.sedeId) params.sedeId = parseInt(filtrosMov.sedeId);
+      if (esAdmin && filtrosMov.sedeId)
+        params.sedeId = parseInt(filtrosMov.sedeId);
       if (!esAdmin && sedeIdUsuario) params.sedeId = sedeIdUsuario;
       if (filtrosMov.productoId) params.productoId = filtrosMov.productoId;
       const data = await inventarioService.listarMovimientos(params);
@@ -116,20 +117,28 @@ const InventarioPage = () => {
     } finally {
       setCargando(false);
     }
-  }, [activeTab, filtrosMov.sedeId, filtrosMov.productoId, esAdmin, sedeIdUsuario]);
+  }, [
+    activeTab,
+    filtrosMov.sedeId,
+    filtrosMov.productoId,
+    esAdmin,
+    sedeIdUsuario,
+  ]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
-    void cargarSedes();
-    void cargarProductos();
-    // Catálogo de proveedores para el selector del modal de entradas
-    contabilidadService
-      .obtenerProveedores({ activo: true })
-      .then((data) => setProveedores(Array.isArray(data) ? data : []))
-      .catch((err) => {
-        console.error("Error al cargar proveedores:", err);
-        setProveedores([]);
-      });
+    const id = window.setTimeout(() => {
+      void cargarSedes();
+      void cargarProductos();
+      contabilidadService
+        .obtenerProveedores({ activo: true })
+        .then((data) => setProveedores(Array.isArray(data) ? data : []))
+        .catch((err) => {
+          console.error("Error al cargar proveedores:", err);
+          setProveedores([]);
+        });
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [isSessionChecked, isAuthenticated, cargarSedes, cargarProductos]);
 
   useEffect(() => {
@@ -140,12 +149,7 @@ const InventarioPage = () => {
     }, 0);
 
     return () => window.clearTimeout(id);
-  }, [
-    activeTab,
-    cargarMovimientos,
-    isSessionChecked,
-    isAuthenticated,
-  ]);
+  }, [activeTab, cargarMovimientos, isSessionChecked, isAuthenticated]);
 
   // ── Handlers formulario ──────────────────────────────────────
   const handleCambioForm = (e) => {
@@ -178,7 +182,9 @@ const InventarioPage = () => {
         return;
       }
       const cantidadFinal =
-        form.tipo === "ajuste" && form.signoAjuste === "restar" ? -magnitud : magnitud;
+        form.tipo === "ajuste" && form.signoAjuste === "restar"
+          ? -magnitud
+          : magnitud;
 
       // Deuda con proveedor: solo aplica en entradas
       let deuda = null;
@@ -417,24 +423,43 @@ const InventarioPage = () => {
               <div className="mov-signo-toggle">
                 <button
                   type="button"
-                  className={form.signoAjuste === "sumar" ? "mov-signo-btn mov-signo-btn--activo-suma" : "mov-signo-btn"}
+                  className={
+                    form.signoAjuste === "sumar"
+                      ? "mov-signo-btn mov-signo-btn--activo-suma"
+                      : "mov-signo-btn"
+                  }
                   onClick={() => setForm({ ...form, signoAjuste: "sumar" })}
                 >
-                  <span className="material-symbols-outlined" aria-hidden="true">add</span>
+                  <span
+                    className="material-symbols-outlined"
+                    aria-hidden="true"
+                  >
+                    add
+                  </span>
                   Sumar
                 </button>
                 <button
                   type="button"
-                  className={form.signoAjuste === "restar" ? "mov-signo-btn mov-signo-btn--activo-resta" : "mov-signo-btn"}
+                  className={
+                    form.signoAjuste === "restar"
+                      ? "mov-signo-btn mov-signo-btn--activo-resta"
+                      : "mov-signo-btn"
+                  }
                   onClick={() => setForm({ ...form, signoAjuste: "restar" })}
                 >
-                  <span className="material-symbols-outlined" aria-hidden="true">remove</span>
+                  <span
+                    className="material-symbols-outlined"
+                    aria-hidden="true"
+                  >
+                    remove
+                  </span>
                   Restar
                 </button>
               </div>
 
               <label htmlFor="mov-cantidad" className="mov-cantidad-label">
-                Unidades a {form.signoAjuste === "restar" ? "restar" : "sumar"} *
+                Unidades a {form.signoAjuste === "restar" ? "restar" : "sumar"}{" "}
+                *
               </label>
               <input
                 id="mov-cantidad"

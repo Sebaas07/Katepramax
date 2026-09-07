@@ -186,7 +186,7 @@ const EntregasPage = () => {
   const [guardando, setGuardando] = useState(false);
   const [errorDatos, setErrorDatos] = useState(null);
   const [sedes, setSedes] = useState([]);
-  const [cargandoSedes, setCargandoSedes] = useState(false);
+  //const [cargandoSedes, setCargandoSedes] = useState(false);
 
   const [modalConfirmarAbierto, setModalConfirmarAbierto] = useState(false);
   const [modalFalloAbierto, setModalFalloAbierto] = useState(false);
@@ -217,15 +217,12 @@ const EntregasPage = () => {
     if (!isSessionChecked || !isAuthenticated) return;
 
     const cargarSedes = async () => {
-      setCargandoSedes(true);
       try {
         const data = await inventarioService.obtenerSedes();
         setSedes(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error al cargar sedes:", err);
         setSedes([]);
-      } finally {
-        setCargandoSedes(false);
       }
     };
 

@@ -75,10 +75,10 @@ const CeldaOrigen = memo(({ origen }) => {
   );
 });
 
-const COLUMNAS_DIA = [
+/*const COLUMNAS_DIA = [
   { campo: "fecha", label: "Fecha", tipo: "fecha" },
   { campo: "total", label: "Total", tipo: "moneda" },
-];
+];*/
 
 const COLUMNAS_CONCEPTO = [
   { campo: "concepto", label: "Concepto", tipo: "texto" },
@@ -97,8 +97,8 @@ const EgresosTab = memo(
     onEditar,
     onEliminar,
     resumenSemanal,
-    resumenConcepto,
-    totalesDia,
+    resumenConcepto
+    /*totalesDia,*/
   }) => {
     const usaResumenBackend = Boolean(resumenSemanal?.porSede);
 
