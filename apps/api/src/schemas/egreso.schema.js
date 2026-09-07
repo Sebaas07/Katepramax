@@ -45,7 +45,7 @@ const listarEgresos = {
     properties: {
       fecha:    { type: "string", format: "date" },
       semana:   { type: "integer" },
-      sedeId:   { type: "integer" },
+      sedeId:   { type: ["string", "integer"] },
       concepto: { type: "string" },
       skip:     { type: "integer", minimum: 0, default: 0 },
       take:     { type: "integer", minimum: 1, maximum: 200, default: 50 },

@@ -153,7 +153,10 @@ const ContabilidadPage = () => {
       const semanaNum = parseInt(filtroSemana, 10) || SEM_ACTUAL;
       const fBase = {
         semana: filtroSemana || undefined,
-        sedeId: filtroSedeId || undefined,
+        // Solo enviamos sedeId si hay un valor real: un string vacío hace que
+        // el backend (integers en el querystring) devuelva 400 y rompa la
+        // recarga de la tabla tras guardar.
+        ...(filtroSedeId ? { sedeId: filtroSedeId } : {}),
       };
 
       if (tab === "ingresos") {

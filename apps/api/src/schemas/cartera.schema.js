@@ -44,7 +44,7 @@ const listarCartera = {
     properties: {
       fecha:  { type: "string", format: "date" },
       semana: { type: "integer", minimum: 1, maximum: 53 },
-      sedeId: { type: "integer" },
+      sedeId: { type: ["string", "integer"] },
       skip:   { type: "integer", minimum: 0, default: 0 },
       take:   { type: "integer", minimum: 1, maximum: 200, default: 50 },
     },

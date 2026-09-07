@@ -48,7 +48,7 @@ const listarAbonos = {
     type: "object",
     properties: {
       proveedorId: { type: "integer" },
-      sedeId:      { type: "integer" },
+      sedeId:      { type: ["string", "integer"] },
       semana:      { type: "integer" },
       fecha:       { type: "string", format: "date" },
       skip:        { type: "integer", minimum: 0, default: 0 },

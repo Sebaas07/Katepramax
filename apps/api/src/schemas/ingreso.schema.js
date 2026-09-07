@@ -38,7 +38,7 @@ const crearIngreso = {
 
 const listarIngresos = {
   summary: "Listar ingresos", tags: ["Ingresos"], security: [{ bearerAuth: [] }],
-  querystring: { type: "object", properties: { fecha: { type: "string", format: "date" }, semana: { type: "integer" }, sedeId: { type: "integer" }, skip: { type: "integer", minimum: 0, default: 0 }, take: { type: "integer", minimum: 1, maximum: 200, default: 50 } }, additionalProperties: false },
+  querystring: { type: "object", properties: { fecha: { type: "string", format: "date" }, semana: { type: "integer" }, sedeId: { type: ["string", "integer"] }, skip: { type: "integer", minimum: 0, default: 0 }, take: { type: "integer", minimum: 1, maximum: 200, default: 50 } }, additionalProperties: false },
   response: { 200: { type: "array", items: ingresoBase } },
 };
 
