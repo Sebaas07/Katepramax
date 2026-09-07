@@ -455,7 +455,15 @@ const ContabilidadPage = () => {
       }
       setModalOpen(false);
       setItemEditar(null);
-      await cargarDatos();
+      if (!itemEditar) {
+        // Tras un alta, el filtro pasa a la semana del registro creado: el
+        // alta computa la semana desde la fecha del formulario y puede diferir
+        // de la semana en pantalla (p. ej. tras el reinicio del periodo el 7
+        // de septiembre). Se deja que el efecto recargue con la semana nueva.
+        setFiltroSemana(String(payload.semana ?? SEM_ACTUAL));
+      } else {
+        await cargarDatos();
+      }
     } catch (err) {
       toast.error(err?.message || "No fue posible guardar el registro.");
     } finally {
