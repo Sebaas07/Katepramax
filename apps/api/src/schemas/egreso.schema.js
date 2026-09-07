@@ -12,6 +12,8 @@ const egresoBase = {
     concepto:    { type: "string" },
     total:       { type: "number" },
     observacion: { type: "string", nullable: true },
+    origen:      { type: "string" },
+    idReferencia: { type: "integer", nullable: true },
     creadoEn:    { type: "string", format: "date-time" },
     sede:        { type: "object", properties: { id: { type: "integer" }, nombre: { type: "string" } } },
   },

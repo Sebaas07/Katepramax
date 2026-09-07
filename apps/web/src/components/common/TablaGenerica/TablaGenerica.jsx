@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import "./TablaGenerica.css";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
+import { formatFecha } from "@/utils/formatters";
 
 /**
  * TablaGenerica — Katepramax
@@ -108,9 +109,7 @@ const TablaGenerica = ({
         return valor != null ? formatearMoneda.format(valor) : "$0";
 
       case "fecha":
-        return valor != null
-          ? new Date(valor).toLocaleDateString("es-CO")
-          : "—";
+        return valor != null ? formatFecha(valor) : "—";
 
       case "booleano":
         return valor ? (

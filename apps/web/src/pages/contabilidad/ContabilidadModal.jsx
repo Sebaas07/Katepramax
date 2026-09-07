@@ -1,6 +1,6 @@
 import Modal from "@/components/common/Modal/Modal";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
-import { formatCOP } from "@/utils/formatters";
+import { formatCOP, hoyISO } from "@/utils/formatters";
 import {
   esCampoNumerico,
   esCampoTexto,
@@ -9,8 +9,6 @@ import {
   sanitizarTextoInput,
 } from "@/utils/contabilidadForm";
 import { memo } from "react";
-
-const hoyISO = () => new Date().toISOString().split("T")[0];
 
 // Sugerencias para el autocompletar del campo "Concepto" de egresos. Es
 // texto libre (el usuario puede escribir cualquier cosa), esto solo ayuda
@@ -185,6 +183,14 @@ const ContabilidadModal = memo(
 
           {modalTipo === "ingreso" && (
             <>
+              <div className="cont-nota-info cont-nota-info--alerta">
+                <span className="material-symbols-outlined">warning</span>
+                <p>
+                  Si este cobro corresponde a una entrega ya confirmada o a un
+                  abono registrado por el entregador, el sistema ya lo generó
+                  automáticamente. Verifica aquí para no duplicarlo.
+                </p>
+              </div>
               <div className={grupoClase}>
                 <Label htmlFor="cont-efectivo">Efectivo (COP)</Label>
                 <input

@@ -75,6 +75,18 @@ const CobrosEntregadorTab = ({ cobros, fechaInicio, fechaFin }) => {
             </div>
           </div>
         </div>
+        <div className="cont-kpi-card" style={{ "--kpi-color": "var(--secondary)" }}>
+          <div className="cont-kpi-card__icon">
+            <span className="material-symbols-outlined">account_balance_wallet</span>
+          </div>
+          <div className="cont-kpi-card__body">
+            <div className="cont-kpi-card__titulo">Abonos de deuda</div>
+            <div className="cont-kpi-card__valor">{formatCOP(cobros?.totalAbonos ?? 0)}</div>
+            <div className="cont-kpi-card__sub">
+              Por cobros de deudas anteriores
+            </div>
+          </div>
+        </div>
       </div>
 {/* 
       {chartData.length > 0 && (
@@ -104,6 +116,7 @@ const CobrosEntregadorTab = ({ cobros, fechaInicio, fechaFin }) => {
             { campo: "entregador",    label: "Entregador",    tipo: "texto"  },
             { campo: "pedidos",       label: "Entregas",      tipo: "numero" },
             { campo: "total",         label: "Total cobrado", tipo: "moneda" },
+            { campo: "abonos",        label: "Abonos deuda",  tipo: "moneda" },
             { campo: "efectivo",      label: "Efectivo",      tipo: "moneda" },
             { campo: "cuentas",       label: "Transferencia", tipo: "moneda" },
             { campo: "valorDomicilio", label: "Domicilios a pagar", tipo: "moneda" },

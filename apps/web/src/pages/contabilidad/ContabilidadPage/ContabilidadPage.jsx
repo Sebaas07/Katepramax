@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import contabilidadService from "@/services/contabilidad.service";
 import reporteService from "@/services/reporte.service";
 import inventarioService from "@/services/inventario.service";
-import { getSemanaISO, getRangoSemana, formatFecha } from "@/utils/formatters";
+import { getSemanaISO, getRangoSemana, formatFecha, hoyISO } from "@/utils/formatters";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
 import {
   construirPayloadContabilidad,
@@ -22,8 +22,6 @@ import EgresosTab from "../EgresosTab";
 //import CarteraTab from "../CarteraTab";
 import ProveedoresTab from "../ProveedoresTab";
 import PanelGeneralTab from "../PanelGeneralTab";
-import ArqueoSemanalTab from "../ArqueoSemanalTab";
-import GananciaGastoTab from "../GananciaGastoTab";
 import CobrosEntregadorTab from "../CobrosEntregadorTab";
 import CierreCajaTab from "../CierreCajaTab";
 
@@ -35,7 +33,6 @@ import Modal from "@/components/common/Modal/Modal";
 import "./ContabilidadPage.css";
 
 // ─────────────────────────────────────────────────────────────
-const hoyISO = () => new Date().toISOString().split("T")[0];
 const SEM_ACTUAL = getSemanaISO(new Date());
 
 const TABS = [
@@ -47,8 +44,6 @@ const TABS = [
   { key: "cierre-diario", label: "Cierre Diario", icon: "today" },
   { key: "cierre-semanal", label: "Cierre Semanal", icon: "date_range" },
   { key: "panel", label: "Panel General", icon: "dashboard" },
-  { key: "ganancia", label: "Ganancia / Gasto", icon: "point_of_sale" },
-  { key: "arqueo", label: "Arqueo Semanal", icon: "summarize" },
 ];
 
 const FORM_VACIO = {
@@ -91,21 +86,15 @@ const ContabilidadPage = () => {
   const [totalesDiaEgr, setTotalesDiaEgr] = useState([]);
   const [resumenSedeAbonos, setResumenSedeAbonos] = useState([]);
   const [deudaProveedores, setDeudaProveedores] = useState([]);
-  const [arqueo, setArqueo] = useState(null);
-  const [arqueoError, setArqueoError] = useState("");
   const [panelGeneral, setPanelGeneral] = useState(null);
-  const [corteCaja, setCorteCaja] = useState(null);
-  const [cargandoCorte, setCargandoCorte] = useState(false);
   const [cobrosEntregador, setCobrosEntregador] = useState(null);
 
   // ── Filtros ───────────────────────────────────────────────
   const [filtroSemana, setFiltroSemana] = useState(String(SEM_ACTUAL));
   const [filtroSedeId, setFiltroSedeId] = useState(
-    sedeIdUsuario ? String(sedeIdUsuario) : "",
+    esAdmin ? "" : sedeIdUsuario ? String(sedeIdUsuario) : "",
   );
   const [filtroPanelF, setFiltroPanelFecha] = useState(hoyISO());
-  const [periodoGanancia, setPeriodoGanancia] = useState("dia");
-  const [fechaGanancia, setFechaGanancia] = useState(hoyISO());
   const [fechaInicioCobros, setFechaInicioCobros] = useState(
     () => getRangoSemana(SEM_ACTUAL).inicio,
   );
@@ -149,19 +138,17 @@ const ContabilidadPage = () => {
 
   // ── Carga de datos ────────────────────────────────────────
   const cargarDatos = useCallback(async () => {
-    if (tab === "ganancia" || esTabCierre) {
+    if (esTabCierre) {
       setCargando(false);
       return;
     }
     setCargando(true);
-    setArqueoError("");
     try {
       const semanaNum = parseInt(filtroSemana, 10) || SEM_ACTUAL;
       const fBase = {
         semana: filtroSemana || undefined,
         sedeId: filtroSedeId || undefined,
       };
-      const fSem = { semana: filtroSemana || undefined };
 
       if (tab === "ingresos") {
         const [lista, resSemanal, totDia] = await Promise.all([
@@ -196,33 +183,9 @@ const ContabilidadPage = () => {
         setResumenProv(resumen);
         setResumenSedeAbonos(resSede);
         setDeudaProveedores(saldosDeuda);
-      } else if (tab === "arqueo") {
-        const [reporte, carteraSem, invSem] = await Promise.all([
-          contabilidadService.obtenerArqueo(semanaNum),
-          contabilidadService.obtenerCartera(fSem),
-          contabilidadService.obtenerInventarioSemanal(semanaNum),
-        ]);
-        if (reporte) {
-          setArqueo({
-            ...reporte,
-            carteraSemana: carteraSem,
-            inventarioSemana: invSem,
-          });
-        } else {
-          setArqueo(null);
-          setArqueoError(
-            "No se pudo cargar el arqueo. Verifica que existan registros para esta semana.",
-          );
-        }
       } else if (tab === "panel") {
-        const [panel, totIngDia, totEgrDia] = await Promise.all([
-          contabilidadService.obtenerPanelGeneral(filtroPanelF),
-          contabilidadService.obtenerTotalesDiaIngresos(semanaNum),
-          contabilidadService.obtenerTotalesDiaEgresos(semanaNum),
-        ]);
+        const panel = await contabilidadService.obtenerPanelGeneral(filtroPanelF);
         setPanelGeneral(panel);
-        setTotalesDiaIng(totIngDia);
-        setTotalesDiaEgr(totEgrDia);
       } else if (tab === "cobros") {
         const sede = esAdmin ? (filtroSedeId ? parseInt(filtroSedeId, 10) : undefined) : undefined;
         const data = await reporteService.obtenerCobrosEntregador({
@@ -266,47 +229,7 @@ const ContabilidadPage = () => {
     return () => window.clearTimeout(id);
   }, [cargarDatos, isSessionChecked, isAuthenticated]);
 
-  // ── Corte de caja (Ganancia / Gasto) ──────────────────────
-  const rangoGanancia = useMemo(() => {
-    const [anio, mes, dia] = fechaGanancia.split("-").map(Number);
-    if (periodoGanancia === "dia") {
-      return { desde: fechaGanancia, hasta: fechaGanancia };
-    }
-    if (periodoGanancia === "quincena") {
-      const ultimoDiaMes = new Date(anio, mes, 0).getDate();
-      const pad = (n) => String(n).padStart(2, "0");
-      return dia <= 15
-        ? { desde: `${anio}-${pad(mes)}-01`, hasta: `${anio}-${pad(mes)}-15` }
-        : { desde: `${anio}-${pad(mes)}-16`, hasta: `${anio}-${pad(mes)}-${pad(ultimoDiaMes)}` };
-    }
-    const ultimoDiaMes = new Date(anio, mes, 0).getDate();
-    const pad = (n) => String(n).padStart(2, "0");
-    return { desde: `${anio}-${pad(mes)}-01`, hasta: `${anio}-${pad(mes)}-${pad(ultimoDiaMes)}` };
-  }, [periodoGanancia, fechaGanancia]);
-
-  useEffect(() => {
-    if (!isSessionChecked || !isAuthenticated) return;
-    if (tab !== "ganancia") return;
-    let activo = true;
-    setCargandoCorte(true);
-    reporteService
-      .obtenerCorteCaja({ ...rangoGanancia, sedeId: filtroSedeId || undefined })
-      .then((data) => {
-        if (activo) setCorteCaja(data);
-      })
-      .catch((err) => {
-        if (!activo) return;
-        toast.error("Error al cargar el corte de caja: " + (err?.message || "desconocido"));
-        setCorteCaja(null);
-      })
-      .finally(() => {
-        if (activo) setCargandoCorte(false);
-      });
-    return () => {
-      activo = false;
-    };
-  }, [tab, rangoGanancia, filtroSedeId, isSessionChecked, isAuthenticated]);
-
+  // ── Corte de caja (Cierre Diario / Semanal) ────────────────
   const mapSede = useCallback(
     (items) =>
       items.map((i) => ({
@@ -575,15 +498,13 @@ const ContabilidadPage = () => {
   const subtituloHeader =
     tab === "panel"
       ? formatFecha(filtroPanelF)
-      : tab === "ganancia"
-        ? `${formatFecha(rangoGanancia.desde)}${rangoGanancia.desde !== rangoGanancia.hasta ? ` — ${formatFecha(rangoGanancia.hasta)}` : ""}`
-        : tab === "cierre-diario"
-          ? "Cierre de caja del día"
-          : tab === "cierre-semanal"
-            ? "Cierre de caja de la semana"
-            : tab === "cobros"
-              ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
-              : `Semana ${filtroSemana || SEM_ACTUAL}`;
+      : tab === "cierre-diario"
+        ? "Cierre de caja del día"
+        : tab === "cierre-semanal"
+          ? "Cierre de caja de la semana"
+          : tab === "cobros"
+            ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
+            : `Semana ${filtroSemana || SEM_ACTUAL}`;
 
   return (
     <div className="cont-page">
@@ -593,7 +514,7 @@ const ContabilidadPage = () => {
           <p className="cont-subtitulo">{subtituloHeader}</p>
         </div>
         <div className="cont-page__acciones">
-          {esAdmin && !["arqueo", "panel"].includes(tab) && (
+          {esAdmin && tab !== "panel" && (
             <div className="filter-group">
               <label htmlFor="cont-sede">Sede</label>
               <select
@@ -612,7 +533,6 @@ const ContabilidadPage = () => {
             </div>
           )}
           {tab !== "panel" &&
-            tab !== "ganancia" &&
             tab !== "cobros" &&
             !esTabCierre && (
             <div className="filter-group">
@@ -759,29 +679,6 @@ const ContabilidadPage = () => {
             <PanelGeneralTab
               panelGeneral={{ ...panelGeneral, _sedes: sedes }}
               fecha={filtroPanelF}
-              totalesDiaIngresos={totalesDiaIng}
-              totalesDiaEgresos={totalesDiaEgr}
-            />
-          )}
-
-          {tab === "ganancia" && (
-            <GananciaGastoTab
-              periodo={periodoGanancia}
-              onPeriodoChange={setPeriodoGanancia}
-              fechaReferencia={fechaGanancia}
-              onFechaReferenciaChange={setFechaGanancia}
-              corte={corteCaja}
-              cargando={cargandoCorte}
-            />
-          )}
-
-          {tab === "arqueo" && (
-            <ArqueoSemanalTab
-              arqueo={arqueo}
-              arqueoError={arqueoError}
-              filtroSemana={filtroSemana}
-              onFiltroSemanaChange={handleFiltroSemana}
-              sedes={sedes}
             />
           )}
         </div>

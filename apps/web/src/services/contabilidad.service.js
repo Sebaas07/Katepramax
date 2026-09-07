@@ -9,21 +9,45 @@ const normalizarSemana = (valor) => {
     : Math.min(53, Math.max(1, numero));
 };
 
+// El backend limita cada página a un máximo de 200 registros (take), y las
+// tablas de Contabilidad ya no reciben solo movimientos manuales: cada
+// entrega cobrada, abono de cliente, compra de contado y pago a proveedor
+// también inserta un Ingreso/Egreso automático. En una semana con actividad
+// normal es fácil superar 50 o incluso 200 movimientos por sede, así que
+// pedir una sola página dejaba movimientos reales sin traer, sin ningún
+// aviso. Esta utilidad recorre todas las páginas hasta agotarlas.
+const TAKE_PAGINA = 200;
+const obtenerTodasLasPaginas = async (fetchPage, filtrosBase = {}) => {
+  let skip = 0;
+  let todos = [];
+  // Límite de seguridad para no entrar en bucle infinito si el backend
+  // devolviera siempre `take` registros por algún error de datos.
+  for (let i = 0; i < 500; i++) {
+    const pagina = await fetchPage({ ...filtrosBase, skip, take: TAKE_PAGINA });
+    if (!Array.isArray(pagina) || pagina.length === 0) break;
+    todos = todos.concat(pagina);
+    if (pagina.length < TAKE_PAGINA) break;
+    skip += TAKE_PAGINA;
+  }
+  return todos;
+};
+
 const contabilidadService = {
   // ── INGRESOS ──────────────────────────────────────────────
   obtenerIngresos: async (filtros = {}) => {
-    try {
-      const f = { ...filtros };
-      // Si no es Admin, filtrar por sede automáticamente
-      if (!tieneAccesoTotal()) {
-        const sedeIdUsuario = obtenerSedeUsuario();
-        if (sedeIdUsuario) {
-          f.sedeId = sedeIdUsuario;
-        }
+    const f = { ...filtros };
+    // Si no es Admin, filtrar por sede automáticamente
+    if (!tieneAccesoTotal()) {
+      const sedeIdUsuario = obtenerSedeUsuario();
+      if (sedeIdUsuario) {
+        f.sedeId = sedeIdUsuario;
       }
-      return await contabilidadApi.obtenerIngresos(f);
-    } catch {
-      return [];
+    }
+    try {
+      return await obtenerTodasLasPaginas(contabilidadApi.obtenerIngresos, f);
+    } catch (err) {
+      console.error("Error al obtener ingresos:", err);
+      throw err;
     }
   },
 
@@ -88,18 +112,19 @@ const contabilidadService = {
 
   // ── EGRESOS ───────────────────────────────────────────────
   obtenerEgresos: async (filtros = {}) => {
-    try {
-      const f = { ...filtros };
-      // Si no es Admin, filtrar por sede automáticamente
-      if (!tieneAccesoTotal()) {
-        const sedeIdUsuario = obtenerSedeUsuario();
-        if (sedeIdUsuario) {
-          f.sedeId = sedeIdUsuario;
-        }
+    const f = { ...filtros };
+    // Si no es Admin, filtrar por sede automáticamente
+    if (!tieneAccesoTotal()) {
+      const sedeIdUsuario = obtenerSedeUsuario();
+      if (sedeIdUsuario) {
+        f.sedeId = sedeIdUsuario;
       }
-      return await contabilidadApi.obtenerEgresos(f);
-    } catch {
-      return [];
+    }
+    try {
+      return await obtenerTodasLasPaginas(contabilidadApi.obtenerEgresos, f);
+    } catch (err) {
+      console.error("Error al obtener egresos:", err);
+      throw err;
     }
   },
 
@@ -224,9 +249,10 @@ const contabilidadService = {
   // Abonos/pagos a proveedores (lo que se muestra en la tabla de la tab "Abonos")
   listarAbonos: async (filtros = {}) => {
     try {
-      return await contabilidadApi.listarAbonos(filtros);
-    } catch {
-      return [];
+      return await obtenerTodasLasPaginas(contabilidadApi.listarAbonos, filtros);
+    } catch (err) {
+      console.error("Error al obtener abonos:", err);
+      throw err;
     }
   },
 
@@ -288,10 +314,10 @@ const contabilidadService = {
   },
 
   // ── ARQUEO ────────────────────────────────────────────────
-  obtenerArqueo: async (semana) => {
+  obtenerArqueo: async (semana, sedeId) => {
     try {
       const sem = normalizarSemana(semana ?? getSemanaISO(new Date()));
-      return await contabilidadApi.obtenerArqueo(sem);
+      return await contabilidadApi.obtenerArqueo(sem, sedeId);
     } catch {
       return null;
     }

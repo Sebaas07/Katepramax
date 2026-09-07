@@ -549,6 +549,7 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
         estado: "EnRuta",
         pedido: {
           ...asignacionMock.pedido,
+          sedeId: 1,
           cliente: { id: 1, nombre: "Juan Pérez", telefono: null, saldoDeuda: 100000 },
         },
       })
@@ -557,6 +558,7 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
       asignacionEntrega: { update: vi.fn() },
       pedido: { update: vi.fn() },
       cliente: { update: vi.fn() },
+      ingreso: { create: vi.fn() },
     };
     prisma.$transaction.mockImplementation(async (fn) => fn(tx));
 
@@ -577,6 +579,28 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
       where: { id: 1 },
       data: { saldoDeuda: { decrement: 80000 } }, // 50000 (pedido) + 30000 (abono)
     });
+    // Ingreso del cobro de la entrega, marcado con origen automático
+    expect(tx.ingreso.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          origen: "entrega",
+          idReferencia: 1,
+          efectivo: 50000,
+          total: 50000,
+        }),
+      }),
+    );
+    // El abono a deuda anterior genera su propio Ingreso en efectivo
+    expect(tx.ingreso.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          origen: "abono-deuda-entrega",
+          idReferencia: 1,
+          efectivo: 30000,
+          total: 30000,
+        }),
+      }),
+    );
   });
 
   it("debería retornar 400 si el abonoDeuda es mayor al saldoDeuda actual del cliente", async () => {

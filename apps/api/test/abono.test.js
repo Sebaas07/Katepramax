@@ -316,6 +316,7 @@ describe("PATCH /api/v1/abonos/:id", () => {
     // FIX: mockear métodos individuales
     prisma.abono.findUnique.mockResolvedValue(abonoMock);
     prisma.abono.update.mockResolvedValue(actualizado);
+    prisma.egreso.findFirst.mockResolvedValue(null);
 
     const res = await app.inject({
       method: "PATCH", url: "/api/v1/abonos/1",
@@ -361,6 +362,7 @@ describe("DELETE /api/v1/abonos/:id", () => {
     // FIX: mockear métodos individuales
     prisma.abono.findUnique.mockResolvedValue(abonoMock);
     prisma.abono.delete.mockResolvedValue(abonoMock);
+    prisma.egreso.deleteMany.mockResolvedValue({ count: 1 });
 
     const res = await app.inject({
       method: "DELETE", url: "/api/v1/abonos/1",

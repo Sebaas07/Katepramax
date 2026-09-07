@@ -33,30 +33,30 @@ async function eliminar(prisma, id) {
   return prisma.egreso.delete({ where: { id } });
 }
 
-async function resumenPorSede(prisma, semana) {
+async function resumenPorSede(prisma, semana, sedeId) {
   return prisma.egreso.groupBy({
     by: ["sedeId"],
-    where: { semana },
+    where: { semana, ...(sedeId ? { sedeId } : {}) },
     _sum:   { total: true },
     _count: { id: true },
     orderBy: { sedeId: "asc" },
   });
 }
 
-async function resumenPorConcepto(prisma, semana) {
+async function resumenPorConcepto(prisma, semana, sedeId) {
   return prisma.egreso.groupBy({
     by: ["concepto"],
-    where: { semana },
+    where: { semana, ...(sedeId ? { sedeId } : {}) },
     _sum:   { total: true },
     _count: { id: true },
     orderBy: { _sum: { total: "desc" } },
   });
 }
 
-async function totalesPorDia(prisma, semana) {
+async function totalesPorDia(prisma, semana, sedeId) {
   return prisma.egreso.groupBy({
     by: ["fecha"],
-    where: { semana },
+    where: { semana, ...(sedeId ? { sedeId } : {}) },
     _sum:  { total: true },
     orderBy: { fecha: "asc" },
   });

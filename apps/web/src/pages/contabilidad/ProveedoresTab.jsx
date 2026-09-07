@@ -45,10 +45,6 @@ const ProveedoresTab = memo(
       () => resumenProv.reduce((t, p) => t + toNumber(p.totalPagado), 0),
       [resumenProv],
     );
-    const totalAbonos = useMemo(
-      () => resumenProv.reduce((t, p) => t + toNumber(p.abonos), 0),
-      [resumenProv],
-    );
 
     const deudaPorProveedor = useMemo(
       () => new Map(saldosDeuda.map((d) => [Number(d.proveedorId), toNumber(d.saldoPendiente)])),
@@ -130,8 +126,8 @@ const ProveedoresTab = memo(
               color="#4ade80"
               filas={resumenProv
                 .slice(0, 4)
-                .map((p) => ({ sede: p.proveedor, valor: p.abonos }))}
-              total={totalAbonos}
+                .map((p) => ({ sede: p.proveedor, valor: p.totalPagado }))}
+              total={totalPagado}
             />
             {totalDeuda > 0 && (
               <TarjetaResumenProveedor

@@ -7,22 +7,15 @@ const toNumber = (v) => Number(v ?? 0);
 const sumar    = (filas, campo) => filas.reduce((t, f) => t + toNumber(f?.[campo]), 0);
 const rowsDeReporte = (data) => (Array.isArray(data) ? data : data?.porSede ?? []);
 
-const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaChange, sedes }) => {
+const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaChange, mostrarFiltro = true }) => {
   const semanaNum  = parseInt(filtroSemana, 10) || 1;
   const rangoSemana = useMemo(() => getRangoSemana(semanaNum), [semanaNum]);
-
-  // El arqueo semanal solo calcula con oficinas; el fallback de soporte debe
-  // mostrar las mismas sedes. Si ninguna sede trae tipo, se usan todas.
-  const sedesOficinas = useMemo(() => {
-    const oficinas = (sedes ?? []).filter((s) => s.tipo === "Oficina");
-    return oficinas.length ? oficinas : (sedes ?? []);
-  }, [sedes]);
 
   // ── Cálculos derivados del arqueo ───────────────────────────
   const arqueoIngresos = useMemo(() =>
     rowsDeReporte(arqueo?.ingresos).map((r) => ({
       sede: r.sede, sedeId: r.sedeId,
-      efectivo: toNumber(r.efectivo), cuentas: toNumber(r.cuentas), total: toNumber(r.total),
+      efectivo: toNumber(r.efectivo), transferencia: toNumber(r.transferencia ?? r.cuentas), abonos: toNumber(r.abonos), total: toNumber(r.total),
     })), [arqueo]);
 
   const arqueoEgresos = useMemo(() =>
@@ -51,52 +44,12 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
     });
   }, [arqueo, arqueoIngresos, arqueoEgresos]);
 
-  const arqueoCartera = useMemo(() => {
-    const raw = Array.isArray(arqueo?.cartera) ? arqueo.cartera : arqueo?.cartera?.porSede ?? [];
-    if (raw.length) {
-      return raw.map((r) => ({
-        sede: r.sede, sedeId: r.sedeId,
-        saldoInicio: toNumber(r.saldoInicio),
-        saldoCierre: toNumber(r.saldoCierre ?? r.saldoDia ?? r.saldoActual),
-        variacion:   toNumber(r.variacion ?? ((r.saldoCierre ?? r.saldoDia ?? r.saldoActual) - r.saldoInicio)),
-      }));
-    }
-    const regs = (arqueo?.carteraSemana ?? []).slice().sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-    if (!regs.length) return sedesOficinas.map((s) => ({ sede: s.nombre, sedeId: s.id, saldoInicio: 0, saldoCierre: 0, variacion: 0 }));
-    return sedesOficinas.map((s) => {
-      const rows   = regs.filter((c) => c.sedeId === s.id);
-      const ini    = toNumber(rows[0]?.saldoAnterior ?? rows[0]?.saldoDia);
-      const cierre = toNumber(rows[rows.length - 1]?.saldoDia);
-      return { sede: s.nombre, sedeId: s.id, saldoInicio: ini, saldoCierre: cierre, variacion: cierre - ini };
-    });
-  }, [arqueo, sedesOficinas]);
-
-  const arqueoInventario = useMemo(() => {
-    const raw = Array.isArray(arqueo?.inventario) ? arqueo.inventario : arqueo?.inventario?.porSede ?? [];
-    if (raw.length) {
-      return raw.map((r) => ({
-        sede: r.sede, sedeId: r.sedeId,
-        cantCierre:  toNumber(r.cantCierre ?? r.cantidad ?? r.cantidadIngresada),
-        costoCierre: toNumber(r.costoCierre ?? r.costo),
-      }));
-    }
-    const regs = arqueo?.inventarioSemana ?? [];
-    if (!regs.length) return sedesOficinas.map((s) => ({ sede: s.nombre, sedeId: s.id, cantCierre: 0, costoCierre: 0 }));
-    return sedesOficinas.map((s) => {
-      const filas = regs.filter((i) => i.sedeId === s.id);
-      return {
-        sede: s.nombre, sedeId: s.id,
-        cantCierre:  filas.reduce((t, i) => t + toNumber(i.cantidad ?? i.cantidadIngresada), 0),
-        costoCierre: filas.reduce((t, i) => t + toNumber(i.costo), 0),
-      };
-    });
-  }, [arqueo, sedesOficinas]);
-
   const totales = useMemo(() => ({
     ingresos: {
-      efectivo: arqueo?.ingresos?.totales?.efectivo ?? sumar(arqueoIngresos, "efectivo"),
-      cuentas:  arqueo?.ingresos?.totales?.cuentas  ?? sumar(arqueoIngresos, "cuentas"),
-      total:    arqueo?.ingresos?.totales?.total     ?? sumar(arqueoIngresos, "total"),
+      efectivo:      arqueo?.ingresos?.totales?.efectivo      ?? sumar(arqueoIngresos, "efectivo"),
+      transferencia: arqueo?.ingresos?.totales?.transferencia ?? sumar(arqueoIngresos, "transferencia"),
+      abonos:        arqueo?.ingresos?.totales?.abonos        ?? sumar(arqueoIngresos, "abonos"),
+      total:         arqueo?.ingresos?.totales?.total         ?? sumar(arqueoIngresos, "total"),
     },
     egresos: {
       operativo:   arqueo?.egresos?.totales?.operativo    ?? sumar(arqueoEgresos, "operativo"),
@@ -105,10 +58,11 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
     },
     saldoNeto:  arqueo?.saldoNeto?.total ?? sumar(arqueoSaldoNeto, "saldoNeto"),
     cartera:    toNumber(arqueo?.cartera),
-    inventario: arqueo?.costoInventario  ?? sumar(arqueoInventario, "costoCierre"),
-  }), [arqueo, arqueoIngresos, arqueoEgresos, arqueoSaldoNeto, arqueoInventario]);
+    inventario: toNumber(arqueo?.costoInventario),
+  }), [arqueo, arqueoIngresos, arqueoEgresos, arqueoSaldoNeto]);
 
   if (!arqueo) {
+    if (mostrarFiltro === false) return null;
     return (
       <EmptyState
         icono="summarize"
@@ -121,7 +75,8 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
   return (
     <div className="cont-arqueo">
       {/* Filtro de semana */}
-      <div className="arqueo-filtro-card">
+      {mostrarFiltro && (
+        <div className="arqueo-filtro-card">
         <div className="filter-group">
           <label htmlFor="arqueo-semana">Numero de semana</label>
           <input
@@ -141,11 +96,12 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
           </div>
         </div>
       </div>
+      )}
 
       {/* KPIs */}
       <div className="arqueo-kpis">
         {[
-          { accent: "#4ade80",       icon: "trending_up",           titulo: "Ingresos Semanales", valor: totales.ingresos.total, sub: `${formatCOP(totales.ingresos.efectivo)} efectivo · ${formatCOP(totales.ingresos.cuentas)} cuentas` },
+          { accent: "#4ade80",       icon: "trending_up",           titulo: "Ingresos Semanales", valor: totales.ingresos.total, sub: `${formatCOP(totales.ingresos.efectivo)} efectivo · ${formatCOP(totales.ingresos.transferencia)} transferencia` },
           { accent: "var(--error)",  icon: "trending_down",         titulo: "Egresos Semanales",  valor: totales.egresos.total, sub: `${formatCOP(totales.egresos.operativo)} operativos · ${formatCOP(totales.egresos.proveedores)} proveedores` },
           { accent: totales.saldoNeto >= 0 ? "#4ade80" : "var(--error)", icon: "account_balance_wallet", titulo: "Saldo Neto",  valor: totales.saldoNeto, sub: "Ingresos - egresos" },
           { accent: "var(--primary)",icon: "payments",              titulo: "Cartera",            valor: totales.cartera,    sub: "Saldo pendiente de clientes" },
@@ -165,9 +121,9 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
 
       {/* Bloques de tabla */}
       <ArqueoBloque numero={1} titulo="Ingresos Semanales"
-        columnas={["Sede", "Efectivo", "Cuentas", "Total"]}
-        filas={arqueoIngresos.map((r) => [r.sede, formatCOP(r.efectivo), formatCOP(r.cuentas), formatCOP(r.total)])}
-        totalFila={["TOTAL GENERAL", formatCOP(totales.ingresos.efectivo), formatCOP(totales.ingresos.cuentas), formatCOP(totales.ingresos.total)]} />
+        columnas={["Sede", "Efectivo", "Transferencia", "Abonos", "Total"]}
+        filas={arqueoIngresos.map((r) => [r.sede, formatCOP(r.efectivo), formatCOP(r.transferencia), formatCOP(r.abonos), formatCOP(r.total)])}
+        totalFila={["TOTAL GENERAL", formatCOP(totales.ingresos.efectivo), formatCOP(totales.ingresos.transferencia), formatCOP(totales.ingresos.abonos), formatCOP(totales.ingresos.total)]} />
 
       <ArqueoBloque numero={2} titulo="Egresos Semanales"
         columnas={["Sede", "Operativos", "Proveedores", "Total Egresos"]}
@@ -178,16 +134,6 @@ const ArqueoSemanalTab = ({ arqueo, arqueoError, filtroSemana, onFiltroSemanaCha
         columnas={["Sede", "Ingresos", "Egresos", "Saldo Neto"]}
         filas={arqueoSaldoNeto.map((r) => [r.sede, formatCOP(r.ingresos), formatCOP(r.egresos), formatCOP(r.saldoNeto)])}
         totalFila={["TOTAL GENERAL", formatCOP(totales.ingresos.total), formatCOP(totales.egresos.total), formatCOP(totales.saldoNeto)]} />
-
-      <ArqueoBloque numero={4} titulo="Variacion de Cartera"
-        columnas={["Sede", "Saldo Inicio", "Saldo Cierre", "Variacion"]}
-        filas={arqueoCartera.map((r) => [r.sede, formatCOP(r.saldoInicio), formatCOP(r.saldoCierre), formatCOP(r.variacion)])}
-        totalFila={["TOTAL GENERAL", formatCOP(sumar(arqueoCartera, "saldoInicio")), formatCOP(sumar(arqueoCartera, "saldoCierre")), formatCOP(sumar(arqueoCartera, "variacion"))]} />
-
-      <ArqueoBloque numero={5} titulo="Variacion de Inventario"
-        columnas={["Sede", "Cantidad Semana", "Costo Semana"]}
-        filas={arqueoInventario.map((r) => [r.sede, new Intl.NumberFormat("es-CO").format(r.cantCierre), formatCOP(r.costoCierre)])}
-        totalFila={["TOTAL GENERAL", new Intl.NumberFormat("es-CO").format(sumar(arqueoInventario, "cantCierre")), formatCOP(totales.inventario)]} />
     </div>
   );
 };

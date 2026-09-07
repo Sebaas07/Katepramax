@@ -177,3 +177,55 @@ describe("clienteService.desactivar", () => {
     expect(result.mensaje).toMatch(/desactivado/i);
   });
 });
+
+// ── abonar ────────────────────────────────────────────────────────────────────
+
+describe("clienteService.abonar", () => {
+  it("debería lanzar AppError 404 si el cliente no existe", async () => {
+    prisma.cliente.findUnique.mockResolvedValue(null);
+
+    await expect(svc.abonar(999, 50000, adminMock)).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("debería descontar el saldo y crear el Ingreso de tipo abono-cliente", async () => {
+    prisma.cliente.findUnique.mockResolvedValue({
+      ...clienteMock,
+      sedeId: 1,
+      saldoDeuda: 100000,
+    });
+    prisma.cliente.update.mockResolvedValue({
+      ...clienteMock,
+      sedeId: 1,
+      saldoDeuda: 50000,
+    });
+    prisma.ingreso.create.mockResolvedValue({});
+
+    await svc.abonar(1, 50000, adminMock);
+
+    expect(prisma.ingreso.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        origen: "abono-cliente",
+        idReferencia: 1,
+        sedeId: 1,
+        efectivo: 50000,
+        cuentas: 0,
+        total: 50000,
+      }),
+      include: expect.anything(),
+    });
+  });
+
+  it("debería lanzar AppError 400 si el abono excede el saldo deuda", async () => {
+    prisma.cliente.findUnique.mockResolvedValue({
+      ...clienteMock,
+      sedeId: 1,
+      saldoDeuda: 20000,
+    });
+
+    await expect(svc.abonar(1, 50000, adminMock)).rejects.toMatchObject({
+      statusCode: 400,
+    });
+  });
+});

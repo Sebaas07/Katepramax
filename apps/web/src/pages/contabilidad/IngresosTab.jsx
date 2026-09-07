@@ -1,7 +1,28 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import { TarjetaResumen } from "./ContabilidadUI";
 //import { formatCOP } from "@/utils/formatters";
+
+// Etiquetas de origen para los ingresos automáticos generados por otros módulos.
+const ETIQUETA_ORIGEN = {
+  manual: null,
+  entrega: { label: "Automático: entrega", color: "#4ade80" },
+  "abono-deuda-entrega": { label: "Automático: abono entregador", color: "#4ade80" },
+  "abono-cliente": { label: "Automático: abono cliente", color: "#60a5fa" },
+};
+
+const CeldaOrigen = memo(({ origen }) => {
+  const et = ETIQUETA_ORIGEN[origen];
+  if (!et) return origen === "manual" ? "Manual" : (origen ?? "—");
+  return (
+    <span
+      className="cont-etiqueta-egreso"
+      style={{ color: et.color, borderColor: et.color + "44" }}
+    >
+      {et.label}
+    </span>
+  );
+});
 
 const COLUMNAS = [
   { campo: "fecha", label: "Fecha", tipo: "fecha" },
@@ -10,6 +31,7 @@ const COLUMNAS = [
   { campo: "efectivo", label: "Efectivo", tipo: "moneda" },
   { campo: "cuentas", label: "Cuentas", tipo: "moneda" },
   { campo: "total", label: "Total", tipo: "moneda" },
+  { campo: "origen", label: "Origen", tipo: "texto" },
   { campo: "observacion", label: "Obs.", tipo: "texto" },
 ];
 
@@ -159,6 +181,11 @@ const IngresosTab = ({
           buscarEnCampos={["sede", "observacion"]}
           paginacion
           renderAcciones={acciones}
+          renderCeldaCustom={(fila, col) =>
+            col.campo === "origen" ? (
+              <CeldaOrigen origen={fila.origen} />
+            ) : null
+          }
         />
       </div>
     </>
