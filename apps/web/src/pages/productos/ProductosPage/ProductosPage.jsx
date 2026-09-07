@@ -514,17 +514,20 @@ const ProductosPage = () => {
             )
           : 0
         : (producto.existencia ?? 0),
-      sedes:
-        veResumenGlobal &&
-        Array.isArray(producto.stockSedes) &&
-        producto.stockSedes.length
-          ? producto.stockSedes
+      sedes: (() => {
+        if (!veResumenGlobal) return "—";
+        const bodegas = Array.isArray(producto.stockSedes)
+          ? producto.stockSedes.filter((s) => s.sede?.tipo === "Bodega")
+          : [];
+        return bodegas.length
+          ? bodegas
               .map(
                 (s) =>
                   `${s.sede?.nombre ?? `Sede ${s.sedeId}`}: ${s.stockActual ?? 0}`,
               )
               .join(" | ")
-          : "—",
+          : "—";
+      })(),
     }));
   }, [productosFiltrados, esAdmin, esAdminBogota]);
 
@@ -558,7 +561,7 @@ const ProductosPage = () => {
       { campo: "departamento", label: "Departamento", tipo: "texto" },
       { campo: "proveedor", label: "Proveedor", tipo: "texto" },
       ...(veResumenGlobal
-        ? [{ campo: "sedes", label: "Sedes", tipo: "texto" }]
+        ? [{ campo: "sedes", label: "Bodega", tipo: "texto" }]
         : []),
       { campo: "activo", label: "Estado", tipo: "booleano" },
       { campo: "creadoEn", label: "Creado", tipo: "fecha" },

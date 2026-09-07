@@ -27,7 +27,7 @@ async function listar(prisma, { descripcion, activo, proveedorId, departamento, 
     where,
     include: {
       proveedor:  { select: { id: true, nombre: true } },
-      stockSedes: { select: { sedeId: true, stockActual: true, sede: { select: { nombre: true } } } },
+      stockSedes: { select: { sedeId: true, stockActual: true, sede: { select: { nombre: true, tipo: true } } } },
     },
     orderBy: { descripcion: "asc" },
     skip,
@@ -44,7 +44,7 @@ async function buscarPorCodigo(prisma, codigo) {
     where: { codigo },
     include: {
       proveedor:  { select: { id: true, nombre: true } },
-      stockSedes: { select: { sedeId: true, stockActual: true, sede: { select: { nombre: true } } } },
+      stockSedes: { select: { sedeId: true, stockActual: true, sede: { select: { nombre: true, tipo: true } } } },
     },
   });
 }
@@ -60,7 +60,7 @@ async function actualizar(prisma, codigo, data) {
     data,
     include: {
       proveedor:  { select: { id: true, nombre: true } },
-      stockSedes: { select: { sedeId: true, stockActual: true, sede: { select: { nombre: true } } } },
+      stockSedes: { select: { sedeId: true, stockActual: true, sede: { select: { nombre: true, tipo: true } } } },
     },
   });
 }
