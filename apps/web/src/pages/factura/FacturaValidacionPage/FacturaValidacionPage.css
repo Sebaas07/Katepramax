@@ -1,6 +1,6 @@
 /* ============================================================
    FacturaValidacionPage.css — página pública de validación
-   Alineada al design system Katepramax (Dark Plum + Aged Gold)
+   Estilo alineado al dashboard: surface-container + oro suave
    ============================================================ */
 
 .factura-publica {
@@ -8,10 +8,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1rem;
+  padding: 2.5rem 1rem;
   background:
-    radial-gradient(circle at 50% 20%, rgba(197, 179, 88, 0.1), transparent 28rem),
-    radial-gradient(circle at 80% 80%, rgba(77, 0, 77, 0.35), transparent 24rem),
+    radial-gradient(ellipse at 50% 0%, rgba(197, 179, 88, 0.06), transparent 50%),
     var(--surface);
 }
 
@@ -21,39 +20,87 @@
   align-items: center;
   gap: 1.25rem;
   width: 100%;
-  max-width: 420px;
-  padding: 1.75rem 1.5rem;
-  background: var(--glass-bg-solid);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--glass-shadow);
-  transition: border-color var(--transition-base);
+  max-width: 380px;
+  padding: 1.5rem;
+  background: var(--surface-container);
+  border: 1px solid rgba(233, 195, 73, 0.12);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  transition: border-color var(--transition-fast);
 }
 
 .factura-publica__card:hover {
-  border-color: var(--aged-gold-border-hover);
+  border-color: rgba(233, 195, 73, 0.28);
+}
+
+/* ── Branding superior ────────────────────────────────────── */
+.factura-publica__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding-bottom: 0.25rem;
+}
+
+.factura-publica__brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: rgba(233, 195, 73, 0.1);
+  border: 1px solid rgba(233, 195, 73, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.factura-publica__brand-icon .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--secondary);
+}
+
+.factura-publica__brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.factura-publica__brand-name {
+  font-family: var(--font-headline);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--secondary);
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+
+.factura-publica__brand-sub {
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  line-height: 1.1;
 }
 
 /* ── Aviso de validez ─────────────────────────────────────── */
 .factura-publica__aviso {
   display: flex;
   align-items: flex-start;
-  gap: 0.625rem;
+  gap: 0.5rem;
   width: 100%;
-  padding: 0.75rem 0.875rem;
-  background: var(--forest-green-dim);
-  border: 1px solid rgba(34, 139, 34, 0.45);
-  border-radius: var(--radius-lg);
-  color: #4ade80;
+  padding: 0.625rem 0.75rem;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: var(--radius-md);
   font-family: var(--font-label);
-  font-size: 13px;
+  font-size: 12px;
   box-sizing: border-box;
 }
 
 .factura-publica__aviso .material-symbols-outlined {
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
   margin-top: 1px;
   color: #4ade80;
@@ -62,11 +109,11 @@
 .factura-publica__aviso p {
   margin: 0;
   line-height: 1.45;
-  color: #86efac;
+  color: var(--on-surface-variant);
 }
 
 .factura-publica__aviso strong {
-  color: #bbf7d0;
+  color: #4ade80;
   font-weight: 600;
 }
 
@@ -75,10 +122,14 @@
   width: 100%;
   display: flex;
   justify-content: center;
-  padding: 0.75rem;
+  padding: 1rem 0.75rem;
   background: var(--surface-container-lowest);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-lg);
+  border: 1px solid rgba(76, 68, 81, 0.35);
+  border-radius: var(--radius-md);
+}
+
+.factura-publica__preview .factura-ticket {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Estado de carga ──────────────────────────────────────── */
@@ -86,7 +137,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.875rem;
   color: var(--on-surface);
   font-family: var(--font-headline);
   font-size: 0.9375rem;
@@ -94,19 +145,23 @@
 }
 
 .factura-publica__carga-orb {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-full);
-  border: 3px solid var(--outline-variant);
+  border: 2.5px solid var(--outline-variant);
   border-top-color: var(--secondary);
   animation: factura-spin 0.8s linear infinite;
-  box-shadow: 0 0 24px rgba(233, 195, 73, 0.18);
+  box-shadow: 0 0 20px rgba(233, 195, 73, 0.15);
 }
 
 @keyframes factura-spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+.factura-publica__carga strong {
+  font-weight: 600;
 }
 
 .factura-publica__carga span {
@@ -117,14 +172,14 @@
 
 /* ── Estado de error / no encontrado ──────────────────────── */
 .factura-publica__icono {
-  font-size: 48px;
+  font-size: 44px;
   color: var(--on-surface-variant);
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 .factura-publica__card h1 {
   font-family: var(--font-headline);
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--on-surface);
@@ -141,14 +196,14 @@
   line-height: 1.45;
 }
 
-/* ── Botón imprimir (CTA del design system) ───────────────── */
+/* ── Botón imprimir ───────────────────────────────────────── */
 .factura-publica__btn {
   width: 100%;
   background: var(--gradient-cta);
   color: #fff;
   border: none;
   border-radius: var(--radius-lg);
-  padding: 0.75rem 1.25rem;
+  padding: 0.7rem 1.25rem;
   font-family: var(--font-label);
   font-weight: 700;
   font-size: 13px;
@@ -165,7 +220,7 @@
 .factura-publica__btn:hover {
   background: var(--gradient-cta-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(197, 179, 88, 0.25);
+  box-shadow: 0 4px 16px rgba(197, 179, 88, 0.22);
 }
 
 .factura-publica__btn:active {
@@ -196,18 +251,21 @@
   }
 
   .factura-publica__card {
-    padding: 1.25rem 1rem;
+    padding: 1.125rem;
     gap: 1rem;
-    border-radius: var(--radius-lg);
   }
 
   .factura-publica__aviso {
-    font-size: 12px;
-    padding: 0.625rem 0.75rem;
+    font-size: 11px;
+    padding: 0.55rem 0.65rem;
   }
 
   .factura-publica__btn {
-    padding: 0.7rem 1rem;
+    padding: 0.65rem 1rem;
+  }
+
+  .factura-publica__preview {
+    padding: 0.75rem 0.5rem;
   }
 }
 
@@ -224,12 +282,11 @@
     padding: 0 !important;
     background: transparent !important;
     border: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
     width: 100% !important;
     max-width: 100% !important;
   }
 
+  .factura-publica__brand,
   .factura-publica__aviso,
   .factura-publica__btn,
   .factura-publica__link,
