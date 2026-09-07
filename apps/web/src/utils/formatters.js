@@ -123,17 +123,35 @@ export const truncar = (texto, max = 40) => {
  * Ej: new Date("2026-09-07") → 1 · new Date("2026-09-14") → 2
  */
 export const getSemanaISO = (fecha = new Date()) => {
-  const d = new Date(
-    Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()),
-  );
-  // La semana 1 arranca el 7 de septiembre del periodo en curso (o del anterior
-  // si la fecha aún no llega al reset del año).
-  const sep7Actual = new Date(Date.UTC(d.getUTCFullYear(), 8, 7));
+  const d0 = fecha instanceof Date && Number.isFinite(fecha.getTime())
+    ? fecha
+    : new Date(fecha);
+  let y, m, d;
+  // Un bucklet de día (medianoche UTC, p. ej. new Date("2026-09-07")) ya
+  // representa el día calendario en Bogotá: se leen sus campos UTC tal cual.
+  const esBucket =
+    d0.getUTCHours() === 0 &&
+    d0.getUTCMinutes() === 0 &&
+    d0.getUTCSeconds() === 0 &&
+    d0.getUTCMilliseconds() === 0;
+  if (esBucket) {
+    y = d0.getUTCFullYear();
+    m = d0.getUTCMonth();
+    d = d0.getUTCDate();
+  } else {
+    // Instante corriente: se resuelve el día calendario de Bogotá (UTC−5).
+    const bog = new Date(d0.getTime() - 5 * 60 * 60 * 1000);
+    y = bog.getUTCFullYear();
+    m = bog.getUTCMonth();
+    d = bog.getUTCDate();
+  }
+  const dia = new Date(Date.UTC(y, m, d));
+  const sep7Actual = new Date(Date.UTC(y, 8, 7));
   const base =
-    d < sep7Actual
-      ? new Date(Date.UTC(d.getUTCFullYear() - 1, 8, 7))
+    dia < sep7Actual
+      ? new Date(Date.UTC(y - 1, 8, 7))
       : sep7Actual;
-  return Math.floor((d - base) / 86400000 / 7) + 1;
+  return Math.floor((dia - base) / 86400000 / 7) + 1;
 };
 
 /**
@@ -143,10 +161,13 @@ export const getSemanaISO = (fecha = new Date()) => {
  */
 export const getRangoSemana = (semana) => {
   const hoy = new Date();
-  const sep7Anio = new Date(Date.UTC(hoy.getFullYear(), 8, 7));
+  const bog = new Date(hoy.getTime() - 5 * 60 * 60 * 1000);
+  const y = bog.getUTCFullYear();
+  const dia = new Date(Date.UTC(y, bog.getUTCMonth(), bog.getUTCDate()));
+  const sep7Anio = new Date(Date.UTC(y, 8, 7));
   const base =
-    hoy < sep7Anio
-      ? new Date(Date.UTC(hoy.getFullYear() - 1, 8, 7))
+    dia < sep7Anio
+      ? new Date(Date.UTC(y - 1, 8, 7))
       : sep7Anio;
   const start = new Date(base);
   start.setUTCDate(base.getUTCDate() + (semana - 1) * 7);
