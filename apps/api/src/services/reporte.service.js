@@ -6,6 +6,7 @@ const {
   rangoSemana,
   fechaValida,
   fechaBogotaISO,
+  resolverFamiliaSede,
 } = require("../utils/contabilidad");
 
 function toNum(v) { return Number(v ?? 0); }
@@ -41,11 +42,7 @@ async function getSedes(prisma, usuario, sedeIdFiltro, soloOficinas = false) {
   }
 
   if (sedeIdFiltro) {
-    const sede = await prisma.sede.findUnique({
-      where:  { id: Number(sedeIdFiltro) },
-      select: { id: true, nombre: true, tipo: true },
-    });
-    return sede ? reducir([sede]) : [];
+    return reducir(await resolverFamiliaSede(prisma, sedeIdFiltro));
   }
 
   const sedes = await prisma.sede.findMany({
@@ -55,7 +52,7 @@ async function getSedes(prisma, usuario, sedeIdFiltro, soloOficinas = false) {
   return reducir(sedes);
 }
 
-function sedeWhere(usuario, sedeIdFiltro) {
+async function sedeWhere(prisma, usuario, sedeIdFiltro) {
   if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
     const sedesIds = Array.isArray(usuario.sedesOperativas)
       ? usuario.sedesOperativas
@@ -66,9 +63,13 @@ function sedeWhere(usuario, sedeIdFiltro) {
       ? { sedeId: sedesIds[0] }
       : { sedeId: { in: sedesIds } };
   }
-  // Admin: acceso total, con filtro opcional de una sede específica.
+  // Admin: acceso total, o filtrado por la familia (bodega + oficinas
+  // ligadas) de la sede puntual elegida en el dashboard.
   if (sedeIdFiltro) {
-    return { sedeId: Number(sedeIdFiltro) };
+    const familia = await resolverFamiliaSede(prisma, sedeIdFiltro);
+    const ids = familia.map((s) => s.id);
+    if (ids.length === 0) return { sedeId: Number(sedeIdFiltro) };
+    return ids.length === 1 ? { sedeId: ids[0] } : { sedeId: { in: ids } };
   }
   return {};
 }
@@ -92,7 +93,7 @@ async function arqueoSemanal(app, { semana, sedeId } = {}, usuario) {
   const whereFecha = { fecha: { gte, lt } };
 
   const sedes     = await getSedes(prisma, usuario, sedeId);
-  const whereSede = sedeWhere(usuario, sedeId);
+  const whereSede = await sedeWhere(prisma, usuario, sedeId);
 
   const ingRows = await prisma.ingreso.findMany({
     where: { ...whereFecha, ...whereSede },
@@ -266,7 +267,7 @@ async function panelGeneral(app, { fecha, sedeId } = {}, usuario) {
   const { gte: dia, lt: diaFin } = rangoDia(fecha);
 
   const sedes     = await getSedes(prisma, usuario, sedeId);
-  const whereSede = sedeWhere(usuario, sedeId);
+  const whereSede = await sedeWhere(prisma, usuario, sedeId);
 
   const ingRows = await prisma.ingreso.groupBy({
     by:    ["sedeId"],
@@ -361,8 +362,10 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
 
   const { gte: desde, lt: hasta } = rangoDiaBogota(fechaInicio, fechaFin);
 
-  const whereSede = sedeWhere(usuario);
-  const sedeFiltro = sedeId ? { sedeId: Number(sedeId) } : whereSede.sedeId ? { sedeId: whereSede.sedeId } : undefined;
+  const whereSede = await sedeWhere(prisma, usuario);
+  const sedeFiltro = sedeId
+    ? await sedeWhere(prisma, usuario, sedeId)
+    : (whereSede.sedeId !== undefined ? whereSede : undefined);
 
   const asignaciones = await prisma.asignacionEntrega.findMany({
     where: {
@@ -435,7 +438,7 @@ async function corteCaja(app, { desde, hasta, sedeId } = {}, usuario) {
   const desdeDia = rangoDia(desde).gte;
   const hastaDia = rangoDia(hasta).lt;
 
-  const whereSede = sedeWhere(usuario, sedeId);
+  const whereSede = await sedeWhere(prisma, usuario, sedeId);
   const whereRangoFecha = { fecha: { gte: desdeDia, lt: hastaDia } };
 
   const ingresos = await prisma.ingreso.findMany({

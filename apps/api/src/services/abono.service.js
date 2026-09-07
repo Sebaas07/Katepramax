@@ -1,7 +1,7 @@
 const repo     = require("../repositories/abono.repository");
 const egresoRepo = require("../repositories/egreso.repository");
 const AppError = require("../errors/AppError");
-const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeDeuda, ORIGENES } = require("../utils/contabilidad");
+const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeDeuda, ORIGENES, resolverFamiliaSede } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
 
 async function registrar(app, body, usuario) {
@@ -74,7 +74,12 @@ async function obtenerLista(app, query, usuario) {
   if (usuario.rol !== "Admin") {
     filtros.sedeId = await sedeDeuda(app, usuario);
   } else if (query.sedeId) {
-    filtros.sedeId = Number(query.sedeId);
+    // La deuda vive en la bodega (sus oficinas la comparten): el Admin que
+    // filtra por una sede ve su familia completa (bodega + oficinas).
+    const ids = (await resolverFamiliaSede(app.prisma, query.sedeId)).map((s) => s.id);
+    if (ids.length === 1)      filtros.sedeId = ids[0];
+    else if (ids.length > 1)   filtros.sedeIds = ids;
+    else                       filtros.sedeId = Number(query.sedeId);
   }
 
   return repo.listar(app.prisma, filtros);

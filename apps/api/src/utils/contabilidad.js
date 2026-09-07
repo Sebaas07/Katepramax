@@ -221,6 +221,35 @@ async function sedeWhereDeuda(app, usuario) {
   return sedeId == null ? {} : { sedeId };
 }
 
+// Dada una sede puntual, resuelve su "familia": ella misma más la bodega/
+// oficinas con las que comparte datos (misma relación que usa
+// auth.middleware.js para construir usuario.sedesOperativas). Se usa para
+// resolver el filtro de una sede específica (Admin), de modo que elegir la
+// bodega o cualquiera de sus oficinas traiga siempre los mismos datos.
+async function resolverFamiliaSede(prisma, sedeId) {
+  const sede = await prisma.sede.findUnique({
+    where:  { id: Number(sedeId) },
+    select: {
+      id: true, nombre: true, tipo: true, bodegaId: true,
+      oficinas: { select: { id: true, nombre: true, tipo: true } },
+    },
+  });
+  if (!sede) return [];
+
+  const propia = { id: sede.id, nombre: sede.nombre, tipo: sede.tipo };
+  if (sede.tipo === "Bodega") {
+    return [propia, ...(sede.oficinas ?? [])];
+  }
+  if (sede.tipo === "Oficina" && sede.bodegaId) {
+    const bodega = await prisma.sede.findUnique({
+      where:  { id: sede.bodegaId },
+      select: { id: true, nombre: true, tipo: true },
+    });
+    return bodega ? [propia, bodega] : [propia];
+  }
+  return [propia];
+}
+
 module.exports = {
   MAX_OBSERVACION,
   MAX_CONCEPTO,
@@ -242,4 +271,5 @@ module.exports = {
   sedeWhere,
   sedeDeuda,
   sedeWhereDeuda,
+  resolverFamiliaSede,
 };

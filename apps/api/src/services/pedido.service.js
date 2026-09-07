@@ -1,6 +1,7 @@
 const repo = require("../repositories/pedido.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
+const { resolverFamiliaSede } = require("../utils/contabilidad");
 
 /**
  * pedido.service.js
@@ -239,7 +240,17 @@ async function obtenerLista(app, query, usuario) {
       filtros.sedeIds = sedes;
     }
   } else if (query.sedeId) {
-    filtros.sedeId = Number(query.sedeId);
+    // Admin con filtro puntual: resuelve la familia de la sede (bodega +
+    // oficinas ligadas) para que elegir la bodega o cualquiera de sus
+    // oficinas traiga siempre los mismos datos.
+    const ids = (await resolverFamiliaSede(app.prisma, query.sedeId)).map((s) => s.id);
+    if (ids.length === 1) {
+      filtros.sedeId = ids[0];
+    } else if (ids.length > 1) {
+      filtros.sedeIds = ids;
+    } else {
+      filtros.sedeId = Number(query.sedeId);
+    }
   }
 
   return repo.listar(app.prisma, filtros);

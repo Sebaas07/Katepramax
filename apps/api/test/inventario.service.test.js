@@ -466,6 +466,23 @@ describe("inventarioService.obtenerLista", () => {
     // filtro de sede debe ser el del usuario, no el del query
     expect(callWhere.sedeId).toBe(1);
   });
+
+  it("Admin con sedeId debería resolver la familia (bodega + oficinas)", async () => {
+    prisma.sede.findUnique.mockResolvedValue({
+      id: 4, nombre: "Bogotá", tipo: "Bodega", bodegaId: null,
+      oficinas: [{ id: 5, nombre: "Bogotá Centro", tipo: "Oficina" }],
+    });
+    prisma.inventario.findMany.mockResolvedValue([]);
+
+    await inventarioService.obtenerLista(
+      appMock,
+      { sedeId: "4" },
+      usuarioAdmin,
+    );
+
+    const callWhere = prisma.inventario.findMany.mock.calls[0][0].where;
+    expect(callWhere.sedeId).toEqual({ in: [4, 5] });
+  });
 });
 
 // ── obtenerPorId ──────────────────────────────────────────────────────────────
@@ -806,6 +823,27 @@ describe("inventarioService.resumenDeudaProveedores", () => {
       ),
     ).rejects.toMatchObject({ statusCode: 403 });
   });
+
+  it("Admin con sedeId debería resolver la familia (bodega + oficinas)", async () => {
+    prisma.sede.findUnique.mockResolvedValue({
+      id: 4, nombre: "Bogotá", tipo: "Bodega", bodegaId: null,
+      oficinas: [{ id: 5, nombre: "Bogotá Centro", tipo: "Oficina" }],
+    });
+    prisma.inventario.groupBy.mockResolvedValue([]);
+    prisma.abono.groupBy.mockResolvedValue([]);
+    prisma.proveedor.findMany.mockResolvedValue([]);
+
+    await inventarioService.resumenDeudaProveedores(
+      appMock,
+      { sedeId: 4 },
+      usuarioAdmin,
+    );
+
+    const callWhere = prisma.inventario.groupBy.mock.calls[0][0].where;
+    const abonoWhere = prisma.abono.groupBy.mock.calls[0][0].where;
+    expect(callWhere.sedeId).toEqual({ in: [4, 5] });
+    expect(abonoWhere.sedeId).toEqual({ in: [4, 5] });
+  });
 });
 
 // ── historialProveedor ────────────────────────────────────────────────────────
@@ -1009,6 +1047,7 @@ describe("inventarioService.historialProveedor", () => {
 
   it("Admin puede filtrar por sedeId", async () => {
     prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
+    prisma.sede.findUnique.mockResolvedValue({ id: 2, nombre: "Medellín", tipo: "Bodega", oficinas: [] });
     prisma.inventario.findMany.mockResolvedValue(entradasMock);
     prisma.inventario.groupBy.mockResolvedValue([]);
     prisma.abono.groupBy.mockResolvedValue([]);

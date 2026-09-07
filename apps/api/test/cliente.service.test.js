@@ -68,6 +68,19 @@ describe("clienteService.listar", () => {
       expect.objectContaining({ skip: 10, take: 5 }),
     );
   });
+
+  it("Admin con sedeId debería resolver la familia (bodega + oficinas)", async () => {
+    prisma.sede.findUnique.mockResolvedValue({
+      id: 4, nombre: "Bogotá", tipo: "Bodega", bodegaId: null,
+      oficinas: [{ id: 5, nombre: "Bogotá Centro", tipo: "Oficina" }],
+    });
+    prisma.cliente.findMany.mockResolvedValue([]);
+
+    await svc.listar({ sedeId: "4" }, adminMock);
+
+    const callWhere = prisma.cliente.findMany.mock.calls[0][0].where;
+    expect(callWhere.sedeId).toEqual({ in: [4, 5] });
+  });
 });
 
 // ── obtenerPorId ──────────────────────────────────────────────────────────────

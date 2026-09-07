@@ -2,7 +2,7 @@ const repo = require("../repositories/inventario.repository");
 const egresoRepo = require("../repositories/egreso.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
-const { sedeEsPermitida, rangoDia, fechaValida, sedeWhereDeuda, semanaValida, ORIGENES } = require("../utils/contabilidad");
+const { sedeEsPermitida, rangoDia, fechaValida, sedeWhereDeuda, semanaValida, ORIGENES, resolverFamiliaSede } = require("../utils/contabilidad");
 
 /**
  * Calcula el delta de stock según el tipo de movimiento.
@@ -191,7 +191,11 @@ async function obtenerLista(app, query, usuario) {
   if (usuario.rol !== "Admin") {
     filtros.sedeId = sedeOperativa(usuario);
   } else if (query.sedeId) {
-    filtros.sedeId = Number(query.sedeId);
+    // Admin que filtra por una sede ve su familia completa (bodega + oficinas).
+    const ids = (await resolverFamiliaSede(app.prisma, query.sedeId)).map((s) => s.id);
+    if (ids.length === 1)      filtros.sedeId = ids[0];
+    else if (ids.length > 1)   filtros.sedeIds = ids;
+    else                       filtros.sedeId = Number(query.sedeId);
   }
 
   return repo.listar(app.prisma, filtros);
@@ -414,7 +418,14 @@ async function resumenDeudaProveedores(app, query, usuario) {
 
   const prisma = app.prisma;
   const where = await sedeWhereDeuda(app, usuario);
-  if (usuario.rol === "Admin" && query.sedeId) where.sedeId = Number(query.sedeId);
+  if (usuario.rol === "Admin" && query.sedeId) {
+    // La deuda vive en la bodega (sus oficinas la comparten): un Admin que
+    // filtra por una sede ve su familia completa.
+    const ids = (await resolverFamiliaSede(app.prisma, query.sedeId)).map((s) => s.id);
+    if (ids.length === 1)    where.sedeId = ids[0];
+    else if (ids.length > 1) where.sedeId = { in: ids };
+    else                     where.sedeId = Number(query.sedeId);
+  }
   if (query.semana) where.semana = semanaValida(query.semana);
 
   const [deudas, abonos] = await Promise.all([
@@ -487,7 +498,10 @@ async function historialProveedor(app, params, query, usuario) {
 
   const whereSede = await sedeWhereDeuda(app, usuario);
   if (usuario.rol === "Admin" && query.sedeId) {
-    whereSede.sedeId = Number(query.sedeId);
+    const ids = (await resolverFamiliaSede(app.prisma, query.sedeId)).map((s) => s.id);
+    if (ids.length === 1)    whereSede.sedeId = ids[0];
+    else if (ids.length > 1) whereSede.sedeId = { in: ids };
+    else                     whereSede.sedeId = Number(query.sedeId);
   }
 
   // Listado de entradas del proveedor, con rango de fechas opcional

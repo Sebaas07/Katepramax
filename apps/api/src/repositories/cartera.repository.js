@@ -4,11 +4,12 @@ async function crear(prisma, data) {
   return prisma.cartera.create({ data, include: INCLUDE });
 }
 
-async function listar(prisma, { fecha, semana, sedeId, skip = 0, take = 50 } = {}) {
+async function listar(prisma, { fecha, semana, sedeId, sedeIds, skip = 0, take = 50 } = {}) {
   const where = {};
   if (fecha)  where.fecha  = new Date(fecha);
   if (semana) where.semana = Number(semana);
-  if (sedeId) where.sedeId = Number(sedeId);
+  if (sedeIds?.length) where.sedeId = { in: sedeIds.map(Number) };
+  else if (sedeId)     where.sedeId = Number(sedeId);
   return prisma.cartera.findMany({
     where,
     include: INCLUDE,

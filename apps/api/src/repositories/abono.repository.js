@@ -7,10 +7,11 @@ async function crear(prisma, data) {
   return prisma.abono.create({ data, include: INCLUDE });
 }
 
-async function listar(prisma, { proveedorId, sedeId, semana, fecha, skip = 0, take = 50 } = {}) {
+async function listar(prisma, { proveedorId, sedeId, sedeIds, semana, fecha, skip = 0, take = 50 } = {}) {
   const where = {};
   if (proveedorId) where.proveedorId = proveedorId;
-  if (sedeId)      where.sedeId      = sedeId;
+  if (sedeIds?.length) where.sedeId   = { in: sedeIds };
+  else if (sedeId)     where.sedeId   = sedeId;
   if (semana)      where.semana      = semana;
   if (fecha)       where.fecha       = fecha;
   return prisma.abono.findMany({

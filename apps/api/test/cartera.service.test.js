@@ -164,3 +164,18 @@ describe("carteraService.borrar", () => {
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 });
+
+describe("carteraService.obtenerLista", () => {
+  it("Admin con sedeId debería resolver la familia (bodega + oficinas)", async () => {
+    prisma.sede.findUnique.mockResolvedValue({
+      id: 4, nombre: "Bogotá", tipo: "Bodega", bodegaId: null,
+      oficinas: [{ id: 5, nombre: "Bogotá Centro", tipo: "Oficina" }],
+    });
+    prisma.cartera.findMany.mockResolvedValue([]);
+
+    await carteraSvc.obtenerLista(appMock, { sedeId: "4" }, usuarioAdmin);
+
+    const where = prisma.cartera.findMany.mock.calls[0][0].where;
+    expect(where.sedeId).toEqual({ in: [4, 5] });
+  });
+});

@@ -6,11 +6,12 @@ async function crear(prisma, data) {
   return prisma.ingreso.create({ data, include: INCLUDE });
 }
 
-async function listar(prisma, { fecha, semana, sedeId, skip = 0, take = 50 } = {}) {
+async function listar(prisma, { fecha, semana, sedeId, sedeIds, skip = 0, take = 50 } = {}) {
   const where = {};
   if (fecha)  where.fecha  = fecha;
   if (semana) where.semana = semana;
-  if (sedeId) where.sedeId = sedeId;
+  if (sedeIds?.length) where.sedeId = { in: sedeIds };
+  else if (sedeId)     where.sedeId = sedeId;
   return prisma.ingreso.findMany({
     where,
     include: INCLUDE,

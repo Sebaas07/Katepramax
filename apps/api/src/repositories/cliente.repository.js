@@ -9,11 +9,12 @@ const clienteRepository = (prisma) => ({
       include: { sede: { select: { id: true, nombre: true } } },
     }),
 
-  findAll: ({ nombre, activo, sedeId, skip = 0, take = 50 } = {}) => {
+  findAll: ({ nombre, activo, sedeId, sedeIds, skip = 0, take = 50 } = {}) => {
     const where = {};
     if (nombre) where.nombre = { contains: nombre };
     if (activo !== undefined) where.activo = activo;
-    if (sedeId) where.sedeId = sedeId;
+    if (sedeIds?.length) where.sedeId = { in: sedeIds };
+    else if (sedeId)     where.sedeId = sedeId;
     return prisma.cliente.findMany({
       where,
       include: { sede: { select: { id: true, nombre: true } } },

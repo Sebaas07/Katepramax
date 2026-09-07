@@ -1,6 +1,6 @@
 const repo     = require("../repositories/ingreso.repository");
 const AppError = require("../errors/AppError");
-const { fechaValida, numero, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere } = require("../utils/contabilidad");
+const { fechaValida, numero, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere, resolverFamiliaSede } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
 
 async function registrar(app, body, usuario) {
@@ -55,7 +55,10 @@ async function obtenerLista(app, query, usuario) {
   if (usuario.rol !== "Admin") {
     filtros.sedeId = usuario.sedeId;
   } else if (query.sedeId) {
-    filtros.sedeId = Number(query.sedeId);
+    const ids = (await resolverFamiliaSede(app.prisma, query.sedeId)).map((s) => s.id);
+    if (ids.length === 1)      filtros.sedeId = ids[0];
+    else if (ids.length > 1)   filtros.sedeIds = ids;
+    else                       filtros.sedeId = Number(query.sedeId);
   }
 
   return repo.listar(app.prisma, filtros);

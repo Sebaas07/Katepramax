@@ -112,14 +112,15 @@ describe("abonoService.obtenerLista", () => {
      expect(filtros.semana).toBe(18);
    });
 
-   it("debería convertir sedeId a número", async () => {
-     prisma.abono.findMany.mockResolvedValue([]);
+it("debería convertir sedeId a número", async () => {
+    prisma.abono.findMany.mockResolvedValue([]);
+    prisma.sede.findUnique.mockResolvedValue({ id: 1, nombre: "Bogotá", tipo: "Bodega", oficinas: [] });
 
-     await service.obtenerLista(appMock, { sedeId: "1" }, usuarioMock);
+    await service.obtenerLista(appMock, { sedeId: "1" }, usuarioMock);
 
-     const filtros = prisma.abono.findMany.mock.calls[0][0].where;
-     expect(filtros.sedeId).toBe(1);
-   });
+    const filtros = prisma.abono.findMany.mock.calls[0][0].where;
+    expect(filtros.sedeId).toBe(1);
+  });
 
    it("debería convertir proveedorId a número", async () => {
      prisma.abono.findMany.mockResolvedValue([]);
@@ -138,6 +139,19 @@ describe("abonoService.obtenerLista", () => {
 
      const filtros = prisma.abono.findMany.mock.calls[0][0].where;
      expect(filtros.sedeId).toBe(5);
+   });
+
+   it("Admin con sedeId debería resolver la familia (bodega + oficinas)", async () => {
+     prisma.sede.findUnique.mockResolvedValue({
+       id: 4, nombre: "Bogotá", tipo: "Bodega", bodegaId: null,
+       oficinas: [{ id: 5, nombre: "Bogotá Centro", tipo: "Oficina" }],
+     });
+     prisma.abono.findMany.mockResolvedValue([]);
+
+     await service.obtenerLista(appMock, { sedeId: "4" }, usuarioMock);
+
+     const filtros = prisma.abono.findMany.mock.calls[0][0].where;
+     expect(filtros.sedeId).toEqual({ in: [4, 5] });
    });
  });
 

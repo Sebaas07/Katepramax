@@ -6,7 +6,7 @@ const clienteRepository = require("../repositories/cliente.repository");
 const ingresoRepo = require("../repositories/ingreso.repository");
 const AppError = require("../errors/AppError");
 const { registrarAccion } = require("../utils/logger");
-const { semanaNegocio, inicioDiaLocal, ORIGENES } = require("../utils/contabilidad");
+const { semanaNegocio, inicioDiaLocal, ORIGENES, resolverFamiliaSede } = require("../utils/contabilidad");
 
 function sedeEsPermitida(usuario) {
   return (
@@ -21,7 +21,7 @@ const clienteService = (app) => {
   const repo = clienteRepository(app.prisma);
 
   return {
-    listar: ({ nombre, activo, sedeId, skip, take }, usuario) => {
+    listar: async ({ nombre, activo, sedeId, skip, take }, usuario) => {
       if (!sedeEsPermitida(usuario)) {
         throw new AppError("No tienes permiso para listar clientes.", 403);
       }
@@ -40,7 +40,10 @@ const clienteService = (app) => {
       if (usuario.rol !== "Admin" && usuario.sedeId != null) {
         filtros.sedeId = usuario.sedeId;
       } else if (usuario.rol === "Admin" && sedeId) {
-        filtros.sedeId = Number(sedeId);
+        const ids = (await resolverFamiliaSede(app.prisma, sedeId)).map((s) => s.id);
+        if (ids.length === 1)      filtros.sedeId = ids[0];
+        else if (ids.length > 1)   filtros.sedeIds = ids;
+        else                       filtros.sedeId = Number(sedeId);
       }
 
       return repo.findAll(filtros);

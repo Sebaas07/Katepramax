@@ -236,6 +236,34 @@ describe("pedidoService.obtenerLista", () => {
     const where = prisma.pedido.findMany.mock.calls[0][0].where;
     expect(where.clienteId).toBe(5);
   });
+
+  it("Admin con sedeId debería resolver la familia (bodega + oficinas)", async () => {
+    prisma.sede.findUnique
+      .mockResolvedValueOnce({
+        id: 4, nombre: "Bogotá", tipo: "Bodega", bodegaId: null,
+        oficinas: [{ id: 5, nombre: "Bogotá Centro", tipo: "Oficina" }],
+      });
+    prisma.pedido.findMany.mockResolvedValue([]);
+
+    await service.obtenerLista(appMock, { sedeId: "4" }, { rol: "Admin" });
+
+    const where = prisma.pedido.findMany.mock.calls[0][0].where;
+    expect(where.creador).toEqual({ sedeId: { in: [4, 5] } });
+  });
+
+  it("Admin con sedeId (oficina) debería resolver su bodega", async () => {
+    prisma.sede.findUnique
+      .mockResolvedValueOnce({
+        id: 5, nombre: "Bogotá Centro", tipo: "Oficina", bodegaId: 4, oficinas: [],
+      })
+      .mockResolvedValueOnce({ id: 4, nombre: "Bogotá", tipo: "Bodega" });
+    prisma.pedido.findMany.mockResolvedValue([]);
+
+    await service.obtenerLista(appMock, { sedeId: "5" }, { rol: "Admin" });
+
+    const where = prisma.pedido.findMany.mock.calls[0][0].where;
+    expect(where.creador).toEqual({ sedeId: { in: [5, 4] } });
+  });
 });
 
 // ── obtenerPorId ──────────────────────────────────────────────────────────────

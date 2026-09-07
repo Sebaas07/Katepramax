@@ -40,12 +40,13 @@ const upsertDiario = crear;
 
 async function listar(
   prisma,
-  { fecha, semana, sedeId, productoId, tipo, skip = 0, take = 50 } = {},
+  { fecha, semana, sedeId, sedeIds, productoId, tipo, skip = 0, take = 50 } = {},
 ) {
   const where = {};
   if (fecha) where.fecha = fecha;
   if (semana) where.semana = semana;
-  if (sedeId) where.sedeId = sedeId;
+  if (sedeIds?.length) where.sedeId = { in: sedeIds };
+  else if (sedeId) where.sedeId = sedeId;
   if (productoId) where.productoId = productoId;
   if (tipo) where.tipo = tipo;
   return prisma.inventario.findMany({

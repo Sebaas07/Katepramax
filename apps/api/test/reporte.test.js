@@ -384,6 +384,63 @@ describe("GET /api/v1/reportes/panel-general", () => {
     expect(body.ingresos.total).toBe(250000);
   });
 
+  it("debería incluir los datos de la bodega cuando el Admin filtra por una oficina ligada a ella (y viceversa)", async () => {
+    mockSesion(sesionAdminMock);
+    // Bogotá (id 4, Bodega) alimenta a Bogotá Centro (id 5, Oficina).
+    // Los movimientos quedan registrados sobre la bodega (sedeId 4), pero
+    // el Admin filtra por la oficina (sedeId 5) igual que haría un usuario
+    // de esa oficina: debe ver los mismos datos que si filtrara por la bodega.
+    prisma.sede.findUnique.mockImplementation(({ where: { id } }) => {
+      if (id === 4) {
+        return Promise.resolve({
+          id: 4, nombre: "Bogotá", tipo: "Bodega", bodegaId: null,
+          oficinas: [{ id: 5, nombre: "Bogotá Centro", tipo: "Oficina" }],
+        });
+      }
+      if (id === 5) {
+        return Promise.resolve({
+          id: 5, nombre: "Bogotá Centro", tipo: "Oficina", bodegaId: 4,
+        });
+      }
+      return Promise.resolve(null);
+    });
+    prisma.ingreso = {
+      groupBy: vi.fn().mockResolvedValue([
+        { sedeId: 4, _sum: { efectivo: 200000, cuentas: 50000, total: 250000 } },
+      ]),
+    };
+    prisma.egreso = { groupBy: vi.fn().mockResolvedValue([]) };
+    prisma.cliente = {
+      ...prisma.cliente,
+      aggregate: vi.fn().mockResolvedValue({ _sum: { saldoDeuda: 800000 } }),
+    };
+    prisma.stockSede = {
+      ...prisma.stockSede,
+      aggregate: vi.fn().mockResolvedValue({ _sum: { stockActual: 500 } }),
+      findMany:  vi.fn().mockResolvedValue([]),
+    };
+    prisma.pedido = { ...prisma.pedido, count: vi.fn().mockResolvedValue(0) };
+    prisma.asignacionEntrega = { ...prisma.asignacionEntrega, count: vi.fn().mockResolvedValue(0) };
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/reportes/panel-general?fecha=2026-05-05&sedeId=5",
+      headers: authAdmin(),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    // Antes del fix, filtrar por la oficina (sedeId 5) no traía nada porque
+    // el movimiento está registrado sobre la bodega (sedeId 4).
+    expect(body.ingresos.total).toBe(250000);
+    expect(body.ingresos.porSede.map((s) => s.sedeId).sort()).toEqual([4, 5]);
+    expect(body.cartera).toBe(800000);
+    // El `where` real que se le manda a Prisma debe cubrir ambas sedes de la
+    // familia (4 y 5), no solo la sede puntual elegida (5) — de lo contrario
+    // los mocks de arriba estarían "acertando" sin que el filtro real sirva.
+    const whereUsado = prisma.ingreso.groupBy.mock.calls[0][0].where;
+    expect(whereUsado.sedeId).toEqual({ in: [5, 4] });
+  });
+
   it("debería retornar 200 para Bodega", async () => {
     mockSesion(sesionBodegaMock);
     prisma.sede.findMany.mockResolvedValue(sedes);
