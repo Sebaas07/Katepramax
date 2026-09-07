@@ -56,6 +56,15 @@ const FacturaValidacionPage = () => {
     return (
       <div className="factura-publica">
         <div className="factura-publica__card">
+          <div className="factura-publica__brand">
+            <div className="factura-publica__brand-icon">
+              <span className="material-symbols-outlined">local_shipping</span>
+            </div>
+            <div className="factura-publica__brand-text">
+              <span className="factura-publica__brand-name">KATEPRAMAX</span>
+              <span className="factura-publica__brand-sub">ERP Distribution</span>
+            </div>
+          </div>
           <span className="material-symbols-outlined factura-publica__icono">
             receipt_long
           </span>
@@ -69,6 +78,16 @@ const FacturaValidacionPage = () => {
   return (
     <div className="factura-publica">
       <div className="factura-publica__card">
+        <div className="factura-publica__brand">
+          <div className="factura-publica__brand-icon">
+            <span className="material-symbols-outlined">local_shipping</span>
+          </div>
+          <div className="factura-publica__brand-text">
+            <span className="factura-publica__brand-name">KATEPRAMAX</span>
+            <span className="factura-publica__brand-sub">ERP Distribution</span>
+          </div>
+        </div>
+
         <div className="factura-publica__aviso">
           <span className="material-symbols-outlined">verified</span>
           <p>
