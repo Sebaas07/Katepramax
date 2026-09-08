@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { filtrarPorSede } from "@/utils/permisos";
 import reportesApi from "@/api/reportesApi";
 import pedidosApi from "@/api/pedidosApi";
+import entregaService from "@/services/entrega.service";
 import inventarioService from "@/services/inventario.service";
 import EstadoBadge from "@/components/common/EstadoBadge/EstadoBadge";
 import { formatCOP, formatFechaHora } from "@/utils/formatters";
@@ -53,7 +54,7 @@ const obtenerFechaISOHoy = () => {
 
 // ── Componente ────────────────────────────────────────────────
 const DashboardPage = () => {
-  const { usuario, esAdmin, isAuthenticated, isSessionChecked } = useAuth();
+  const { usuario, esAdmin, esEntregador, isAuthenticated, isSessionChecked } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Solo Admin puede filtrar por una sede específica desde el dashboard;
@@ -112,6 +113,11 @@ const DashboardPage = () => {
   const cargarKpis = useCallback(async () => {
     setCargandoKpis(true);
     setErrorKpis(false);
+    if (esEntregador) {
+      setKpis(null);
+      setCargandoKpis(false);
+      return;
+    }
     try {
       // filtrarPorSede aplica sedeId automáticamente para Bodega/AdminBogota;
       // para Admin, respeta el filtro elegido en el menú superior (si hay).
@@ -127,12 +133,27 @@ const DashboardPage = () => {
     } finally {
       setCargandoKpis(false);
     }
-  }, [sedeIdSeleccionada]);
+  }, [esEntregador, sedeIdSeleccionada]);
 
   // ── Últimos pedidos ───────────────────────────────────────
   const cargarPedidos = useCallback(async () => {
     setCargandoTabla(true);
     try {
+      if (esEntregador) {
+        const asignaciones = await entregaService.obtenerMisEntregas({ take: 5 });
+        const entregas = Array.isArray(asignaciones)
+          ? asignaciones
+          : (asignaciones?.data ?? []);
+        setPedidos(
+          entregas.slice(0, 5).map((asignacion) => ({
+            ...asignacion.pedido,
+            id: asignacion.pedido?.id ?? asignacion.pedidoId,
+            estado: asignacion.estado ?? asignacion.pedido?.estado,
+            asignacionId: asignacion.id,
+          })),
+        );
+        return;
+      }
       // filtrarPorSede garantiza que Bodega solo vea su sede
       const filtros = filtrarPorSede({
         take: 5,
@@ -146,7 +167,7 @@ const DashboardPage = () => {
     } finally {
       setCargandoTabla(false);
     }
-  }, [sedeIdSeleccionada]);
+  }, [esEntregador, sedeIdSeleccionada]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -226,7 +247,7 @@ const DashboardPage = () => {
         <div className="dashboard-tabla__header">
           <h6 className="dashboard-tabla__titulo">
             <span className="material-symbols-outlined">history</span>
-            Últimos pedidos
+            {esEntregador ? "Mis entregas" : "Últimos pedidos"}
           </h6>
           <span className="dashboard-tabla__badge">Tiempo real</span>
         </div>

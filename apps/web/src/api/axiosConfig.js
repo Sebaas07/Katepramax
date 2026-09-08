@@ -91,7 +91,10 @@ clienteApi.interceptors.response.use(
 
       try {
         const refreshToken = obtenerRefreshToken();
-        if (!refreshToken) throw new Error("Sin refresh token almacenado.");
+        if (!refreshToken) {
+          cerrarSesion();
+          return Promise.reject(error);
+        }
 
         // Instancia limpia para no pasar por este interceptor de nuevo
         const { data } = await axios.post(

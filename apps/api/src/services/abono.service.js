@@ -1,7 +1,7 @@
 const repo     = require("../repositories/abono.repository");
 const egresoRepo = require("../repositories/egreso.repository");
 const AppError = require("../errors/AppError");
-const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeDeuda, ORIGENES, resolverFamiliaSede } = require("../utils/contabilidad");
+const { fechaValida, numeroPositivo, rangoDia, sanitizarTexto, semanaValida, sedeEsPermitida, sedeWhere, sedeDeuda, ORIGENES, resolverFamiliaSede } = require("../utils/contabilidad");
 const { registrarAccion } = require("../utils/logger");
 
 async function registrar(app, body, usuario) {
@@ -175,7 +175,8 @@ function whereResumen(usuario, sedeId) {
 }
 
 async function resumenPorProveedor(app, semana, usuario, sedeId) {
-  const where = whereResumen(usuario, sedeId ?? (await sedeDeuda(app, usuario)));
+  const sedeResumen = usuario.rol === "Admin" ? sedeId : await sedeDeuda(app, usuario);
+  const where = whereResumen(usuario, sedeResumen);
   const filas = await repo.resumenPorProveedor(app.prisma, semanaValida(semana), where.sedeId);
   const proveedores = await app.prisma.proveedor.findMany({ select: { id: true, nombre: true } });
   const mapa = Object.fromEntries(proveedores.map((p) => [p.id, p.nombre]));
@@ -188,7 +189,8 @@ async function resumenPorProveedor(app, semana, usuario, sedeId) {
 }
 
 async function resumenPorSede(app, semana, usuario, sedeId) {
-  const where = whereResumen(usuario, sedeId ?? (await sedeDeuda(app, usuario)));
+  const sedeResumen = usuario.rol === "Admin" ? sedeId : await sedeDeuda(app, usuario);
+  const where = whereResumen(usuario, sedeResumen);
   const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), where.sedeId);
   const sedes = usuario.rol !== "Admin" && where.sedeId != null
     ? [{ id: where.sedeId, nombre: (await app.prisma.sede.findUnique({ where: { id: where.sedeId }, select: { nombre: true } }))?.nombre ?? `Sede ${where.sedeId}` }]

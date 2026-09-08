@@ -186,7 +186,6 @@ const EntregasPage = () => {
   const [guardando, setGuardando] = useState(false);
   const [errorDatos, setErrorDatos] = useState(null);
   const [sedes, setSedes] = useState([]);
-  const [, setCargandoSedes] = useState(false);
 
   const [modalConfirmarAbierto, setModalConfirmarAbierto] = useState(false);
   const [modalFalloAbierto, setModalFalloAbierto] = useState(false);
