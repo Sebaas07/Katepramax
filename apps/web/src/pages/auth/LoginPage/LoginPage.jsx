@@ -257,7 +257,7 @@ const LoginPage = () => {
                     name="usuario"
                     type="text"
                     className="login__field-input"
-                    placeholder="Usuario o correo electrónico"
+                    placeholder="Usuario"
                     value={form.usuario}
                     onChange={manejarCambio}
                     autoComplete="username"

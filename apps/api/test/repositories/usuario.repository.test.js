@@ -10,7 +10,6 @@ const usuarioMock = {
   id: 2,
   nombreCompleto: "Carlos López",
   usuario: "clopez",
-  correo: "carlos@test.com",
   rol: "Bodega",
   sedeId: 1,
   sede: { nombre: "Sede Principal" },
@@ -38,28 +37,6 @@ describe("usuarioRepository.findByUsuario", () => {
     prisma.usuario.findUnique.mockResolvedValue(null);
 
     const result = await repo.findByUsuario("noexiste");
-
-    expect(result).toBeNull();
-  });
-});
-
-// ── findByCorreo ──────────────────────────────────────────────────────────────
-
-describe("usuarioRepository.findByCorreo", () => {
-  it("debería buscar por correo único", async () => {
-    prisma.usuario.findUnique.mockResolvedValue(usuarioMock);
-
-    await repo.findByCorreo("carlos@test.com");
-
-    expect(prisma.usuario.findUnique).toHaveBeenCalledWith({
-      where: { correo: "carlos@test.com" },
-    });
-  });
-
-  it("debería retornar null si no existe", async () => {
-    prisma.usuario.findUnique.mockResolvedValue(null);
-
-    const result = await repo.findByCorreo("noexiste@test.com");
 
     expect(result).toBeNull();
   });
@@ -114,7 +91,7 @@ describe("usuarioRepository.create", () => {
   it("debería llamar prisma.usuario.create con los datos dados", async () => {
     prisma.usuario.create.mockResolvedValue(usuarioMock);
 
-    const data = { usuario: "clopez", correo: "carlos@test.com", clave: "$2b$10$hash", rol: "Bodega", sedeId: 1 };
+    const data = { usuario: "clopez", clave: "$2b$10$hash", rol: "Bodega", sedeId: 1 };
     await repo.create(data);
 
     expect(prisma.usuario.create).toHaveBeenCalledWith({ data });

@@ -149,8 +149,14 @@ const prisma = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  // Restaurar $transaction después de cada clearAllMocks
+  Object.values(prisma).forEach((collection) => {
+    if (collection && typeof collection === "object") {
+      Object.values(collection).forEach((fn) => {
+        if (typeof fn === "function") fn.mockReset();
+      });
+    }
+  });
+
   prisma.$transaction.mockImplementation((cb) =>
     typeof cb === "function" ? cb(prisma) : Promise.all(cb),
   );

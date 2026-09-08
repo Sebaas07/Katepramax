@@ -19,7 +19,6 @@ const usuarioMock = {
   id: 2,
   nombreCompleto: "Carlos López",
   usuario: "clopez",
-  correo: "carlos@test.com",
   rol: "Bodega",
   sedeId: 1,
   sede: { nombre: "Sede Principal" },
@@ -72,16 +71,13 @@ describe("usuarioService.getById", () => {
 
 describe("usuarioService.create", () => {
   it("debería lanzar AppError 400 si el nombre de usuario ya existe", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(usuarioMock) // usuario duplicado
-      .mockResolvedValueOnce(null);
+    prisma.usuario.findUnique.mockResolvedValueOnce(usuarioMock);
 
     await expect(
       svc.create(
         {
           nombreCompleto: "Nuevo",
           usuario: "clopez",
-          correo: "nuevo@test.com",
           contrasena: "pass123",
           rol: "Bodega",
           sedeId: 1,
@@ -94,33 +90,28 @@ describe("usuarioService.create", () => {
     });
   });
 
-  it("debería lanzar AppError 400 si el correo ya está registrado", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null) // usuario libre
-      .mockResolvedValueOnce(usuarioMock); // correo duplicado
+  it("debería crear un usuario sin requerir email", async () => {
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
+    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.usuario.create.mockResolvedValue(usuarioMock);
+    prisma.log.create.mockResolvedValue({});
 
     await expect(
       svc.create(
         {
           nombreCompleto: "Nuevo",
           usuario: "nuevo",
-          correo: "carlos@test.com",
           contrasena: "pass123",
           rol: "Bodega",
           sedeId: 1,
         },
         1,
       ),
-    ).rejects.toMatchObject({
-      statusCode: 400,
-      message: expect.stringMatching(/correo/i),
-    });
+    ).resolves.toHaveProperty("usuario", "clopez");
   });
 
   it("debería hashear la contraseña antes de guardar", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
     prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
     prisma.usuario.create.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
@@ -129,7 +120,6 @@ describe("usuarioService.create", () => {
       {
         nombreCompleto: "Nuevo",
         usuario: "nuevo",
-        correo: "nuevo@test.com",
         contrasena: "pass123",
         rol: "Bodega",
         sedeId: 1,
@@ -145,9 +135,7 @@ describe("usuarioService.create", () => {
   });
 
   it("no debería incluir contrasena en los datos creados", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
     prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
     prisma.usuario.create.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
@@ -156,7 +144,6 @@ describe("usuarioService.create", () => {
       {
         nombreCompleto: "Nuevo",
         usuario: "nuevo",
-        correo: "nuevo@test.com",
         contrasena: "pass123",
         rol: "Bodega",
         sedeId: 1,
@@ -183,7 +170,6 @@ describe("usuarioService.create", () => {
       {
         nombreCompleto: "Carlos López",
         usuario: "clopez",
-        correo: "carlos@test.com",
         contrasena: "pass123",
         rol: "Bodega",
         sedeId: 1,
@@ -209,7 +195,6 @@ describe("usuarioService.create", () => {
       {
         nombreCompleto: "Nuevo",
         usuario: "nuevo",
-        correo: "nuevo@test.com",
         contrasena: "pass123",
         rol: "Bodega",
         sedeId: "1",
@@ -375,9 +360,7 @@ describe("usuarioService con Entregador multi-bodega", () => {
   const entregadorMock = { ...usuarioMock, id: 3, rol: "Entregador", sedeId: 1 };
 
   it("create de Entregador registra todas las bodegas en la tabla puente", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
     prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock); // sede principal 1
     prisma.sede.findMany.mockResolvedValue([
       { id: 1 },
@@ -391,7 +374,6 @@ describe("usuarioService con Entregador multi-bodega", () => {
       {
         nombreCompleto: "Repartidor",
         usuario: "repartidor",
-        correo: "repartidor@test.com",
         contrasena: "pass123",
         rol: "Entregador",
         sedeId: 1,
@@ -411,9 +393,7 @@ describe("usuarioService con Entregador multi-bodega", () => {
   });
 
   it("create de Entregador exige bodegas válidas (tipo Bodega)", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
     prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
     prisma.sede.findMany.mockResolvedValue([{ id: 1 }]); // falta la 99
 
@@ -422,7 +402,6 @@ describe("usuarioService con Entregador multi-bodega", () => {
         {
           nombreCompleto: "Repartidor",
           usuario: "repartidor2",
-          correo: "repartidor2@test.com",
           contrasena: "pass123",
           rol: "Entregador",
           sedeId: 1,
@@ -479,9 +458,7 @@ describe("usuarioService con Entregador multi-bodega", () => {
   });
 
   it("create de Bodega rechaza una sede de tipo Oficina (debe ser una bodega)", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
     prisma.sede.findUnique.mockResolvedValue(sedeOficinaMock);
 
     await expect(
@@ -489,7 +466,6 @@ describe("usuarioService con Entregador multi-bodega", () => {
         {
           nombreCompleto: "Nuevo",
           usuario: "bodegaoficina",
-          correo: "bodegaoficina@test.com",
           contrasena: "pass123",
           rol: "Bodega",
           sedeId: 6,
@@ -503,9 +479,7 @@ describe("usuarioService con Entregador multi-bodega", () => {
   });
 
   it("create de Oficinista rechaza una sede de tipo Bodega (debe ser una oficina)", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
     prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
 
     await expect(
@@ -513,7 +487,6 @@ describe("usuarioService con Entregador multi-bodega", () => {
         {
           nombreCompleto: "Nuevo",
           usuario: "oficinistabodega",
-          correo: "oficinistabodega@test.com",
           contrasena: "pass123",
           rol: "Oficinista",
           sedeId: 1,
@@ -527,9 +500,7 @@ describe("usuarioService con Entregador multi-bodega", () => {
   });
 
   it("create de AdminBogota acepta cualquier tipo de sede", async () => {
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
     prisma.sede.findUnique.mockResolvedValue({
       id: 8,
       tipo: "Oficina",
@@ -546,7 +517,6 @@ describe("usuarioService con Entregador multi-bodega", () => {
       {
         nombreCompleto: "Admin Bogotá",
         usuario: "abogota",
-        correo: "abogota@test.com",
         contrasena: "pass123",
         rol: "AdminBogota",
         sedeId: 8,

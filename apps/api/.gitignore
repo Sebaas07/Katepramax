@@ -32,3 +32,5 @@ coverage/
 .DS_Store
 Thumbs.db
 /generated/prisma
+
+prisma/seed.prod.js

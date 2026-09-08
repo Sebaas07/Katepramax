@@ -9,7 +9,7 @@ const loginBody = {
   required: ["usuario", "contrasena"],
   additionalProperties: false,
   properties: {
-    usuario: { type: "string", minLength: 3, maxLength: 50, description: "Nombre de usuario o email" },
+    usuario: { type: "string", minLength: 3, maxLength: 50, description: "Nombre de usuario" },
     contrasena: { type: "string", minLength: 6, maxLength: 100, description: "Contraseña del usuario" },
   },
 };

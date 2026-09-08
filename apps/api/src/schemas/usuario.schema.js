@@ -20,7 +20,6 @@ const usuarioResponse = {
     id: { type: "integer" },
     nombreCompleto: { type: "string" },
     usuario: { type: "string" },
-    correo: { type: "string" },
     telefono: { type: "string" },
     rol: rolEnum,
     sedeId: { type: "integer" },
@@ -67,7 +66,6 @@ const createUsuarioBody = {
       pattern: "^[a-zA-Z0-9_]+$",
       description: "Solo letras, números y guión bajo",
     },
-    correo: { type: "string", format: "email", maxLength: 150 },
     contrasena,
     rol: rolEnum,
     telefono: {
@@ -101,7 +99,6 @@ const updateUsuarioBody = {
       pattern: "^[a-zA-Z0-9_]+$",
       description: "Solo letras, números y guión bajo",
     },
-    correo: { type: "string", format: "email", maxLength: 150 },
     telefono: {
       type: "string",
       maxLength: 10,

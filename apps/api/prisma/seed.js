@@ -5,6 +5,16 @@ const usuarioRepository = require("../src/repositories/usuario.repository");
 
 const prisma = new PrismaClient();
 
+// Códigos de colores ANSI para la consola
+const colors = {
+  reset: "\x1b[0m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  red: "\x1b[31m",
+  cyan: "\x1b[36m",
+};
+
 async function truncarTablas() {
   const tablas = [
     "historial_estados_pedido",
@@ -36,7 +46,7 @@ async function truncarTablas() {
     try {
       await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tabla};`);
     } catch (e) {
-      console.warn(`Tabla '${tabla}' no existe, se omite.`);
+      console.warn(`${colors.yellow}Tabla '${tabla}' no existe, se omite.${colors.reset}`);
     }
   }
 
@@ -46,10 +56,11 @@ async function truncarTablas() {
 async function main() {
   const usuRepo = usuarioRepository(prisma);
 
-  console.log("Limpiando base de datos...");
+  console.log(`${colors.cyan}Iniciando seed de desarrollo...${colors.reset}`);
+  console.log(`${colors.blue}Limpiando base de datos...${colors.reset}`);
   await truncarTablas();
 
-  console.log("Creando sedes...");
+  console.log(`${colors.blue}Creando sedes...${colors.reset}`);
   const sedes = await Promise.all([
     prisma.sede.create({ data: { nombre: "Bogotá" } }),
     prisma.sede.create({ data: { nombre: "Cartagena" } }),
@@ -66,9 +77,9 @@ async function main() {
   await prisma.sede.update({ where: { id: sedes[5].id }, data: { bodegaId: sedes[0].id } });
   await prisma.sede.update({ where: { id: sedes[6].id }, data: { bodegaId: sedes[1].id } });
 
-  console.log("Creando usuarios de prueba (todos los roles)...");
+  console.log(`${colors.blue}Creando usuarios de prueba (todos los roles)...${colors.reset}`);
   // Una sola contraseña para probar todos los perfiles.
-  const PASSWORD_PRUEBA = "Sergiogeien4.";
+  const PASSWORD_PRUEBA = "Admin1234.";
   const hashedPassword = await bcrypt.hash(PASSWORD_PRUEBA, 10);
 
   // Índices de `sedes` según el tipo exigido por cada rol:
@@ -78,7 +89,6 @@ async function main() {
   //   Entregador        → bodegas (multi-bodega)
   const usuarios = await Promise.all([
     usuRepo.create({
-      correo: "admin@example.com",
       clave: hashedPassword,
       nombreCompleto: "Administrador General",
       usuario: "admin",
@@ -87,7 +97,6 @@ async function main() {
       sedeId: sedes[0].id, // Bogotá (bodega)
     }),
     usuRepo.create({
-      correo: "adminbogota@example.com",
       clave: hashedPassword,
       nombreCompleto: "Admin Bogotá",
       usuario: "adminbogota",
@@ -96,7 +105,6 @@ async function main() {
       sedeId: sedes[0].id, // Bogotá
     }),
     usuRepo.create({
-      correo: "bodega@example.com",
       clave: hashedPassword,
       nombreCompleto: "Bodega Cartagena",
       usuario: "bodega",
@@ -105,7 +113,6 @@ async function main() {
       sedeId: sedes[1].id, // Cartagena (bodega)
     }),
     usuRepo.create({
-      correo: "oficinista@example.com",
       clave: hashedPassword,
       nombreCompleto: "Oficinista Villavicencio",
       usuario: "oficinista",
@@ -114,7 +121,6 @@ async function main() {
       sedeId: sedes[3].id, // Villavicencio Centro (oficina) → bodega Villavicencio
     }),
     usuRepo.create({
-      correo: "entregador@example.com",
       clave: hashedPassword,
       nombreCompleto: "Entregador Villavicencio",
       usuario: "entregador",
@@ -135,19 +141,19 @@ async function main() {
     })),
   });
 
-  console.log("Seed finalizado con éxito.");
+  console.log(`${colors.green}✨ Seed finalizado con éxito.${colors.reset}`);
   console.log("");
-  console.log("Usuarios creados (contraseña para todos: " + PASSWORD_PRUEBA + "):");
-  console.log("  admin        — Administrador General (Admin)");
-  console.log("  adminbogota  — Admin Bogotá (AdminBogota)");
-  console.log("  bodega       — Bodega Cartagena (Bodega)");
-  console.log("  oficinista   — Oficinista Villavicencio (Oficinista)");
-  console.log("  entregador   — Entregador Villavicencio (Entregador)");
+  console.log(`${colors.cyan}Usuarios creados (contraseña para todos: ${PASSWORD_PRUEBA}):${colors.reset}`);
+  console.log(`  ${colors.yellow}admin${colors.reset}        — Administrador General (Admin)`);
+  console.log(`  ${colors.yellow}adminbogota${colors.reset}  — Admin Bogotá (AdminBogota)`);
+  console.log(`  ${colors.yellow}bodega${colors.reset}       — Bodega Cartagena (Bodega)`);
+  console.log(`  ${colors.yellow}oficinista${colors.reset}   — Oficinista Villavicencio (Oficinista)`);
+  console.log(`  ${colors.yellow}entregador${colors.reset}   — Entregador Villavicencio (Entregador)`);
 }
 
 main()
   .catch((e) => {
-    console.error("Error en el seed:", e);
+    console.error(`${colors.red}Error en el seed:${colors.reset}`, e);
     process.exit(1);
   })
   .finally(async () => {

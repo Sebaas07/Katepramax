@@ -18,7 +18,6 @@ const usuarioMock = {
   id: 2,
   nombreCompleto: "Carlos López",
   usuario: "clopez",
-  correo: "carlos@test.com",
   rol: "Bodega",
   sedeId: 1,
   sede: { nombre: "Sede Principal" },
@@ -232,7 +231,6 @@ describe("POST /api/v1/usuarios", () => {
       payload: {
         nombreCompleto: "Nuevo",
         usuario: "nuevo",
-        correo: "nuevo@test.com",
         contrasena: "pass#123",
         rol: "Bodega",
         sedeId: 1,
@@ -244,9 +242,7 @@ describe("POST /api/v1/usuarios", () => {
 
   it("debería retornar 400 si el nombre de usuario ya existe", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(usuarioMock) // usuario duplicado
-      .mockResolvedValueOnce(null); // correo libre
+    prisma.usuario.findUnique.mockResolvedValueOnce(usuarioMock);
 
     const res = await app.inject({
       method: "POST",
@@ -255,7 +251,6 @@ describe("POST /api/v1/usuarios", () => {
       payload: {
         nombreCompleto: "Carlos",
         usuario: "clopez",
-        correo: "otro@test.com",
         contrasena: "pass#123",
         rol: "Bodega",
         sedeId: 1,
@@ -266,11 +261,12 @@ describe("POST /api/v1/usuarios", () => {
     expect(res.json().error).toMatch(/usuario/i);
   });
 
-  it("debería retornar 400 si el correo ya existe", async () => {
+  it("debería crear un usuario sin requerir email", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null) // usuario libre
-      .mockResolvedValueOnce(usuarioMock); // correo duplicado
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
+    prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
+    prisma.usuario.create.mockResolvedValue(usuarioMock);
+    prisma.log.create.mockResolvedValue({});
 
     const res = await app.inject({
       method: "POST",
@@ -279,22 +275,19 @@ describe("POST /api/v1/usuarios", () => {
       payload: {
         nombreCompleto: "Carlos",
         usuario: "nuevo",
-        correo: "carlos@test.com",
         contrasena: "pass#123",
         rol: "Bodega",
         sedeId: 1,
       },
     });
 
-    expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/correo/i);
+    expect(res.statusCode).toBe(201);
+    expect(res.json().usuario).toBe("clopez");
   });
 
   it("debería retornar 201 al crear un usuario correctamente", async () => {
     prisma.sesion.findFirst.mockResolvedValue(sesionAdminMock);
-    prisma.usuario.findUnique
-      .mockResolvedValueOnce(null) // usuario libre
-      .mockResolvedValueOnce(null); // correo libre
+    prisma.usuario.findUnique.mockResolvedValueOnce(null);
     prisma.sede.findUnique.mockResolvedValue(sedeBodegaMock);
     prisma.usuario.create.mockResolvedValue(usuarioMock);
     prisma.log.create.mockResolvedValue({});
@@ -306,7 +299,6 @@ describe("POST /api/v1/usuarios", () => {
       payload: {
         nombreCompleto: "Carlos López",
         usuario: "clopez",
-        correo: "carlos@test.com",
         contrasena: "pass#123",
         rol: "Bodega",
         sedeId: 1,
