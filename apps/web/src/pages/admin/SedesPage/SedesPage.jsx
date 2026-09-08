@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import sedesService from "@/services/sedes.service";
@@ -37,20 +37,62 @@ const TipoBadge = ({ tipo }) => (
   </span>
 );
 
+const ESTADO_INICIAL = {
+  sedes: [],
+  cargando: false,
+  guardando: false,
+  modalAbierto: false,
+  modalConfirmAbierto: false,
+  sedeSel: null,
+  sedeAToggle: null,
+  nombre: "",
+  tipo: "Bodega",
+  bodegaId: "",
+  errorNombre: "",
+};
+
+const reducerSedes = (state, action) => {
+  if (action.type === "actualizar") {
+    return { ...state, [action.campo]: action.valor };
+  }
+  return state;
+};
+
 const SedesPage = () => {
   const { esAdminGestion, isAuthenticated, isSessionChecked } = useAuth();
 
-  const [sedes, setSedes] = useState([]);
-  const [cargando, setCargando] = useState(false);
-  const [guardando, setGuardando] = useState(false);
-  const [modalAbierto, setModalAbierto] = useState(false);
-  const [modalConfirmAbierto, setModalConfirmAbierto] = useState(false);
-  const [sedeSel, setSedeSel] = useState(null);
-  const [sedeAToggle, setSedeAToggle] = useState(null);
-  const [nombre, setNombre] = useState("");
-  const [tipo, setTipo] = useState("Bodega");
-  const [bodegaId, setBodegaId] = useState("");
-  const [errorNombre, setErrorNombre] = useState("");
+  const [estado, dispatch] = useReducer(reducerSedes, ESTADO_INICIAL);
+  const {
+    sedes,
+    cargando,
+    guardando,
+    modalAbierto,
+    modalConfirmAbierto,
+    sedeSel,
+    sedeAToggle,
+    nombre,
+    tipo,
+    bodegaId,
+    errorNombre,
+  } = estado;
+  const actualizar = useCallback(
+    (campo, valor) => dispatch({ type: "actualizar", campo, valor }),
+    [],
+  );
+  const setSedes = useCallback((valor) => actualizar("sedes", valor), [actualizar]);
+  const setCargando = useCallback((valor) => actualizar("cargando", valor), [actualizar]);
+  const setGuardando = useCallback((valor) => actualizar("guardando", valor), [actualizar]);
+  const setModalAbierto = useCallback((valor) => actualizar("modalAbierto", valor), [actualizar]);
+  const setModalConfirmAbierto = useCallback(
+    (valor) => actualizar("modalConfirmAbierto", valor),
+    [actualizar],
+  );
+  const setSedeSel = useCallback((valor) => actualizar("sedeSel", valor), [actualizar]);
+  const setSedeAToggle = useCallback((valor) => actualizar("sedeAToggle", valor), [actualizar]);
+  const setNombre = useCallback((valor) => actualizar("nombre", valor), [actualizar]);
+  const setTipo = useCallback((valor) => actualizar("tipo", valor), [actualizar]);
+  const setBodegaId = useCallback((valor) => actualizar("bodegaId", valor), [actualizar]);
+  const setErrorNombre = useCallback((valor) => actualizar("errorNombre", valor), [actualizar]);
 
   const cargarSedes = useCallback(async () => {
     setCargando(true);
@@ -64,7 +106,7 @@ const SedesPage = () => {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [setCargando, setSedes]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -84,7 +126,7 @@ const SedesPage = () => {
     setBodegaId("");
     setErrorNombre("");
     setModalAbierto(true);
-  }, []);
+  }, [setBodegaId, setErrorNombre, setModalAbierto, setNombre, setSedeSel, setTipo]);
 
   const abrirEditar = useCallback((sede) => {
     setSedeSel(sede);
@@ -93,7 +135,7 @@ const SedesPage = () => {
     setBodegaId(sede.bodegaId != null ? String(sede.bodegaId) : "");
     setErrorNombre("");
     setModalAbierto(true);
-  }, []);
+  }, [setBodegaId, setErrorNombre, setModalAbierto, setNombre, setSedeSel, setTipo]);
 
   const cerrarModal = useCallback(() => {
     setModalAbierto(false);
@@ -102,7 +144,7 @@ const SedesPage = () => {
     setTipo("Bodega");
     setBodegaId("");
     setErrorNombre("");
-  }, []);
+  }, [setBodegaId, setErrorNombre, setModalAbierto, setNombre, setSedeSel, setTipo]);
 
   const handleGuardar = useCallback(async () => {
     if (!esAdminGestion) return;
@@ -147,17 +189,17 @@ const SedesPage = () => {
     } finally {
       setGuardando(false);
     }
-  }, [esAdminGestion, nombre, tipo, bodegaId, sedeSel, cerrarModal, cargarSedes, sedes]);
+  }, [esAdminGestion, nombre, tipo, bodegaId, sedeSel, cerrarModal, cargarSedes, sedes, setErrorNombre, setGuardando]);
 
   const abrirModalConfirmToggle = useCallback((sede) => {
     setSedeAToggle(sede);
     setModalConfirmAbierto(true);
-  }, []);
+  }, [setModalConfirmAbierto, setSedeAToggle]);
 
   const cerrarModalConfirm = useCallback(() => {
     setModalConfirmAbierto(false);
     setSedeAToggle(null);
-  }, []);
+  }, [setModalConfirmAbierto, setSedeAToggle]);
 
   const handleToggleSede = useCallback(async () => {
     if (!sedeAToggle) return;
@@ -178,7 +220,7 @@ const SedesPage = () => {
     } finally {
       setGuardando(false);
     }
-  }, [sedeAToggle, cerrarModalConfirm, cargarSedes]);
+  }, [sedeAToggle, cerrarModalConfirm, cargarSedes, setGuardando]);
 
   const columnas = useMemo(
     () => [
