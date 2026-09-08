@@ -13,16 +13,57 @@ function sedeEsPermitida(usuario) {
     usuario.rol === "Admin" ||
     usuario.rol === "Bodega" ||
     usuario.rol === "AdminBogota" ||
+    usuario.rol === "Oficinista" ||
+    usuario.rol === "Entregador"
+  );
+}
+
+/** Solo lectura/abono de cartera (no crear/editar/desactivar). */
+function puedeConsultarCartera(usuario) {
+  return sedeEsPermitida(usuario);
+}
+
+function puedeGestionarClientes(usuario) {
+  return (
+    usuario.rol === "Admin" ||
+    usuario.rol === "Bodega" ||
+    usuario.rol === "AdminBogota" ||
     usuario.rol === "Oficinista"
   );
 }
 
 /**
+ * Sedes del entregador: tabla entregador_sedes + sede principal del usuario.
+ * Expande cada una a su familia (bodega + oficinas) para ver los mismos clientes.
+ */
+async function idsSedesEntregador(prisma, usuario) {
+  const asignadas = await prisma.entregadorSede.findMany({
+    where: { entregadorId: usuario.id },
+    select: { sedeId: true },
+  });
+  const baseIds = new Set(asignadas.map((a) => a.sedeId));
+  if (usuario.sedeId != null) baseIds.add(usuario.sedeId);
+
+  if (baseIds.size === 0) return [];
+
+  const todos = new Set();
+  for (const id of baseIds) {
+    const familia = await resolverFamiliaSede(prisma, id);
+    for (const s of familia) todos.add(s.id);
+  }
+  return [...todos];
+}
+
+/**
  * IDs de la familia de sedes del usuario (bodega + oficinas ligadas).
- * Admin no se filtra por familia.
+ * Admin no se filtra por familia. Entregador usa sus sedes asignadas.
  */
 async function idsFamiliaUsuario(prisma, usuario) {
-  if (!usuario || usuario.rol === "Admin" || usuario.sedeId == null) return null;
+  if (!usuario || usuario.rol === "Admin") return null;
+  if (usuario.rol === "Entregador") {
+    return idsSedesEntregador(prisma, usuario);
+  }
+  if (usuario.sedeId == null) return null;
   const familia = await resolverFamiliaSede(prisma, usuario.sedeId);
   const ids = familia.map((s) => s.id);
   return ids.length > 0 ? ids : [usuario.sedeId];
@@ -43,8 +84,8 @@ const clienteService = (app) => {
   const repo = clienteRepository(app.prisma);
 
   return {
-    listar: async ({ nombre, activo, sedeId, skip, take }, usuario) => {
-      if (!sedeEsPermitida(usuario)) {
+    listar: async ({ nombre, activo, sedeId, soloConDeuda, skip, take }, usuario) => {
+      if (!puedeConsultarCartera(usuario)) {
         throw new AppError("No tienes permiso para listar clientes.", 403);
       }
 
@@ -57,10 +98,23 @@ const clienteService = (app) => {
         activo: activoBool,
         skip: Number(skip ?? 0),
         take: Number(take ?? 50),
+        soloConDeuda:
+          soloConDeuda === true ||
+          soloConDeuda === "true" ||
+          usuario.rol === "Entregador",
       };
 
-      if (usuario.rol !== "Admin" && usuario.sedeId != null) {
-        // Compartir clientes entre la bodega y sus oficinas (misma familia).
+      if (usuario.rol === "Entregador") {
+        const ids = await idsSedesEntregador(app.prisma, usuario);
+        if (ids.length === 0) {
+          throw new AppError(
+            "No tienes sedes asignadas. Pide a un administrador que te asigne a una bodega.",
+            403,
+          );
+        }
+        filtros.sedeIds = ids;
+        filtros.activo = true;
+      } else if (usuario.rol !== "Admin" && usuario.sedeId != null) {
         const ids = await idsFamiliaUsuario(app.prisma, usuario);
         if (ids && ids.length > 1) filtros.sedeIds = ids;
         else if (ids && ids.length === 1) filtros.sedeId = ids[0];
@@ -76,7 +130,7 @@ const clienteService = (app) => {
     },
 
     obtenerPorId: async (id, usuario) => {
-      if (!sedeEsPermitida(usuario)) {
+      if (!puedeConsultarCartera(usuario)) {
         throw new AppError("No tienes permiso para ver clientes.", 403);
       }
 
@@ -92,12 +146,13 @@ const clienteService = (app) => {
     },
 
     crear: async (data, usuario) => {
+      if (!puedeGestionarClientes(usuario)) {
+        throw new AppError("No tienes permiso para crear clientes.", 403);
+      }
       const { nombre, telefono, limiteCredito, saldoDeuda, sedeId } = data;
       const campos = { nombre, telefono };
       if (limiteCredito !== undefined) campos.limiteCredito = limiteCredito;
       if (saldoDeuda !== undefined) campos.saldoDeuda = saldoDeuda;
-      // Si no es Admin, el cliente queda asociado a la sede del usuario que lo crea.
-      // Admin puede omitir sedeId o enviarlo explícitamente.
       if (sedeId !== undefined) campos.sedeId = sedeId;
       else if (usuario && usuario.rol !== "Admin") campos.sedeId = usuario.sedeId;
       const nuevo = await repo.create(campos);
@@ -108,7 +163,7 @@ const clienteService = (app) => {
     },
 
     actualizar: async (id, data, usuario) => {
-      if (!sedeEsPermitida(usuario)) {
+      if (!puedeGestionarClientes(usuario)) {
         throw new AppError("No tienes permiso para editar clientes.", 403);
       }
 
@@ -128,9 +183,6 @@ const clienteService = (app) => {
         "limiteCredito",
         "sedeId",
       ];
-      // saldoDeuda no se edita a mano: solo cambia vía operaciones
-      // (pedido creado/cancelado, entrega, abonos) para mantener la
-      // cartera coherente con los movimientos contables.
       for (const c of permitidos) {
         if (data[c] !== undefined) campos[c] = data[c];
       }
@@ -141,7 +193,7 @@ const clienteService = (app) => {
     },
 
     desactivar: async (id, usuario) => {
-      if (!sedeEsPermitida(usuario)) {
+      if (!puedeGestionarClientes(usuario)) {
         throw new AppError("No tienes permiso para desactivar clientes.", 403);
       }
 
@@ -162,7 +214,7 @@ const clienteService = (app) => {
     },
 
     abonar: async (id, monto, usuario) => {
-      if (!sedeEsPermitida(usuario)) {
+      if (!puedeConsultarCartera(usuario)) {
         throw new AppError("No tienes permiso para abonar a clientes.", 403);
       }
 
@@ -192,9 +244,6 @@ const clienteService = (app) => {
       const sedeAbono = existe.sedeId ?? usuario?.sedeId;
       const fechaAbono = new Date();
 
-      // El abono es dinero que llega a la caja: se modifica la deuda del
-      // cliente y se registra el Ingreso correspondiente en la misma
-      // transacción, para que Contabilidad siempre lo replique.
       const transaccion = await app.prisma.$transaction(async (tx) => {
         const clienteActualizado = await tx.cliente.update({
           where: { id },
@@ -204,6 +253,10 @@ const clienteService = (app) => {
 
         let ingreso = null;
         if (sedeAbono != null) {
+          const obsEntregador =
+            usuario.rol === "Entregador"
+              ? `Abono de cliente "${existe.nombre}" (#${id}) cobrado por entregador`
+              : `Abono de cliente "${existe.nombre}" (#${id})`;
           ingreso = await ingresoRepo.crear(tx, {
             fecha: inicioDiaLocal(fechaAbono),
             semana: semanaNegocio(fechaAbono),
@@ -213,12 +266,9 @@ const clienteService = (app) => {
             total: valorAbono,
             origen: ORIGENES.ABONO_CLIENTE,
             idReferencia: id,
-            observacion: `Abono de cliente "${existe.nombre}" (#${id})`,
+            observacion: obsEntregador,
           });
         } else {
-          // Todo abono es dinero que entra a la caja y debe quedar en
-          // Contabilidad: sin sede no hay dónde registrarlo, así que se
-          // rechaza en lugar de aceptar y dejar el movimiento fuera.
           throw new AppError(
             `No se puede registrar el abono del cliente "${existe.nombre}" (#${id}): ` +
             `el cliente no tiene una sede asignada para reflejarlo en Contabilidad. Asigna una sede al cliente.`,
@@ -229,7 +279,13 @@ const clienteService = (app) => {
         return { clienteActualizado, ingreso };
       });
 
-      await registrarAccion(app, usuario.id, "ABONAR_CLIENTE", `Registró un abono de ${valorAbono} al cliente "${existe.nombre}" (#${id}).`);
+      await registrarAccion(
+        app,
+        usuario.id,
+        "ABONAR_CLIENTE",
+        `Registró un abono de ${valorAbono} al cliente "${existe.nombre}" (#${id})` +
+          (usuario.rol === "Entregador" ? " (entregador)." : "."),
+      );
       return transaccion.clienteActualizado;
     },
   };

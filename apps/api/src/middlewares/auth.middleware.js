@@ -41,8 +41,6 @@ const verifyToken = async (request, reply) => {
     let sedesOperativas = [sesion.usuario.sedeId];
     if (sede) {
       if (sede.tipo === "Bodega") {
-        // Bodega gestiona los pedidos de sus oficinas; la bodega es la sede
-        // operativa de inventario, pero no debe aparecer como oficina.
         const oficinas = (sede.oficinas ?? []).map((o) => o.id);
         sedesOperativas = oficinas.length > 0 ? oficinas : [0];
       } else if (sede.tipo === "Oficina" && sede.bodegaId) {
@@ -51,12 +49,6 @@ const verifyToken = async (request, reply) => {
       }
     }
 
-    // Sede "operativa" del usuario para filtros de inventario/productos.
-    // - Rol Bodega: si está en una oficina usa la bodega padre (bodegaId);
-    //   si está asignado directamente a una bodega, usa su sedeId.
-    // - Rol Oficinista: su oficina se alimenta de la bodega padre (bodegaId),
-    //   así que opera sobre la bodega para ver los productos/existencias que
-    //   registra la bodega. Si su oficina no tiene bodega, usa su sede.
     const esOficina = sede?.tipo === "Oficina" && sede.bodegaId;
     const sedeOperativa =
       sesion.usuario.rol === "Bodega" || sesion.usuario.rol === "Oficinista"
@@ -93,13 +85,6 @@ const requireRole = (roles) => {
 };
 
 // ── 3. Filtro de sede centralizado ────────────────────────────
-/**
- * Inyecta request.sedeFilter para que los controladores/servicios
- * lo usen directamente, garantizando consistencia en toda la app.
- *
- * Admin        → {}                      (ve todo)
- * Bodega/AdminBogota → { sedeId }        (solo su sede)
- */
 const injectSedeFilter = async (request) => {
   const { rol, sedeId, bodegaId } = request.user ?? {};
   if (rol === "Admin") {
@@ -121,17 +106,14 @@ module.exports = {
   requireRole,
   injectSedeFilter,
 
-  // Solo Admin
   soloAdmin: {
     preValidation: [verifyToken, requireRole(["Admin"])],
   },
 
-  // Admin + AdminBogota (escriben en módulos de gestión)
   adminGestion: {
     preValidation: [verifyToken, requireRole(["Admin", "AdminBogota"])],
   },
 
-  // Gestión de catálogo/inventario/envíos — Admin + AdminBogota + Bodega (NO Oficinista)
   adminGestionBodega: {
     preValidation: [
       verifyToken,
@@ -139,17 +121,14 @@ module.exports = {
     ],
   },
 
-  // Gestión de pedidos y asignaciones — Admin + AdminBogota + Oficinista
   gestion: {
     preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Oficinista"])],
   },
 
-  // Cartera e historial de proveedores — Admin + AdminBogota + Oficinista
   carteraProveedores: {
     preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Oficinista"])],
   },
 
-  // Gestión de pedidos/asignaciones — con filtro de sede por rol
   gestionConSede: {
     preValidation: [
       verifyToken,
@@ -158,7 +137,6 @@ module.exports = {
     ],
   },
 
-  // Consulta de información para Bodega/Oficinista (solo lectura) — + Admin/AdminBogota
   consultaBodega: {
     preValidation: [
       verifyToken,
@@ -166,7 +144,6 @@ module.exports = {
     ],
   },
 
-  // Consulta con filtro de sede — Admin + AdminBogota + Bodega + Oficinista
   consultaBodegaConSede: {
     preValidation: [
       verifyToken,
@@ -175,7 +152,6 @@ module.exports = {
     ],
   },
 
-  // Ver entregas (asignaciones) — Admin + AdminBogota + Oficinista + Bodega
   verEntregas: {
     preValidation: [
       verifyToken,
@@ -183,7 +159,6 @@ module.exports = {
     ],
   },
 
-  // Asignar entregador a pedidos — Admin + AdminBogota + Bodega + Oficinista
   asignarEntregador: {
     preValidation: [
       verifyToken,
@@ -191,7 +166,6 @@ module.exports = {
     ],
   },
 
-  // Admin + Bodega + AdminBogota + Oficinista
   adminOBodega: {
     preValidation: [
       verifyToken,
@@ -199,7 +173,6 @@ module.exports = {
     ],
   },
 
-  // Admin + Bodega + AdminBogota + Oficinista — con sedeFilter inyectado
   adminOBodegaConSede: {
     preValidation: [
       verifyToken,
@@ -208,7 +181,14 @@ module.exports = {
     ],
   },
 
-  // Cualquier usuario autenticado
+  /** Listar clientes con deuda y registrar abonos (incluye Entregador). */
+  carteraClientesAbono: {
+    preValidation: [
+      verifyToken,
+      requireRole(["Admin", "Bodega", "AdminBogota", "Oficinista", "Entregador"]),
+    ],
+  },
+
   todos: {
     preValidation: [verifyToken],
   },

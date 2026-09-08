@@ -24,7 +24,6 @@ const clienteBase = {
   },
 };
 
-// POST /api/clientes
 const crearCliente = {
   summary: "Crear un nuevo cliente",
   tags: ["Clientes"],
@@ -47,7 +46,6 @@ const crearCliente = {
   },
 };
 
-// GET /api/clientes
 const listarClientes = {
   summary: "Listar clientes",
   tags: ["Clientes"],
@@ -58,6 +56,7 @@ const listarClientes = {
       nombre: { type: "string" },
       activo: { type: "string", enum: ["true", "false"] },
       sedeId: { type: "integer" },
+      soloConDeuda: { type: "string", enum: ["true", "false"] },
       skip: { type: "integer", minimum: 0, default: 0 },
       take: { type: "integer", minimum: 1, maximum: 200, default: 50 },
     },
@@ -68,7 +67,6 @@ const listarClientes = {
   },
 };
 
-// GET /api/clientes/:id
 const obtenerCliente = {
   summary: "Obtener un cliente por su ID",
   tags: ["Clientes"],
@@ -84,7 +82,6 @@ const obtenerCliente = {
   },
 };
 
-// PATCH /api/clientes/:id
 const editarCliente = {
   summary: "Actualizar datos de un cliente",
   tags: ["Clientes"],
@@ -113,7 +110,6 @@ const editarCliente = {
   },
 };
 
-// DELETE /api/clientes/:id
 const desactivarCliente = {
   summary: "Desactivar un cliente (baja lógica)",
   tags: ["Clientes"],
@@ -129,7 +125,6 @@ const desactivarCliente = {
   },
 };
 
-// POST /api/clientes/:id/abonar
 const abonarCliente = {
   summary: "Abonar a la deuda de un cliente",
   tags: ["Clientes"],
