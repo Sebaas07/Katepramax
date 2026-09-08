@@ -31,8 +31,8 @@ const Spinner = () => (
 );
 
 const CarteraProveedoresPage = () => {
-  const { esAdmin, esBodega, esOficinista, isAuthenticated, isSessionChecked } = useAuth();
-  const puedeAbonar = esAdmin || esBodega || esOficinista;
+  const { esAdmin, esOficinista, isAuthenticated, isSessionChecked } = useAuth();
+  const puedeAbonar = esAdmin || esOficinista;
   const navigate = useNavigate();
 
   const [proveedores, setProveedores] = useState([]);

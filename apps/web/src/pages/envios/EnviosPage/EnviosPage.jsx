@@ -422,8 +422,8 @@ const EnviosPage = () => {
                 ))}
             </div>
             <span className="form-hint">
-              El mismo listado de productos se enviará completo a cada sede
-              seleccionada.
+              El mismo listado se enviará completo a cada sede seleccionada;
+              verifica que la bodega de origen tenga existencias para todas.
             </span>
           </div>
 

@@ -1,4 +1,5 @@
 import envioApi from "@/api/envioApi";
+import { getApiErrorMessage } from "@/utils/apiHelpers";
 
 /**
  * envio.service.js
@@ -34,8 +35,9 @@ const envioService = {
         ...(observaciones?.trim() ? { observaciones: observaciones.trim() } : {}),
       });
     } catch (e) {
-      console.error("[envioService] crearEnvio:", e.message);
-      throw e;
+      const mensaje = getApiErrorMessage(e);
+      console.error("[envioService] crearEnvio:", mensaje);
+      throw new Error(mensaje, { cause: e });
     }
   },
 

@@ -1,6 +1,11 @@
 const ctrl    = require("../controllers/inventario.controller");
 const schemas = require("../schemas/inventario.schema");
-const { consultaBodega, adminGestion, adminGestionBodega } = require("../middlewares/auth.middleware");
+const {
+  consultaBodega,
+  carteraProveedores,
+  adminGestion,
+  adminGestionBodega,
+} = require("../middlewares/auth.middleware");
 
 async function inventarioRoutes(app) {
   // Estáticas PRIMERO para que Fastify no las interprete como :id
@@ -9,11 +14,11 @@ async function inventarioRoutes(app) {
     ctrl.resumenSemanal,
   );
   app.get("/inventario/deuda-proveedores",
-    { schema: schemas.resumenDeudaProveedores, ...consultaBodega },
+    { schema: schemas.resumenDeudaProveedores, ...carteraProveedores },
     ctrl.resumenDeudaProveedores,
   );
   app.get("/inventario/historial-proveedor/:proveedorId",
-    { schema: schemas.historialProveedor, ...consultaBodega },
+    { schema: schemas.historialProveedor, ...carteraProveedores },
     ctrl.historialProveedor,
   );
 

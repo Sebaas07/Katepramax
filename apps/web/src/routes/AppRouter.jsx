@@ -51,6 +51,8 @@ const ROLES = {
   PEDIDOS: ["Admin", "AdminBogota", "Oficinista"],
   // Consulta (inventario) para Bodega/Oficinista + Admin/AdminBogota
   CONSULTA: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
+  // Cartera e historial de proveedores: solo oficina y administradores
+  CARTERA_PROVEEDORES: ["Admin", "AdminBogota", "Oficinista"],
   // Catálogo de productos: todos leen, Bodega además crea/edita
   CATALOGO: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
   // Distribución/entregas: Admin + AdminBogota + Bodega
@@ -112,10 +114,14 @@ const AppRouter = () => (
           <Route path="/pedidos" element={<PedidosPage />} />
         </Route>
 
-        {/* Consulta sin escritura (Bodega/Oficinista lee inventario, proveedores y reportes) */}
+        {/* Consulta sin escritura (Bodega/Oficinista lee inventario y proveedores) */}
         <Route element={<RequireRole roles={ROLES.CONSULTA} />}>
           <Route path="/inventario" element={<InventarioPage />} />{" "}
           <Route path="/proveedores" element={<ProveedoresPage />} />
+        </Route>
+
+        {/* Cartera e historial de proveedores: Bodega no tiene acceso */}
+        <Route element={<RequireRole roles={ROLES.CARTERA_PROVEEDORES} />}>
           <Route path="/proveedores/cartera" element={<CarteraProveedoresPage />} />
           <Route
             path="/proveedores/cartera/historial/:proveedorId"

@@ -13,7 +13,7 @@ const ProveedoresPage = () => {
   const { esAdmin, esBodega, esOficinista, isAuthenticated, isSessionChecked } = useAuth();
   const puedeCrear = esAdmin || esBodega || esOficinista;
   const puedeGestionar = esAdmin || esBodega;
-  const puedeAbonar = esAdmin || esBodega || esOficinista;
+  const puedeAbonar = esAdmin || esOficinista;
   const navigate = useNavigate();
 
   const [proveedores, setProveedores] = useState([]);
@@ -126,13 +126,14 @@ const ProveedoresPage = () => {
   ], []);
 
   const acciones = useMemo(() => (proveedor) => {
-    const base = [
-      {
+    const base = [];
+    if (!esBodega) {
+      base.push({
         label: "Ver historial",
         icon: "history",
         onClick: () => navigate(`/proveedores/cartera/historial/${proveedor.id}`),
-      },
-    ];
+      });
+    }
     // Admin y Bodega pueden editar
     if (puedeGestionar) {
       base.push({
@@ -158,7 +159,7 @@ const ProveedoresPage = () => {
       });
     }
     return base;
-  }, [esAdmin, puedeGestionar, navigate, abrirEditarProveedor, abrirEliminarProveedor, handleReactivarProveedor]);
+  }, [esAdmin, esBodega, puedeGestionar, navigate, abrirEditarProveedor, abrirEliminarProveedor, handleReactivarProveedor]);
 
   const cargarDeuda = useCallback(async () => {
     try {

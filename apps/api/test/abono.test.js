@@ -158,18 +158,13 @@ describe("POST /api/v1/abonos", () => {
     expect(body.proveedor.nombre).toBe("Cemex S.A.");
   });
 
-  it("debería retornar 201 al registrar correctamente (Bodega)", async () => {
+  it("debería retornar 403 al registrar un abono como Bodega", async () => {
     mockSesion(sesionBodegaMock);
-    prisma.proveedor.findUnique.mockResolvedValue(proveedorMock);
-    prisma.sede.findUnique.mockResolvedValue(sedeMock);
-    // FIX: mockear método individual, no reemplazar el objeto del mock centralizado
-    prisma.abono.create.mockResolvedValue(abonoMock);
-
     const res = await app.inject({
       method: "POST", url: "/api/v1/abonos",
       headers: authBodega(), payload,
     });
-    expect(res.statusCode).toBe(201);
+    expect(res.statusCode).toBe(403);
   });
 
   it("debería registrar el abono en la bodega para un Oficinista", async () => {

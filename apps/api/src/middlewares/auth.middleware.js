@@ -144,6 +144,11 @@ module.exports = {
     preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Oficinista"])],
   },
 
+  // Cartera e historial de proveedores — Admin + AdminBogota + Oficinista
+  carteraProveedores: {
+    preValidation: [verifyToken, requireRole(["Admin", "AdminBogota", "Oficinista"])],
+  },
+
   // Gestión de pedidos/asignaciones — con filtro de sede por rol
   gestionConSede: {
     preValidation: [
