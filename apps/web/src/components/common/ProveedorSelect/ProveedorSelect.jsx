@@ -46,6 +46,99 @@ function reducer(state, action) {
   }
 }
 
+const ProveedorSelectPopover = ({
+  listboxId,
+  inputRef,
+  busqueda,
+  cargando,
+  error,
+  proveedoresFiltrados,
+  selectedProveedor,
+  value,
+  onBuscar,
+  onLimpiar,
+  onSeleccionar,
+  onReintentar,
+}) => (
+  <div
+    id={listboxId}
+    className="proveedor-select__popover"
+    role="listbox"
+    aria-label="Lista de proveedores"
+  >
+    <div className="proveedor-select__search">
+      <span className="material-symbols-outlined" aria-hidden="true">
+        search
+      </span>
+      <input
+        ref={inputRef}
+        type="text"
+        value={busqueda}
+        onChange={onBuscar}
+        placeholder="Buscar por nombre..."
+        aria-label="Buscar proveedor por nombre"
+      />
+      {selectedProveedor && (
+        <button
+          type="button"
+          className="proveedor-select__clear"
+          onClick={onLimpiar}
+          aria-label="Limpiar proveedor seleccionado"
+        >
+          <span className="material-symbols-outlined" aria-hidden="true">
+            close
+          </span>
+        </button>
+      )}
+    </div>
+
+    {cargando && (
+      <output className="proveedor-select__loading" aria-live="polite">
+        <span className="proveedor-select__mini-spinner" aria-hidden="true" />
+        Cargando proveedores...
+      </output>
+    )}
+
+    {!cargando && error && (
+      <output className="proveedor-select__error" aria-live="assertive">
+        <span>{error}</span>
+        <button type="button" onClick={onReintentar}>
+          Reintentar
+        </button>
+      </output>
+    )}
+
+    {!cargando && !error && proveedoresFiltrados.length === 0 && (
+      <output className="proveedor-select__empty" aria-live="polite">
+        <span className="material-symbols-outlined" aria-hidden="true">
+          inventory_2
+        </span>
+        {busqueda ? "No hay proveedores que coincidan." : "No hay proveedores activos."}
+      </output>
+    )}
+
+    {!cargando && !error && (
+      <div className="proveedor-select__list">
+        {proveedoresFiltrados.map((proveedor) => (
+          <button
+            key={proveedor.id}
+            type="button"
+            role="option"
+            aria-selected={proveedor.id === value}
+            className={`proveedor-select__option ${
+              proveedor.id === value ? "proveedor-select__option--active" : ""
+            }`}
+            onClick={() => onSeleccionar(proveedor.id)}
+          >
+            <span>{proveedor.label}</span>
+            <small>{proveedor.activo ? "Activo" : "Inactivo"}</small>
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 const ProveedorSelect = ({
   value,
   onChange,
@@ -183,92 +276,22 @@ const ProveedorSelect = ({
       </button>
 
       {isOpen && (
-        <div
-          id={listboxId}
-          className="proveedor-select__popover"
-          role="listbox"
-          aria-label="Lista de proveedores"
-        >
-          <div className="proveedor-select__search">
-            <span className="material-symbols-outlined" aria-hidden="true">
-              search
-            </span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={busqueda}
-              onChange={(e) =>
-                dispatch({ type: "SET_BUSQUEDA", payload: e.target.value })
-              }
-              placeholder="Buscar por nombre..."
-              aria-label="Buscar proveedor por nombre"
-            />
-            {selectedProveedor && (
-              <button
-                type="button"
-                className="proveedor-select__clear"
-                onClick={handleLimpiar}
-                aria-label="Limpiar proveedor seleccionado"
-              >
-                <span className="material-symbols-outlined" aria-hidden="true">
-                  close
-                </span>
-              </button>
-            )}
-          </div>
-
-          {cargando && (
-            <output className="proveedor-select__loading" aria-live="polite">
-              <span
-                className="proveedor-select__mini-spinner"
-                aria-hidden="true"
-              />
-              Cargando proveedores...
-            </output>
-          )}
-
-          {!cargando && error && (
-            <output className="proveedor-select__error" aria-live="assertive">
-              <span>{error}</span>
-              <button type="button" onClick={cargarProveedores}>
-                Reintentar
-              </button>
-            </output>
-          )}
-
-          {!cargando && !error && proveedoresFiltrados.length === 0 && (
-            <output className="proveedor-select__empty" aria-live="polite">
-              <span className="material-symbols-outlined" aria-hidden="true">
-                inventory_2
-              </span>
-              {busqueda
-                ? "No hay proveedores que coincidan."
-                : "No hay proveedores activos."}
-            </output>
-          )}
-
-          {!cargando && !error && (
-            <div className="proveedor-select__list">
-              {proveedoresFiltrados.map((proveedor) => (
-                <button
-                  key={proveedor.id}
-                  type="button"
-                  role="option"
-                  aria-selected={proveedor.id === value}
-                  className={`proveedor-select__option ${
-                    proveedor.id === value
-                      ? "proveedor-select__option--active"
-                      : ""
-                  }`}
-                  onClick={() => handleSeleccionar(proveedor.id)}
-                >
-                  <span>{proveedor.label}</span>
-                  <small>{proveedor.activo ? "Activo" : "Inactivo"}</small>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <ProveedorSelectPopover
+          listboxId={listboxId}
+          inputRef={inputRef}
+          busqueda={busqueda}
+          cargando={cargando}
+          error={error}
+          proveedoresFiltrados={proveedoresFiltrados}
+          selectedProveedor={selectedProveedor}
+          value={value}
+          onBuscar={(e) =>
+            dispatch({ type: "SET_BUSQUEDA", payload: e.target.value })
+          }
+          onLimpiar={handleLimpiar}
+          onSeleccionar={handleSeleccionar}
+          onReintentar={cargarProveedores}
+        />
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useReducer } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +30,23 @@ const parseMaybeNumber = (valor) => {
   return Number.isFinite(numero) ? numero : 0;
 };
 
+const ESTADO_ABONO_INICIAL = {
+  modalAbonoAbierto: false,
+  proveedorSeleccionado: null,
+  montoAbono: "",
+  fechaAbono: hoyISO(),
+  comprobanteAbono: "",
+  observacionAbono: "",
+  erroresAbono: {},
+};
+
+const reducerAbono = (state, action) => {
+  if (action.type === "actualizar") {
+    return { ...state, [action.campo]: action.valor };
+  }
+  return state;
+};
+
 const Spinner = () => (
   <div className="cc-spinner-wrap">
     <div className="cc-spinner" />
@@ -46,13 +63,51 @@ const CarteraProveedoresPage = () => {
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  const [modalAbonoAbierto, setModalAbonoAbierto] = useState(false);
-  const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null);
-  const [montoAbono, setMontoAbono] = useState("");
-  const [fechaAbono, setFechaAbono] = useState(() => hoyISO());
-  const [comprobanteAbono, setComprobanteAbono] = useState("");
-  const [observacionAbono, setObservacionAbono] = useState("");
-  const [erroresAbono, setErroresAbono] = useState({});
+  const [estadoAbono, dispatchAbono] = useReducer(
+    reducerAbono,
+    ESTADO_ABONO_INICIAL,
+  );
+  const {
+    modalAbonoAbierto,
+    proveedorSeleccionado,
+    montoAbono,
+    fechaAbono,
+    comprobanteAbono,
+    observacionAbono,
+    erroresAbono,
+  } = estadoAbono;
+  const actualizarAbono = useCallback(
+    (campo, valor) => dispatchAbono({ type: "actualizar", campo, valor }),
+    [],
+  );
+  const setModalAbonoAbierto = useCallback(
+    (valor) => actualizarAbono("modalAbonoAbierto", valor),
+    [actualizarAbono],
+  );
+  const setProveedorSeleccionado = useCallback(
+    (valor) => actualizarAbono("proveedorSeleccionado", valor),
+    [actualizarAbono],
+  );
+  const setMontoAbono = useCallback(
+    (valor) => actualizarAbono("montoAbono", valor),
+    [actualizarAbono],
+  );
+  const setFechaAbono = useCallback(
+    (valor) => actualizarAbono("fechaAbono", valor),
+    [actualizarAbono],
+  );
+  const setComprobanteAbono = useCallback(
+    (valor) => actualizarAbono("comprobanteAbono", valor),
+    [actualizarAbono],
+  );
+  const setObservacionAbono = useCallback(
+    (valor) => actualizarAbono("observacionAbono", valor),
+    [actualizarAbono],
+  );
+  const setErroresAbono = useCallback(
+    (valor) => actualizarAbono("erroresAbono", valor),
+    [actualizarAbono],
+  );
 
   const cargarProveedores = useCallback(async () => {
     setCargando(true);
