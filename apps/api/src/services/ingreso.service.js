@@ -46,6 +46,14 @@ async function registrar(app, body, usuario) {
   return nuevo;
 }
 
+/** IDs de sede visibles en contabilidad (familia bodega + oficinas). */
+async function idsFamiliaContable(prisma, usuario) {
+  if (!usuario || usuario.rol === "Admin" || usuario.sedeId == null) return null;
+  const familia = await resolverFamiliaSede(prisma, usuario.sedeId);
+  const ids = familia.map((s) => s.id);
+  return ids.length > 0 ? ids : [usuario.sedeId];
+}
+
 async function obtenerLista(app, query, usuario) {
   if (!sedeEsPermitida(usuario)) {
     throw new AppError("No tienes permiso para listar ingresos.", 403);
@@ -57,7 +65,12 @@ async function obtenerLista(app, query, usuario) {
   if (query.concepto) filtros.concepto = query.concepto;
 
   if (usuario.rol !== "Admin") {
-    filtros.sedeId = usuario.sedeId;
+    // Misma familia que clientes: oficinista de Bogotá Centro ve también
+    // ingresos registrados en la bodega Bogotá (p. ej. abonos de clientes).
+    const ids = await idsFamiliaContable(app.prisma, usuario);
+    if (ids && ids.length > 1) filtros.sedeIds = ids;
+    else if (ids && ids.length === 1) filtros.sedeId = ids[0];
+    else filtros.sedeId = usuario.sedeId;
   } else if (query.sedeId) {
     const ids = (await resolverFamiliaSede(app.prisma, query.sedeId)).map((s) => s.id);
     if (ids.length === 1)      filtros.sedeId = ids[0];
@@ -76,8 +89,14 @@ async function obtenerPorId(app, id, usuario) {
   const ingreso = await repo.buscarPorId(app.prisma, id);
   if (!ingreso) throw new AppError(`Ingreso ${id} no encontrado`, 404);
 
-  if (usuario.rol !== "Admin" && ingreso.sedeId !== usuario.sedeId) {
-    throw new AppError("No tienes permiso para ver este ingreso.", 403);
+  if (usuario.rol !== "Admin") {
+    const ids = await idsFamiliaContable(app.prisma, usuario);
+    const ok = ids && ids.length > 0
+      ? ids.includes(ingreso.sedeId)
+      : ingreso.sedeId === usuario.sedeId;
+    if (!ok) {
+      throw new AppError("No tienes permiso para ver este ingreso.", 403);
+    }
   }
 
   return ingreso;
@@ -134,23 +153,36 @@ async function borrar(app, id, usuario) {
   return resultado;
 }
 
-// El parámetro `sedeId` solo aplica para Admin (filtro explícito); los demás
-// roles quedan restringidos a su sede por `sedeWhere`, ignorando el query.
-function whereResumen(usuario, sedeId) {
-  return usuario.rol !== "Admin"
-    ? sedeWhere(usuario)
-    : sedeId
-      ? { sedeId: Number(sedeId) }
-      : {};
+async function whereResumen(app, usuario, sedeId) {
+  if (usuario.rol === "Admin") {
+    if (!sedeId) return {};
+    const ids = (await resolverFamiliaSede(app.prisma, sedeId)).map((s) => s.id);
+    if (ids.length > 1) return { sedeIds: ids };
+    return { sedeId: ids[0] ?? Number(sedeId) };
+  }
+  const ids = await idsFamiliaContable(app.prisma, usuario);
+  if (ids && ids.length > 1) return { sedeIds: ids };
+  if (ids && ids.length === 1) return { sedeId: ids[0] };
+  return sedeWhere(usuario);
 }
 
 async function resumenPorSede(app, semana, usuario, sedeId) {
-  const where = whereResumen(usuario, sedeId);
-  const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), where.sedeId);
+  const where = await whereResumen(app, usuario, sedeId);
+  const filas = await repo.resumenPorSede(
+    app.prisma,
+    semanaValida(semana),
+    where.sedeId,
+  );
+  // Si el resumen nativo solo acepta sedeId único, filtramos en memoria cuando hay familia
+  let filasFinal = filas;
+  if (where.sedeIds?.length) {
+    filasFinal = filas.filter((f) => where.sedeIds.includes(f.sedeId));
+  }
+
   const sedes = await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapa  = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
 
-  const porSede = filas.map((f) => ({
+  const porSede = filasFinal.map((f) => ({
     sede:      mapa[f.sedeId] ?? `Sede ${f.sedeId}`,
     sedeId:    f.sedeId,
     registros: f._count.id,
@@ -172,7 +204,7 @@ async function resumenPorSede(app, semana, usuario, sedeId) {
 }
 
 async function totalesPorDia(app, semana, usuario, sedeId) {
-  const where = whereResumen(usuario, sedeId);
+  const where = await whereResumen(app, usuario, sedeId);
   return repo.totalesPorDia(app.prisma, semanaValida(semana), where.sedeId);
 }
 

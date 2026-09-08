@@ -18,7 +18,6 @@ function sedeEsPermitida(usuario) {
   );
 }
 
-/** Solo lectura/abono de cartera (no crear/editar/desactivar). */
 function puedeConsultarCartera(usuario) {
   return sedeEsPermitida(usuario);
 }
@@ -32,10 +31,6 @@ function puedeGestionarClientes(usuario) {
   );
 }
 
-/**
- * Sedes del entregador: tabla entregador_sedes + sede principal del usuario.
- * Expande cada una a su familia (bodega + oficinas) para ver los mismos clientes.
- */
 async function idsSedesEntregador(prisma, usuario) {
   const asignadas = await prisma.entregadorSede.findMany({
     where: { entregadorId: usuario.id },
@@ -54,10 +49,6 @@ async function idsSedesEntregador(prisma, usuario) {
   return [...todos];
 }
 
-/**
- * IDs de la familia de sedes del usuario (bodega + oficinas ligadas).
- * Admin no se filtra por familia. Entregador usa sus sedes asignadas.
- */
 async function idsFamiliaUsuario(prisma, usuario) {
   if (!usuario || usuario.rol === "Admin") return null;
   if (usuario.rol === "Entregador") {
@@ -69,10 +60,6 @@ async function idsFamiliaUsuario(prisma, usuario) {
   return ids.length > 0 ? ids : [usuario.sedeId];
 }
 
-/**
- * true si el cliente es accesible para el usuario (misma familia de sedes).
- * Clientes sin sede solo los ve Admin.
- */
 function clienteAccesible(cliente, familiaIds, usuario) {
   if (usuario.rol === "Admin") return true;
   if (cliente.sedeId == null) return false;
@@ -176,11 +163,14 @@ const clienteService = (app) => {
       }
 
       const campos = {};
+      // saldoDeuda se permite en edición para ajustes manuales de cartera
+      // (además de los cambios automáticos por pedidos/abonos).
       const permitidos = [
         "nombre",
         "telefono",
         "activo",
         "limiteCredito",
+        "saldoDeuda",
         "sedeId",
       ];
       for (const c of permitidos) {
@@ -241,7 +231,17 @@ const clienteService = (app) => {
         );
       }
 
-      const sedeAbono = existe.sedeId ?? usuario?.sedeId;
+      // Contabilidad: el ingreso va a la sede del cliente (caja de esa familia).
+      // Oficinista/Bodega de la misma familia lo verán al listar por familia.
+      const sedeAbono = existe.sedeId;
+      if (sedeAbono == null) {
+        throw new AppError(
+          `No se puede registrar el abono del cliente "${existe.nombre}" (#${id}): ` +
+          `el cliente no tiene una sede asignada para reflejarlo en Contabilidad. Asigna una sede al cliente.`,
+          400,
+        );
+      }
+
       const fechaAbono = new Date();
 
       const transaccion = await app.prisma.$transaction(async (tx) => {
@@ -251,30 +251,22 @@ const clienteService = (app) => {
           include: { sede: { select: { id: true, nombre: true } } },
         });
 
-        let ingreso = null;
-        if (sedeAbono != null) {
-          const obsEntregador =
-            usuario.rol === "Entregador"
-              ? `Abono de cliente "${existe.nombre}" (#${id}) cobrado por entregador`
-              : `Abono de cliente "${existe.nombre}" (#${id})`;
-          ingreso = await ingresoRepo.crear(tx, {
-            fecha: inicioDiaLocal(fechaAbono),
-            semana: semanaNegocio(fechaAbono),
-            sedeId: sedeAbono,
-            efectivo: valorAbono,
-            cuentas: 0,
-            total: valorAbono,
-            origen: ORIGENES.ABONO_CLIENTE,
-            idReferencia: id,
-            observacion: obsEntregador,
-          });
-        } else {
-          throw new AppError(
-            `No se puede registrar el abono del cliente "${existe.nombre}" (#${id}): ` +
-            `el cliente no tiene una sede asignada para reflejarlo en Contabilidad. Asigna una sede al cliente.`,
-            400,
-          );
-        }
+        const obs =
+          usuario.rol === "Entregador"
+            ? `Abono de cliente "${existe.nombre}" (#${id}) cobrado por entregador`
+            : `Abono de cliente "${existe.nombre}" (#${id})`;
+
+        const ingreso = await ingresoRepo.crear(tx, {
+          fecha: inicioDiaLocal(fechaAbono),
+          semana: semanaNegocio(fechaAbono),
+          sedeId: sedeAbono,
+          efectivo: valorAbono,
+          cuentas: 0,
+          total: valorAbono,
+          origen: ORIGENES.ABONO_CLIENTE,
+          idReferencia: id,
+          observacion: obs,
+        });
 
         return { clienteActualizado, ingreso };
       });
