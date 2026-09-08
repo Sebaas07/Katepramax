@@ -742,6 +742,7 @@ const PedidosPage = () => {
               <input
                 type="text"
                 placeholder="Buscar por ID, cliente, dirección o entregador..."
+                aria-label="Buscar pedidos"
                 value={filtroTexto}
                 onChange={(e) => setFiltroTexto(e.target.value)}
                 className="ped-search-input"
@@ -851,9 +852,8 @@ const PedidosPage = () => {
               Productos *
             </label>
 
-            <div
+            <ul
               className="ped-items"
-              role="list"
               aria-labelledby="productos-label"
             >
               {formPedido.items.map((item, index) => {
@@ -884,7 +884,7 @@ const PedidosPage = () => {
                 ).slice(0, 8);
 
                 return (
-                  <div key={item.id} className="item-group" role="listitem">
+                  <li key={item.id} className="item-group">
                     <div className="item-group-header">
                       <h4>Ítem {index + 1}</h4>
                       {formPedido.items.length > 1 && (
@@ -1065,10 +1065,10 @@ const PedidosPage = () => {
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
 
             <button
               type="button"
@@ -1122,7 +1122,7 @@ const PedidosPage = () => {
         <div className="modal-form">
           {pedidoSeleccionado && (
             <div className="form-group">
-              <label>Pedido #{pedidoSeleccionado.id}</label>
+              <span className="form-label">Pedido #{pedidoSeleccionado.id}</span>
               <p className="pedido-info">
                 {pedidoSeleccionado.cliente}
                 {pedidoSeleccionado.direccion && (

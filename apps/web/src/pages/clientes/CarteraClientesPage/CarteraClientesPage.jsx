@@ -199,7 +199,6 @@ const CarteraClientesPage = () => {
               min="0"
               step="1000"
               placeholder="0"
-              autoFocus
             />
           </div>
         </div>

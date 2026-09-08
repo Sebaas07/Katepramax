@@ -69,9 +69,9 @@ const CorteCajaTicket = ({ corte, titulo, subtitulo }) => {
       <TicketSep />
 
       <TicketLinea etiqueta="Egresos" valor={formatCOP(egresos.total)} />
-      {egresos.porConcepto.slice(0, 6).map((c, i) => (
+      {egresos.porConcepto.slice(0, 6).map((c) => (
         <TicketLinea
-          key={`${c.concepto}-${i}`}
+          key={c.concepto}
           sub
           etiqueta={c.concepto}
           valor={formatCOP(c.total)}

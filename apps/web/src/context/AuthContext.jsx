@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   obtenerSesion,
   estaLogueado,
@@ -149,7 +149,7 @@ export const AuthProvider = ({ children }) => {
     [usuario],
   );
 
-  const value = {
+  const value = useMemo(() => ({
     usuario,
     isAuthenticated,
     isSessionChecked,
@@ -178,7 +178,16 @@ export const AuthProvider = ({ children }) => {
 
     // Puede ver y editar datos de gestión (inventario, productos, pedidos, etc.)
     puedeGestionar: ["Admin", "AdminBogota", "Bodega", "Oficinista"].includes(usuario?.rol),
-  };
+  }), [
+    usuario,
+    isAuthenticated,
+    isSessionChecked,
+    isLoading,
+    error,
+    login,
+    logout,
+    verificarRol,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

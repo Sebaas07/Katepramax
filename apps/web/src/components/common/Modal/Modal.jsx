@@ -28,6 +28,17 @@ const Modal = ({
     onCloseRef.current = onClose;
   }, [onClose]);
 
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const handleBackdropClick = (e) => {
+      if (e.target === dialog) onCloseRef.current();
+    };
+    dialog.addEventListener("click", handleBackdropClick);
+    return () => dialog.removeEventListener("click", handleBackdropClick);
+  }, []);
+
   // Abrir / cerrar el <dialog> nativo según la prop isOpen
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -56,19 +67,11 @@ const Modal = ({
     if (onConfirmar) onConfirmar();
   };
 
-  // Clic en el backdrop (fuera de .modal-content) cierra el modal
-  const handleBackdropClick = (e) => {
-    if (e.target === dialogRef.current) {
-      onCloseRef.current();
-    }
-  };
-
   return createPortal(
     <dialog
       ref={dialogRef}
       className="modal-dialog"
       onCancel={handleCancel}
-      onClick={handleBackdropClick}
       aria-labelledby="modal-titulo"
     >
       <div

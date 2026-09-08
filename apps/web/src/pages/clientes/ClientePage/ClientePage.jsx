@@ -70,19 +70,23 @@ const ClientePage = () => {
   // ── Carga de sedes desde la DB ──────────────────────────
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
+    let activo = true;
     const cargarSedes = async () => {
       setCargandoSedes(true);
       try {
         const data = await inventarioService.obtenerSedes();
-        setSedes(Array.isArray(data) ? data : []);
+        if (activo) setSedes(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error al cargar sedes:", err);
-        setSedes([]);
+        if (activo) setSedes([]);
       } finally {
-        setCargandoSedes(false);
+        if (activo) setCargandoSedes(false);
       }
     };
     void cargarSedes();
+    return () => {
+      activo = false;
+    };
   }, [isSessionChecked, isAuthenticated]);
 
   // ── Handlers ──────────────────────────────────────────────

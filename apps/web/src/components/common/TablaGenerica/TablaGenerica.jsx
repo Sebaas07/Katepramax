@@ -169,8 +169,8 @@ const TablaGenerica = ({
           </thead>
           <tbody>
             {datosPagina.length > 0 ? (
-              datosPagina.map((fila, idx) => (
-                <tr key={fila.id ?? idx}>
+              datosPagina.map((fila) => (
+                <tr key={fila.id ?? fila.codigo ?? JSON.stringify(fila)}>
                   {columnasFinales.map((col) => (
                     <td key={col.campo}>
                       {col.tipo === "acciones" ? (
@@ -226,6 +226,7 @@ const TablaGenerica = ({
 
           <div className="pagination-controls">
             <button
+              aria-label="Primera página"
               type="button"
               onClick={() => manejarCambioPagina(1)}
               disabled={paginaValida === 1}
@@ -234,6 +235,7 @@ const TablaGenerica = ({
               «
             </button>
             <button
+              aria-label="Página anterior"
               type="button"
               onClick={() => manejarCambioPagina(paginaValida - 1)}
               disabled={paginaValida === 1}
@@ -245,6 +247,7 @@ const TablaGenerica = ({
               {paginaValida} / {totalPaginas}
             </span>
             <button
+              aria-label="Siguiente página"
               type="button"
               onClick={() => manejarCambioPagina(paginaValida + 1)}
               disabled={paginaValida === totalPaginas}
@@ -253,6 +256,7 @@ const TablaGenerica = ({
               Siguiente ›
             </button>
             <button
+              aria-label="Última página"
               type="button"
               onClick={() => manejarCambioPagina(totalPaginas)}
               disabled={paginaValida === totalPaginas}

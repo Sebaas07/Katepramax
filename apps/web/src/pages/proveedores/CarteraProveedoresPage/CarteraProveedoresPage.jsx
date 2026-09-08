@@ -246,7 +246,6 @@ const CarteraProveedoresPage = () => {
               value={montoAbono}
               onChange={(e) => setMontoAbono(e.target.value)}
               className={`form-control ${erroresAbono.valorAbono ? "cont-input--error" : ""}`}
-              autoFocus
             />
             {montoAbono && (
               <span className="cont-input-hint">{formatCOP(parseMaybeNumber(montoAbono))}</span>

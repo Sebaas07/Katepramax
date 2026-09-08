@@ -437,6 +437,7 @@ const EnviosPage = () => {
                     list={`env-productos-dl-${idx}`}
                     className="form-control"
                     placeholder="Busca por código o nombre..."
+                    aria-label={`Producto de la línea ${idx + 1}`}
                     defaultValue=""
                     onChange={(e) => {
                       const match = e.target.value.match(/\[(\d+)\]/);
@@ -456,6 +457,7 @@ const EnviosPage = () => {
                   type="number"
                   className="form-control env-linea__cantidad"
                   placeholder="Cant."
+                  aria-label={`Cantidad de la línea ${idx + 1}`}
                   min="1"
                   value={linea.cantidad}
                   onChange={(e) =>

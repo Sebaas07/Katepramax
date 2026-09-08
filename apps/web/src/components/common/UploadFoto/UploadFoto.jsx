@@ -66,19 +66,18 @@ const UploadFoto = ({
   return (
     <div className="upload-foto">
       {/* Etiqueta */}
-      <label className="upload-foto__label">
+      <label className="upload-foto__label" htmlFor="upload-foto">
         {etiqueta}
         {obligatorio && <span className="upload-foto__req"> *</span>}
       </label>
 
       {/* Área de clic */}
-      <div
+      <button
+        type="button"
         className={`upload-foto__area ${urlMostrar ? "upload-foto__area--con-foto" : ""} ${disabled ? "upload-foto__area--disabled" : ""}`}
         onClick={handleClick}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        onKeyDown={(e) => e.key === "Enter" && handleClick()}
         aria-label="Seleccionar foto"
+        disabled={disabled}
       >
         {urlMostrar ? (
           <>
@@ -93,17 +92,6 @@ const UploadFoto = ({
                 <span className="material-symbols-outlined">photo_camera</span>
                 <span className="upload-foto__overlay-texto">Cambiar foto</span>
               </div>
-            )}
-            {/* Botón eliminar */}
-            {!disabled && (
-              <button
-                type="button"
-                className="upload-foto__eliminar"
-                onClick={handleEliminar}
-                aria-label="Eliminar foto"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
             )}
           </>
         ) : (
@@ -121,7 +109,17 @@ const UploadFoto = ({
             </p>
           </div>
         )}
-      </div>
+      </button>
+      {!disabled && urlMostrar && (
+        <button
+          type="button"
+          className="upload-foto__eliminar"
+          onClick={handleEliminar}
+          aria-label="Eliminar foto"
+        >
+          <span className="material-symbols-outlined">close</span>
+        </button>
+      )}
 
       {/* Input oculto — capture="environment" abre cámara trasera en móvil */}
       <input

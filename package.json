@@ -6,7 +6,6 @@
     "dev:web": "pnpm --filter web dev",
     "dev": "concurrently -n \"API,WEB\" -c \"magenta,cyan\" \"pnpm dev:api\" \"pnpm dev:web\"",
     "install-all": "pnpm install",
-    "react:doctor": "pnpm dlx react-doctor@latest . --verbose",
     "security:test": "snyk test --all-projects",
     "security:monitor": "snyk monitor"
   },

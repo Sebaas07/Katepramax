@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import entregaService from "@/services/entrega.service";
@@ -12,6 +18,14 @@ import { formatCOP, formatFecha } from "@/utils/formatters";
 import "./EntregasPage.css";
 
 const POLLING_INTERVAL_MS = 20000;
+
+const suscribirAnchoPantalla = (callback) => {
+  window.addEventListener("resize", callback);
+  return () => window.removeEventListener("resize", callback);
+};
+
+const obtenerAnchoPantalla = () => window.innerWidth;
+const obtenerAnchoPantallaServidor = () => 1024;
 
 const Spinner = () => (
   <div className="entr-spinner-wrap">
@@ -202,30 +216,31 @@ const EntregasPage = () => {
   });
   const [motivoFallo, setMotivoFallo] = useState("");
 
-  // Detectar ancho de pantalla para responsive
-  const [anchoPantalla, setAnchoPantalla] = useState(window.innerWidth);
-  useEffect(() => {
-    const handleResize = () => setAnchoPantalla(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
+  const anchoPantalla = useSyncExternalStore(
+    suscribirAnchoPantalla,
+    obtenerAnchoPantalla,
+    obtenerAnchoPantallaServidor,
+  );
   const usarTarjetas = anchoPantalla < 768;
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
 
+    let activo = true;
     const cargarSedes = async () => {
       try {
         const data = await inventarioService.obtenerSedes();
-        setSedes(Array.isArray(data) ? data : []);
+        if (activo) setSedes(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error al cargar sedes:", err);
-        setSedes([]);
+        if (activo) setSedes([]);
       }
     };
 
     void cargarSedes();
+    return () => {
+      activo = false;
+    };
   }, [isSessionChecked, isAuthenticated]);
 
   // ── Carga de datos ───────────────────────────────────────────────
@@ -508,10 +523,10 @@ const EntregasPage = () => {
         <div className="modal-form">
           {asignacionActiva && (
             <div className="form-group">
-              <label>
+              <span className="form-label">
                 Pedido #
                 {asignacionActiva.pedido?.id ?? asignacionActiva.pedidoId}
-              </label>
+              </span>
               <p className="entr-pedido-info">
                 {asignacionActiva.pedido?.cliente?.nombre ?? "—"}
                 {asignacionActiva.pedido?.direccion && (
@@ -680,10 +695,10 @@ const EntregasPage = () => {
         <div className="modal-form">
           {asignacionActiva && (
             <div className="form-group">
-              <label>
+              <span className="form-label">
                 Pedido #
                 {asignacionActiva.pedido?.id ?? asignacionActiva.pedidoId}
-              </label>
+              </span>
               <p className="entr-pedido-info">
                 {asignacionActiva.pedido?.cliente?.nombre ?? "—"}
               </p>

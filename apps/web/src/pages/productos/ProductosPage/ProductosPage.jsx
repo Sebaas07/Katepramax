@@ -40,6 +40,14 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(number) ? number : fallback;
 };
 
+const calcularPorcentajeGanancia = (precioCosto, precioVenta) => {
+  const costo = toNumber(precioCosto, 0);
+  const venta = toNumber(precioVenta, 0);
+  return costo > 0 && venta > 0
+    ? Number((((venta - costo) / costo) * 100).toFixed(2)).toString()
+    : "0";
+};
+
 const obtenerStock = (producto, sedeId) => {
   const stockSedes = Array.isArray(producto.stockSedes)
     ? producto.stockSedes
@@ -198,17 +206,21 @@ const ProductosPage = () => {
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
 
+    let activo = true;
     const cargarSedes = async () => {
       try {
         const data = await inventarioService.obtenerSedes();
-        setSedes(Array.isArray(data) ? data : []);
+        if (activo) setSedes(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error al cargar sedes:", err);
-        setSedes([]);
+        if (activo) setSedes([]);
       }
     };
 
     void cargarSedes();
+    return () => {
+      activo = false;
+    };
   }, [isSessionChecked, isAuthenticated]);
 
   const cargarProductos = useCallback(async () => {
@@ -263,19 +275,15 @@ const ProductosPage = () => {
           ? { ...prev, [name]: checked }
           : { ...prev, [name]: value };
 
-      if (name === "precioCosto" || name === "precioVenta") {
-        const costo = toNumber(next.precioCosto, 0);
-        const venta = toNumber(next.precioVenta, 0);
-        if (costo > 0 && venta > 0) {
-          next.porcentajeGanancia = Number(
-            (((venta - costo) / costo) * 100).toFixed(2),
-          ).toString();
-        } else {
-          next.porcentajeGanancia = "0";
-        }
-      }
-
-      return next;
+      return name === "precioCosto" || name === "precioVenta"
+        ? {
+            ...next,
+            porcentajeGanancia: calcularPorcentajeGanancia(
+              next.precioCosto,
+              next.precioVenta,
+            ),
+          }
+        : next;
     });
   }, []);
 

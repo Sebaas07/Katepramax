@@ -65,8 +65,11 @@ const FacturaTicket = ({ factura, mostrarQR = true, url }) => {
         <span>PRODUCTO</span>
         <span>VALOR</span>
       </div>
-      {(factura.detalles ?? []).map((d, i) => (
-        <div className="factura-ticket__item" key={i}>
+      {(factura.detalles ?? []).map((d) => (
+        <div
+          className="factura-ticket__item"
+          key={d.id ?? d.productoId ?? `${d.nombre}-${d.cantidad}`}
+        >
           <div className="factura-ticket__item-nombre">{d.nombre}</div>
           <div className="factura-ticket__item-detalle">
             <span>

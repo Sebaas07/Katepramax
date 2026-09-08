@@ -24,8 +24,8 @@ export const TarjetaResumen = memo(({ titulo, icono, color, filas, total }) => (
       <h4>{titulo}</h4>
     </div>
     <div className="cont-resumen-card__filas">
-      {filas.map((f, i) => (
-        <div key={`${f.sede}-${i}`} className="cont-resumen-card__fila">
+      {filas.map((f) => (
+        <div key={f.sede} className="cont-resumen-card__fila">
           <span>{f.sede}</span>
           <strong>{formatCOP(f.valor)}</strong>
         </div>
@@ -45,8 +45,8 @@ export const TarjetaResumenProveedor = memo(({ titulo, icono, color, filas, tota
       <h4>{titulo}</h4>
     </div>
     <div className="cont-resumen-card__filas">
-      {filas.slice(0, 4).map((f, i) => (
-        <div key={`prov-${f.sede}-${i}`} className="cont-resumen-card__fila">
+      {filas.slice(0, 4).map((f) => (
+        <div key={`prov-${f.sede}`} className="cont-resumen-card__fila">
           <span>{f.sede}</span>
           <strong>{formatCOP(f.valor)}</strong>
         </div>
