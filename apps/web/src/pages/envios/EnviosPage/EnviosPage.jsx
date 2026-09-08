@@ -3,25 +3,9 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import envioService from "@/services/envio.service";
 import inventarioService from "@/services/inventario.service";
-import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
+import EnviosListado from "./EnviosListado";
 import "./EnviosPage.css";
-
-const COLUMNAS_ENVIOS = [
-  { campo: "sedeOrigenNombre", label: "Origen", tipo: "texto" },
-  { campo: "sedeDestinoNombre", label: "Destino", tipo: "texto" },
-  { campo: "productosResumen", label: "Productos", tipo: "texto" },
-  { campo: "estado", label: "Estado", tipo: "estado" },
-  { campo: "fechaEnvio", label: "Fecha envío", tipo: "fecha" },
-  { campo: "creadorNombre", label: "Creado por", tipo: "texto" },
-];
-
-const Spinner = ({ texto = "Cargando..." }) => (
-  <div className="env-spinner-wrap">
-    <div className="env-spinner" />
-    <span>{texto}</span>
-  </div>
-);
 
 const lineaVacia = () => ({
   _id: `linea-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -310,73 +294,14 @@ const EnviosPage = () => {
         )}
       </div>
 
-      <div className="env-tabs">
-        {esAdmin && (
-          <button
-            type="button"
-            className={tab === "todos" ? "tab-active" : "tab-btn"}
-            onClick={() => setTab("todos")}
-          >
-            <span className="material-symbols-outlined" aria-hidden="true">
-              list_alt
-            </span>
-            Todos los envíos
-          </button>
-        )}
-        <button
-          type="button"
-          className={tab === "recibidos" ? "tab-active" : "tab-btn"}
-          onClick={() => setTab("recibidos")}
-        >
-          <span className="material-symbols-outlined" aria-hidden="true">
-            move_to_inbox
-          </span>
-          Por confirmar (recibidos)
-        </button>
-        <button
-          type="button"
-          className={tab === "enviados" ? "tab-active" : "tab-btn"}
-          onClick={() => setTab("enviados")}
-        >
-          <span className="material-symbols-outlined" aria-hidden="true">
-            outbox
-          </span>
-          Enviados por mí
-        </button>
-      </div>
-
-      <div className="tab-content">
-        {cargando ? (
-          <Spinner texto="Cargando envíos..." />
-        ) : datosTabla.length === 0 ? (
-          <div className="env-empty">
-            <span className="material-symbols-outlined" aria-hidden="true">
-              local_shipping
-            </span>
-            <p>
-              {tab === "recibidos"
-                ? "No tienes envíos pendientes por confirmar."
-                : tab === "enviados"
-                  ? "No has creado envíos hacia otras sedes."
-                  : "No hay envíos registrados."}
-            </p>
-          </div>
-        ) : (
-          <TablaGenerica
-            columnas={COLUMNAS_ENVIOS}
-            datos={datosTabla}
-            filasPorPagina={10}
-            mostrarBuscador
-            buscarEnCampos={[
-              "sedeOrigenNombre",
-              "sedeDestinoNombre",
-              "creadorNombre",
-            ]}
-            paginacion
-            renderAcciones={renderAcciones}
-          />
-        )}
-      </div>
+      <EnviosListado
+        tab={tab}
+        esAdmin={esAdmin}
+        cargando={cargando}
+        datosTabla={datosTabla}
+        renderAcciones={renderAcciones}
+        onTabChange={setTab}
+      />
 
       {/* ── Modal: Nuevo envío ─────────────────────────────── */}
       <Modal

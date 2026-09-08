@@ -4,9 +4,8 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import proveedoresService from "@/services/proveedores.service";
 import inventarioService from "@/services/inventario.service";
-import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
-import Modal from "@/components/common/Modal/Modal";
-import EmptyState from "@/components/common/EmptyState/EmptyState";
+import ProveedoresListado from "./ProveedoresListado";
+import ProveedoresModales from "./ProveedoresModales";
 import "./ProveedoresPage.css";
 
 const ProveedoresPage = () => {
@@ -244,158 +243,29 @@ const ProveedoresPage = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      {proveedores.length > 0 && (
-        <div className="prov-stats">
-          <div className="prov-stat-card">
-            <div className="prov-stat-card__icon">
-              <span className="material-symbols-outlined">conveyor_belt</span>
-            </div>
-            <div className="prov-stat-card__body">
-              <span className="prov-stat-card__valor">{proveedores.length}</span>
-              <span className="prov-stat-card__label">Total</span>
-            </div>
-          </div>
-          <div className="prov-stat-card">
-            <div className="prov-stat-card__icon">
-              <span className="material-symbols-outlined">check_circle</span>
-            </div>
-            <div className="prov-stat-card__body">
-              <span className="prov-stat-card__valor">{totalActivos}</span>
-              <span className="prov-stat-card__label">Activos</span>
-            </div>
-          </div>
-          {totalInactivos > 0 && (
-            <div className="prov-stat-card">
-              <div className="prov-stat-card__icon">
-                <span className="material-symbols-outlined">block</span>
-              </div>
-              <div className="prov-stat-card__body">
-                <span className="prov-stat-card__valor">{totalInactivos}</span>
-                <span className="prov-stat-card__label">Inactivos</span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      <ProveedoresListado
+        proveedores={proveedores}
+        proveedoresConDeuda={proveedoresConDeuda}
+        totalActivos={totalActivos}
+        totalInactivos={totalInactivos}
+        cargando={cargando}
+        columnas={columnasProveedores}
+        acciones={acciones}
+        filtros={filtros}
+      />
 
-      <div className="tab-content">
-        {cargando ? (
-          <div className="prov-spinner-wrap">
-            <div className="prov-spinner" aria-hidden="true" />
-            <span>Cargando proveedores...</span>
-          </div>
-        ) : proveedores.length > 0 ? (
-          <TablaGenerica
-            columnas={columnasProveedores}
-            datos={proveedoresConDeuda}
-            filasPorPagina={10}
-            mostrarBuscador
-            buscarEnCampos={["nombre"]}
-            paginacion
-            renderAcciones={acciones}
-          />
-        ) : (
-          <EmptyState
-            icono="conveyor_belt"
-            titulo="No hay proveedores registrados"
-            detalle={
-              filtros.activo
-                ? "Prueba cambiando el filtro de estado."
-                : "Crea un nuevo proveedor para comenzar."
-            }
-          />
-        )}
-      </div>
-
-      {/* Modal — Crear / Editar Proveedor */}
-      <Modal
-        isOpen={modalProveedorAbierto}
-        onClose={() => setModalProveedorAbierto(false)}
-        titulo={proveedorSeleccionado ? "Editar Proveedor" : "Nuevo Proveedor"}
-        onConfirmar={handleGuardarProveedor}
-        mostrarCancelar
-        disabled={guardando}
-        textoBotonConfirmar={guardando ? "Guardando..." : "Guardar Proveedor"}
-      >
-        <div className="modal-form">
-          {/* Ícono decorativo solo en creación */}
-          {!proveedorSeleccionado && (
-            <div className="prov-modal-header-icon">
-              <span className="material-symbols-outlined">conveyor_belt</span>
-            </div>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="nombre-input">Nombre del Proveedor *</label>
-            <input
-              id="nombre-input"
-              type="text"
-              name="nombre"
-              value={formProveedor.nombre}
-              onChange={handleCambioFormProveedor}
-              className="form-control"
-              placeholder="Ej: Distribuidora Carnes El Rey"
-              autoComplete="off"
-              autoFocus={!proveedorSeleccionado}
-            />
-            <span className="prov-nombre-hint">
-              Ingresa el nombre exacto tal como aparecerá en los registros
-            </span>
-          </div>
-
-          {/* Toggle de estado activo */}
-          <div className="prov-activo-card">
-            <div className="prov-activo-card__info">
-              <span className="prov-activo-card__label">Proveedor activo</span>
-              <span className="prov-activo-card__sub">
-                {formProveedor.activo
-                  ? "Visible en el sistema y disponible para asignar"
-                  : "Oculto de los listados activos"}
-              </span>
-            </div>
-            <label className="prov-toggle" aria-label="Proveedor activo">
-              <input
-                type="checkbox"
-                name="activo"
-                checked={formProveedor.activo}
-                onChange={handleCambioFormProveedor}
-              />
-              <span className="prov-toggle__slider" />
-            </label>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Modal — Confirmar desactivar */}
-      <Modal
-        isOpen={modalEliminarAbierto}
-        onClose={() => setModalEliminarAbierto(false)}
-        titulo="Desactivar Proveedor"
-        onConfirmar={handleEliminarProveedor}
-        mostrarCancelar
-        disabled={guardando}
-        textoBotonConfirmar={guardando ? "Desactivando..." : "Desactivar"}
-      >
-        <div className="modal-form prov-confirm-body">
-          {proveedorSeleccionado && (
-            <>
-              <span className="material-symbols-outlined prov-confirm-icon" aria-hidden="true">
-                warning
-              </span>
-              <div>
-                <p>
-                  ¿Está seguro de que desea desactivar a{" "}
-                  <strong>{proveedorSeleccionado.nombre}</strong>?
-                </p>
-                <p className="prov-confirm-sub">
-                  Esta acción ocultará el proveedor de los listados activos.
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
+      <ProveedoresModales
+        modalProveedorAbierto={modalProveedorAbierto}
+        modalEliminarAbierto={modalEliminarAbierto}
+        proveedorSeleccionado={proveedorSeleccionado}
+        formProveedor={formProveedor}
+        guardando={guardando}
+        onCerrarProveedor={() => setModalProveedorAbierto(false)}
+        onCerrarEliminar={() => setModalEliminarAbierto(false)}
+        onGuardar={handleGuardarProveedor}
+        onEliminar={handleEliminarProveedor}
+        onCambioForm={handleCambioFormProveedor}
+      />
     </div>
   );
 };

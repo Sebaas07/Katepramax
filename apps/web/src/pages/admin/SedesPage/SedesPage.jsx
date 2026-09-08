@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useReducer } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import sedesService from "@/services/sedes.service";
-import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
-import EmptyState from "@/components/common/EmptyState/EmptyState";
 import { formatFecha } from "@/utils/formatters";
 import SedeForm from "./SedeForm";
+import SedesListado from "./SedesListado";
+import ConfirmarSedeModal from "./ConfirmarSedeModal";
 import "./SedesPage.css";
 
 const Spinner = () => (
@@ -288,57 +288,17 @@ const SedesPage = () => {
         </div>
       </div>
 
-      <div className="sed-stats">
-        <div className="sed-stat-card">
-          <span className="material-symbols-outlined">location_city</span>
-          <div>
-            <span className="sed-stat-valor">{sedes.length}</span>
-            <span className="sed-stat-label">Total sedes</span>
-          </div>
-        </div>
-        <div className="sed-stat-card sed-stat-card--activa">
-          <span className="material-symbols-outlined">location_on</span>
-          <div>
-            <span className="sed-stat-valor">{totalActivas}</span>
-            <span className="sed-stat-label">Activas</span>
-          </div>
-        </div>
-        <div className="sed-stat-card sed-stat-card--inactiva">
-          <span className="material-symbols-outlined">location_off</span>
-          <div>
-            <span className="sed-stat-valor">{totalInactivas}</span>
-            <span className="sed-stat-label">Inactivas</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="tab-content">
-        {cargando ? (
-          <Spinner />
-        ) : sedes.length === 0 ? (
-          <EmptyState
-            icono="location_city"
-            titulo="No hay sedes registradas"
-            detalle="Crea la primera sede para comenzar a usarla en el sistema."
-          >
-            <button className="btn-primary" onClick={abrirCrear} type="button">
-              <span className="material-symbols-outlined">add_location_alt</span>
-              Nueva Sede
-            </button>
-          </EmptyState>
-        ) : (
-          <TablaGenerica
-            columnas={columnas}
-            datos={sedes}
-            filasPorPagina={10}
-            mostrarBuscador
-            buscarEnCampos={["nombre"]}
-            paginacion
-            renderAcciones={renderAcciones}
-            renderCeldaCustom={renderCeldaCustom}
-          />
-        )}
-      </div>
+      <SedesListado
+        sedes={sedes}
+        totalActivas={totalActivas}
+        totalInactivas={totalInactivas}
+        cargando={cargando}
+        columnas={columnas}
+        renderAcciones={renderAcciones}
+        renderCeldaCustom={renderCeldaCustom}
+        onCrear={abrirCrear}
+        Spinner={Spinner}
+      />
 
       <Modal
         isOpen={modalAbierto}
@@ -371,32 +331,13 @@ const SedesPage = () => {
         />
       </Modal>
 
-      <Modal
+      <ConfirmarSedeModal
         isOpen={modalConfirmAbierto}
+        sede={sedeAToggle}
+        guardando={guardando}
         onClose={cerrarModalConfirm}
-        titulo={sedeAToggle?.activo ? "Desactivar Sede" : "Activar Sede"}
-        textoBotonConfirmar={
-          guardando ? "Procesando..." : sedeAToggle?.activo ? "Sí, desactivar" : "Sí, activar"
-        }
         onConfirmar={handleToggleSede}
-        mostrarCancelar
-      >
-        <div className="sed-confirm-body">
-          <span className="material-symbols-outlined sed-confirm-icon">
-            {sedeAToggle?.activo ? "location_off" : "location_on"}
-          </span>
-          <p>
-            ¿Está seguro de que desea{" "}
-            <strong>{sedeAToggle?.activo ? "desactivar" : "activar"}</strong> la
-            sede <strong>{sedeAToggle?.nombre}</strong>?
-          </p>
-          <p className="sed-confirm-sub">
-            {sedeAToggle?.activo
-              ? "La sede ya no aparecerá en los selectores y no permitirá nuevos cargos."
-              : "La sede volverá a estar disponible para todo el sistema."}
-          </p>
-        </div>
-      </Modal>
+      />
     </div>
   );
 };

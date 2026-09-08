@@ -3,27 +3,8 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import clientesService from "@/services/clientes.service";
 import inventarioService from "@/services/inventario.service";
-import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
-import Modal from "@/components/common/Modal/Modal";
+import ClienteContenido from "./ClienteContenido";
 import "./ClientePage.css";
-
-const COLUMNAS_CLIENTES = [
-  { campo: "nombre", label: "Nombre", tipo: "texto" },
-  { campo: "telefono", label: "Teléfono", tipo: "texto" },
-  { campo: "sedeNombre", label: "Sede", tipo: "texto" },
-  { campo: "saldoDeuda", label: "Saldo deuda", tipo: "moneda" },
-  { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda" },
-  { campo: "activo", label: "Estado", tipo: "booleano" },
-  { campo: "creadoEn", label: "Registro", tipo: "fecha" },
-];
-
-// ─── Spinner inline ──────────────────────────────────────────
-const Spinner = () => (
-  <div className="cli-spinner-wrap">
-    <div className="cli-spinner" />
-    <span>Cargando clientes...</span>
-  </div>
-);
 
 // ─── Form inicial alineado con schema Prisma ──────────────────
 // Schema real: nombre, telefono, limiteCredito, saldoDeuda, activo
@@ -281,160 +262,24 @@ const ClientePage = () => {
         </div>
       </div>
 
-      {/* Tabla */}
-      <div className="tab-content">
-        {cargando ? (
-          <Spinner />
-        ) : (
-          <TablaGenerica
-            columnas={COLUMNAS_CLIENTES}
-            datos={clientes.map((c) => ({
-              ...c,
-              sedeNombre: c.sede?.nombre ?? "Sin asignar",
-            }))}
-            filasPorPagina={10}
-            mostrarBuscador
-            buscarEnCampos={["nombre", "telefono"]}
-            paginacion
-            renderAcciones={accionesCliente}
-          />
-        )}
-      </div>
-
-      {/* Modal — Crear / Editar */}
-      <Modal
-        isOpen={modalClienteAbierto}
-        onClose={() => setModalClienteAbierto(false)}
-        titulo={clienteSeleccionado ? "Editar Cliente" : "Nuevo Cliente"}
-        textoBotonConfirmar={guardando ? "Guardando..." : "Guardar"}
-        onConfirmar={handleGuardarCliente}
-        mostrarCancelar
-      >
-        <div className="modal-form">
-          {/* Nombre */}
-          <div className="form-group">
-            <label htmlFor="cli-nombre">Nombre *</label>
-            <input
-              id="cli-nombre"
-              type="text"
-              name="nombre"
-              value={formCliente.nombre}
-              onChange={handleCambioForm}
-              className="form-control"
-              placeholder="Nombre del cliente o empresa"
-            />
-          </div>
-
-          {/* Teléfono */}
-          <div className="form-group">
-            <label htmlFor="cli-telefono">Teléfono</label>
-            <input
-              id="cli-telefono"
-              type="tel"
-              name="telefono"
-              value={formCliente.telefono}
-              onChange={handleCambioForm}
-              className="form-control"
-              placeholder="3XX XXX XXXX"
-            />
-          </div>
-
-          {/* Sede (solo Admin; Bodega/AdminBogota se asigna automático) */}
-          {esAdmin && (
-            <div className="form-group">
-              <label htmlFor="cli-sede">Sede *</label>
-              <select
-                id="cli-sede"
-                name="sedeId"
-                value={formCliente.sedeId}
-                onChange={handleCambioForm}
-                className="form-control"
-                disabled={cargandoSedes}
-              >
-                <option value="">— Selecciona —</option>
-                {sedes.flatMap((sede) =>
-                  sede.tipo === "Oficina"
-                    ? [
-                        <option key={sede.id} value={sede.id}>
-                          {sede.nombre}
-                        </option>,
-                      ]
-                    : [],
-                )}
-              </select>
-            </div>
-          )}
-
-          {/* Límite de crédito */}
-          <div className="form-group">
-            <label htmlFor="cli-limite">Límite de crédito (COP)</label>
-            <input
-              id="cli-limite"
-              type="text" // ← CAMBIAR A TEXT
-              name="limiteCredito"
-              value={formCliente.limiteCredito}
-              onChange={handleCambioForm}
-              className="form-control"
-              placeholder="0"
-            />
-          </div>
-
-          {/* Saldo deuda (solo edición) */}
-          {clienteSeleccionado && (
-            <div className="form-group">
-              <label htmlFor="cli-deuda">Saldo de deuda (COP)</label>
-              <input
-                id="cli-deuda"
-                type="text" // ← CAMBIAR A TEXT
-                name="saldoDeuda"
-                value={formCliente.saldoDeuda}
-                onChange={handleCambioForm}
-                className="form-control"
-                placeholder="0"
-              />
-            </div>
-          )}
-
-          {/* Activo */}
-          <div className="form-group form-group--check">
-            <label htmlFor="cli-activo" className="cli-check-label">
-              <input
-                id="cli-activo"
-                type="checkbox"
-                name="activo"
-                checked={formCliente.activo}
-                onChange={handleCambioForm}
-                className="cli-checkbox"
-              />
-              Cliente activo
-            </label>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Modal — Confirmar desactivar */}
-      <Modal
-        isOpen={modalConfirmAbierto}
-        onClose={() => setModalConfirmAbierto(false)}
-        titulo="Desactivar Cliente"
-        textoBotonConfirmar={guardando ? "Desactivando..." : "Sí, desactivar"}
-        onConfirmar={handleDesactivar}
-        mostrarCancelar
-      >
-        <div className="cli-confirm-body">
-          <span className="material-symbols-outlined cli-confirm-icon">
-            warning
-          </span>
-          <p>
-            ¿Estás seguro de que quieres desactivar a{" "}
-            <strong>{clienteSeleccionado?.nombre}</strong>?
-          </p>
-          <p className="cli-confirm-sub">
-            El cliente no aparecerá en nuevos pedidos pero su historial se
-            conserva.
-          </p>
-        </div>
-      </Modal>
+      <ClienteContenido
+        cargando={cargando}
+        clientes={clientes}
+        accionesCliente={accionesCliente}
+        modalClienteAbierto={modalClienteAbierto}
+        modalConfirmAbierto={modalConfirmAbierto}
+        clienteSeleccionado={clienteSeleccionado}
+        formCliente={formCliente}
+        sedes={sedes}
+        esAdmin={esAdmin}
+        cargandoSedes={cargandoSedes}
+        guardando={guardando}
+        onCerrarCliente={() => setModalClienteAbierto(false)}
+        onCerrarConfirmacion={() => setModalConfirmAbierto(false)}
+        onGuardar={handleGuardarCliente}
+        onDesactivar={handleDesactivar}
+        onCambioForm={handleCambioForm}
+      />
     </div>
   );
 };
