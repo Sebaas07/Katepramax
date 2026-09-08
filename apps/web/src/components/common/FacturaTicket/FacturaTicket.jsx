@@ -1,4 +1,4 @@
-import { QRCodeCanvas } from "qrcode.react";
+import { QRCodeSVG } from "qrcode.react";
 import { obtenerUrlFactura } from "@/utils/facturaUrl";
 import "./FacturaTicket.css";
 
@@ -107,7 +107,13 @@ const FacturaTicket = ({ factura, mostrarQR = true, url }) => {
 
       {mostrarQR && (
         <div className="factura-ticket__qr">
-          <QRCodeCanvas value={link} size={80} level="M" includeMargin />
+          <QRCodeSVG
+            value={link}
+            size={160}
+            level="Q"
+            includeMargin
+            className="factura-ticket__qr-code"
+          />
           <span className="factura-ticket__qr-texto">
             Valide este documento escaneando el código
           </span>

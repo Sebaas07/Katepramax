@@ -41,7 +41,10 @@ const verifyToken = async (request, reply) => {
     let sedesOperativas = [sesion.usuario.sedeId];
     if (sede) {
       if (sede.tipo === "Bodega") {
-        sedesOperativas = [sede.id, ...(sede.oficinas ?? []).map((o) => o.id)];
+        // Bodega gestiona los pedidos de sus oficinas; la bodega es la sede
+        // operativa de inventario, pero no debe aparecer como oficina.
+        const oficinas = (sede.oficinas ?? []).map((o) => o.id);
+        sedesOperativas = oficinas.length > 0 ? oficinas : [0];
       } else if (sede.tipo === "Oficina" && sede.bodegaId) {
         sedesOperativas = [sede.id, sede.bodegaId];
       }

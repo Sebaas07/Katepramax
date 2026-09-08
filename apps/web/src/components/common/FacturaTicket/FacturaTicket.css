@@ -107,6 +107,14 @@
   gap: 4px;
 }
 
+.factura-ticket__qr-code {
+  display: block;
+  width: 32mm;
+  height: 32mm;
+  background: #fff;
+  shape-rendering: crispEdges;
+}
+
 .factura-ticket__qr-texto {
   text-align: center;
   font-size: 10px;
@@ -192,5 +200,10 @@
     padding: 2mm 3mm !important;
     margin: 0 !important;
     font-weight: 700 !important;
+  }
+
+  .factura-ticket__qr-code {
+    width: 32mm !important;
+    height: 32mm !important;
   }
 }

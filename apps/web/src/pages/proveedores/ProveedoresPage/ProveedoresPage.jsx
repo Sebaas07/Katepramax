@@ -11,6 +11,7 @@ import "./ProveedoresPage.css";
 
 const ProveedoresPage = () => {
   const { esAdmin, esBodega, esOficinista, isAuthenticated, isSessionChecked } = useAuth();
+  const puedeCrear = esAdmin || esBodega || esOficinista;
   const puedeGestionar = esAdmin || esBodega;
   const puedeAbonar = esAdmin || esBodega || esOficinista;
   const navigate = useNavigate();
@@ -220,8 +221,8 @@ const ProveedoresPage = () => {
             </select>
           </div>
 
-          {/* Botón visible para Admin y Bodega */}
-          {puedeGestionar && (
+          {/* El alta también está disponible para Oficinista */}
+          {puedeCrear && (
             <button className="btn-primary" onClick={abrirNuevoProveedor} type="button">
               <span className="material-symbols-outlined" aria-hidden="true">add</span>
               Nuevo Proveedor
