@@ -28,6 +28,17 @@ const incluirDetalle = {
   asignador: { select: { id: true, nombreCompleto: true } },
 };
 
+const incluirDetalleEntregador = {
+  ...incluirDetalle,
+  pedido: {
+    ...incluirDetalle.pedido,
+    select: {
+      ...incluirDetalle.pedido.select,
+      cliente: { select: { id: true, nombre: true, telefono: true } },
+    },
+  },
+};
+
 const asignacionRepository = (prisma) => ({
   crear: (data) =>
     prisma.asignacionEntrega.create({ data, include: incluirDetalle }),
@@ -38,13 +49,19 @@ const asignacionRepository = (prisma) => ({
       include: incluirDetalle,
     }),
 
+  findByIdEntregador: (id) =>
+    prisma.asignacionEntrega.findUnique({
+      where: { id },
+      include: incluirDetalleEntregador,
+    }),
+
   obtenerAsignacionPorPedido: (pedidoId) =>
     prisma.asignacionEntrega.findFirst({
       where: { pedidoId },
       orderBy: { asignadoEn: "desc" },
     }),
 
-  listar: ({ entregadorId, estado, pedidoId, skip = 0, take = 50 } = {}) => {
+  listar: ({ entregadorId, estado, pedidoId, skip = 0, take = 50, entregador = false } = {}) => {
     const where = {};
     if (entregadorId) where.entregadorId = entregadorId;
     if (estado) where.estado = estado;
@@ -52,7 +69,7 @@ const asignacionRepository = (prisma) => ({
 
     return prisma.asignacionEntrega.findMany({
       where,
-      include: incluirDetalle,
+      include: entregador ? incluirDetalleEntregador : incluirDetalle,
       orderBy: { asignadoEn: "desc" },
       skip,
       take,

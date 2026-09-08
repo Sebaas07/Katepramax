@@ -154,7 +154,7 @@ const EgresosTab = memo(
 
         {resumenConcepto?.length > 0 && (
           <div className="cont-tabla-wrap">
-            <h4 className="cont-subtitulo">Egresos por concepto</h4>
+            <h4 className="cont-subtitulo cont-tabla-titulo">Egresos por concepto</h4>
             <TablaGenerica
               columnas={COLUMNAS_CONCEPTO}
               datos={resumenConcepto}

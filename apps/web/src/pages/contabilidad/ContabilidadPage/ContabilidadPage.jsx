@@ -706,16 +706,20 @@ const ContabilidadPage = () => {
               ) : (
                 <div className="filter-group">
                   <label htmlFor="cont-semana">Semana</label>
-                  <input
+                  <select
                     id="cont-semana"
-                    type="number"
-                    min="1"
-                    max="53"
                     value={filtroSemana}
                     onChange={(e) => handleFiltroSemana(e.target.value)}
-                    className="filter-select"
-                    style={{ minWidth: 72 }}
-                  />
+                    className="filter-select filter-select--week"
+                  >
+                    {Array.from({ length: 53 }, (_, index) => index + 1).map(
+                      (semana) => (
+                        <option key={semana} value={semana}>
+                          Semana {semana}
+                        </option>
+                      ),
+                    )}
+                  </select>
                 </div>
               )}
             </>
@@ -723,16 +727,20 @@ const ContabilidadPage = () => {
           {(tab === "proveedores" || tab === "cartera") && (
             <div className="filter-group">
               <label htmlFor="cont-semana">Semana</label>
-              <input
+              <select
                 id="cont-semana"
-                type="number"
-                min="1"
-                max="53"
                 value={filtroSemana}
                 onChange={(e) => handleFiltroSemana(e.target.value)}
-                className="filter-select"
-                style={{ minWidth: 72 }}
-              />
+                className="filter-select filter-select--week"
+              >
+                {Array.from({ length: 53 }, (_, index) => index + 1).map(
+                  (semana) => (
+                    <option key={semana} value={semana}>
+                      Semana {semana}
+                    </option>
+                  ),
+                )}
+              </select>
             </div>
           )}
           {tab === "cobros" && (

@@ -299,6 +299,20 @@ select.form-control option {
   color: var(--error);
 }
 
+.entr-pago-mixto {
+  align-items: end;
+}
+
+.entr-pago-mixto__total {
+  grid-column: 1 / -1;
+  padding: 0.7rem 0.875rem;
+  border: 1px solid var(--aged-gold-border);
+  border-radius: var(--radius-md);
+  background: var(--aged-gold-dim);
+  color: var(--secondary);
+  font-weight: 700;
+}
+
 .entr-abono-deuda {
   padding: 0.75rem;
   background: rgba(255, 200, 80, 0.08);

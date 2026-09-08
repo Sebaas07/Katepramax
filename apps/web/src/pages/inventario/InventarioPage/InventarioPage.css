@@ -74,6 +74,8 @@
   border: 1px solid rgba(233, 195, 73, 0.12);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  padding-bottom: 0.75rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
 }
 
 /* ─── Page actions ───────────────────────────────────────────*/
@@ -163,6 +165,7 @@
   flex-wrap: wrap;
   margin-bottom: 1rem;
   align-items: flex-end;
+  padding: 1.25rem 1.5rem 0;
 }
 
 .filter-group {
@@ -189,6 +192,9 @@
   font-size: 13px;
   color: var(--on-surface);
   min-width: 130px;
+  min-height: 2.5rem;
+  line-height: 1.2;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 14px rgba(0, 0, 0, 0.12);
   cursor: pointer;
   outline: none;
   appearance: none;
@@ -196,6 +202,13 @@
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   transition: border-color var(--transition-fast);
+}
+
+.filter-select--bodega {
+  min-width: 190px;
+  padding-left: 1rem;
+  padding-right: 2.5rem;
+  font-weight: 600;
 }
 
 .filter-select:focus {

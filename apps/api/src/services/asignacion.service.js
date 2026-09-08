@@ -197,6 +197,7 @@ const asignacionService = (app) => ({
       estado,
       skip: Number(skip ?? 0),
       take: Number(take ?? 50),
+      entregador: true,
     }),
 
   /**
@@ -222,6 +223,9 @@ const asignacionService = (app) => ({
       }
     }
 
+    if (usuario.rol === "Entregador") {
+      return this.repo.findByIdEntregador(id);
+    }
     return asignacion;
   },
 
@@ -450,7 +454,9 @@ const asignacionService = (app) => ({
         `Confirmó la entrega #${id} del pedido #${asignacion.pedidoId} (cobró ${monto} vía ${metodoPago}${detalleAbono}).`,
       );
 
-      return this.repo.findById(id);
+      return rolUsuario === "Entregador"
+        ? this.repo.findByIdEntregador(id)
+        : this.repo.findById(id);
     }
 
     const dataUpdate = { estado: nuevoEstado };
@@ -467,7 +473,9 @@ const asignacionService = (app) => ({
         "MARCAR_ENTREGA_FALLIDA",
         `Marcó como fallida la entrega #${id} del pedido #${asignacion.pedidoId}.`,
       );
-      return this.repo.findById(id);
+      return rolUsuario === "Entregador"
+        ? this.repo.findByIdEntregador(id)
+        : this.repo.findById(id);
     }
 
     const actualizado = await this.repo.update(id, dataUpdate);
@@ -477,6 +485,16 @@ const asignacionService = (app) => ({
       "ACTUALIZAR_ASIGNACION",
       `Actualizó la asignación #${id} a estado "${nuevoEstado}".`,
     );
+    if (rolUsuario === "Entregador") {
+      const clienteSeguro = { ...actualizado.pedido?.cliente };
+      delete clienteSeguro.saldoDeuda;
+      return {
+        ...actualizado,
+        pedido: actualizado.pedido
+          ? { ...actualizado.pedido, cliente: clienteSeguro }
+          : actualizado.pedido,
+      };
+    }
     return actualizado;
   },
 });

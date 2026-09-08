@@ -55,6 +55,9 @@ const entregaService = {
           throw new Error("Para pago Mixto ingresa el monto en efectivo y en transferencia.");
         }
         const suma = parseFloat(montoEfectivo) + parseFloat(montoTransferencia);
+        if (!Number.isFinite(suma) || suma <= 0) {
+          throw new Error("El pago Mixto debe tener un valor recibido mayor a cero.");
+        }
         if (Math.abs(suma - parseFloat(montoCobrado)) > 0.01) {
           throw new Error(
             "La suma de efectivo + transferencia debe ser igual al monto cobrado.",

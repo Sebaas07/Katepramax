@@ -334,7 +334,7 @@ const InventarioPage = () => {
                         sedeId: e.target.value,
                       }))
                     }
-                    className="filter-select"
+                    className="filter-select filter-select--bodega"
                   >
                     <option value="">Todas</option>
                     {bodegasVisiblesMemo.map((sede) => (

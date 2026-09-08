@@ -282,12 +282,21 @@ const EntregasPage = () => {
   const handleConfirmar = async () => {
     setGuardando(true);
     try {
+      const montoMixto =
+        (parseFloat(formConfirmar.montoEfectivo) || 0) +
+        (parseFloat(formConfirmar.montoTransferencia) || 0);
+      const montoCobrado =
+        formConfirmar.metodoPago === "Mixto"
+          ? montoMixto
+          : formConfirmar.metodoPago === "Credito"
+            ? 0
+            : formConfirmar.montoCobrado;
+
       await entregaService.confirmarEntrega(asignacionActiva.id, {
-        montoCobrado: formConfirmar.metodoPago === "Credito" ? 0 : formConfirmar.montoCobrado,
+        montoCobrado,
         metodoPago: formConfirmar.metodoPago,
         montoEfectivo: formConfirmar.montoEfectivo,
         montoTransferencia: formConfirmar.montoTransferencia,
-        abonoDeuda: formConfirmar.abonoDeuda,
         observaciones: formConfirmar.observaciones,
         fechaConfirmada: formConfirmar.fechaConfirmada,
       });
@@ -551,30 +560,34 @@ const EntregasPage = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="entr-monto">Monto Cobrado ($) *</label>
-            <input
-              id="entr-monto"
-              type="number"
-              value={formConfirmar.metodoPago === "Credito" ? 0 : formConfirmar.montoCobrado}
-              onChange={(e) =>
-                setFormConfirmar((p) => ({
-                  ...p,
-                  montoCobrado: e.target.value,
-                }))
-              }
-              className="form-control"
-              min="0"
-              step="100"
-              placeholder="0"
-              disabled={formConfirmar.metodoPago === "Credito"}
-            />
-            {formConfirmar.metodoPago === "Credito" && (
-              <span className="form-hint">
-                Con pago a crédito no se cobra nada ahora; el pedido queda como deuda del cliente.
-              </span>
-            )}
-          </div>
+          {formConfirmar.metodoPago !== "Mixto" && (
+            <div className="form-group">
+              <label htmlFor="entr-monto">
+                {formConfirmar.metodoPago === "Credito" ? "Monto cobrado" : "Valor recibido ($) *"}
+              </label>
+              <input
+                id="entr-monto"
+                type="number"
+                value={formConfirmar.metodoPago === "Credito" ? 0 : formConfirmar.montoCobrado}
+                onChange={(e) =>
+                  setFormConfirmar((p) => ({
+                    ...p,
+                    montoCobrado: e.target.value,
+                  }))
+                }
+                className="form-control"
+                min="0"
+                step="100"
+                placeholder="0"
+                disabled={formConfirmar.metodoPago === "Credito"}
+              />
+              {formConfirmar.metodoPago === "Credito" && (
+                <span className="form-hint">
+                  Con pago a crédito no se cobra nada ahora; el pedido queda como deuda del cliente.
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="entr-metodo">Forma de Pago *</label>
@@ -595,7 +608,7 @@ const EntregasPage = () => {
           </div>
 
           {formConfirmar.metodoPago === "Mixto" && (
-            <div className="form-row">
+            <div className="form-row entr-pago-mixto">
               <div className="form-group">
                 <label htmlFor="entr-efectivo">Monto en Efectivo ($) *</label>
                 <input
@@ -626,45 +639,12 @@ const EntregasPage = () => {
                   placeholder="0"
                 />
               </div>
-              {(() => {
-                const suma =
+              <div className="form-hint entr-pago-mixto__total">
+                Total recibido: {formatCOP(
                   (parseFloat(formConfirmar.montoEfectivo) || 0) +
-                  (parseFloat(formConfirmar.montoTransferencia) || 0);
-                const cobrado = parseFloat(formConfirmar.montoCobrado) || 0;
-                const coincide = Math.abs(suma - cobrado) < 0.01;
-                return (
-                  <span className={`form-hint ${!coincide ? "form-hint--error" : ""}`}>
-                    Efectivo + transferencia: {formatCOP(suma)}
-                    {!coincide && ` — debe ser igual al monto cobrado (${formatCOP(cobrado)})`}
-                  </span>
-                );
-              })()}
-            </div>
-          )}
-
-          {Number(asignacionActiva?.pedido?.cliente?.saldoDeuda ?? 0) > 0 && (
-            <div className="form-group entr-abono-deuda">
-              <label htmlFor="entr-abono">Abono a deuda anterior del cliente (opcional)</label>
-              <span className="form-hint">
-                Este cliente tiene un saldo pendiente de{" "}
-                <strong>
-                  {formatCOP(asignacionActiva.pedido.cliente.saldoDeuda)}
-                </strong>{" "}
-                de pedidos anteriores. Si te entregó dinero extra para esa deuda, regístralo aquí.
-              </span>
-              <input
-                id="entr-abono"
-                type="number"
-                value={formConfirmar.abonoDeuda}
-                onChange={(e) =>
-                  setFormConfirmar((p) => ({ ...p, abonoDeuda: e.target.value }))
-                }
-                className="form-control"
-                min="0"
-                max={asignacionActiva.pedido.cliente.saldoDeuda}
-                step="100"
-                placeholder="0"
-              />
+                  (parseFloat(formConfirmar.montoTransferencia) || 0),
+                )}
+              </div>
             </div>
           )}
 
