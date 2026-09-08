@@ -6,6 +6,7 @@ import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
 import { formatFecha } from "@/utils/formatters";
+import SedeForm from "./SedeForm";
 import "./SedesPage.css";
 
 const Spinner = () => (
@@ -351,69 +352,23 @@ const SedesPage = () => {
         disabled={guardando}
         maxWidth="480px"
       >
-        <div className="modal-form modal-form--sede">
-          <div className="form-group">
-            <label htmlFor="sed-nombre">Nombre de la sede *</label>
-            <input
-              id="sed-nombre"
-              name="nombre"
-              type="text"
-              value={nombre}
-              onChange={(e) => {
-                setNombre(e.target.value);
-                setErrorNombre("");
-              }}
-              className="form-control"
-              placeholder="Ej: Villavicencio Centro, Medellín..."
-              autoComplete="off"
-            />
-            {errorNombre && <span className="form-error">{errorNombre}</span>}
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="sed-tipo">Tipo de sede *</label>
-            <select
-              id="sed-tipo"
-              name="tipo"
-              value={tipo}
-              onChange={(e) => {
-                setTipo(e.target.value);
-                if (e.target.value !== "Oficina") setBodegaId("");
-              }}
-              className="form-control"
-            >
-              <option value="Bodega">Bodega</option>
-              <option value="Oficina">Oficina</option>
-            </select>
-          </div>
-
-          {tipo === "Oficina" && (
-            <div className="form-group">
-              <label htmlFor="sed-bodega">Bodega de la oficina</label>
-              <select
-                id="sed-bodega"
-                name="bodegaId"
-                value={bodegaId}
-                onChange={(e) => setBodegaId(e.target.value)}
-                className="form-control"
-              >
-                <option value="">Seleccione una bodega...</option>
-                {sedes.flatMap((s) =>
-                  s.tipo === "Bodega" && s.activo && s.id !== sedeSel?.id
-                    ? [
-                        <option key={s.id} value={s.id}>
-                          {s.nombre}
-                        </option>,
-                      ]
-                    : [],
-                )}
-              </select>
-              <span className="form-hint">
-                La oficina verá y despachará los envíos de esta bodega.
-              </span>
-            </div>
-          )}
-        </div>
+        <SedeForm
+          nombre={nombre}
+          tipo={tipo}
+          bodegaId={bodegaId}
+          sedes={sedes}
+          sedeSel={sedeSel}
+          errorNombre={errorNombre}
+          onNombreChange={(e) => {
+            setNombre(e.target.value);
+            setErrorNombre("");
+          }}
+          onTipoChange={(e) => {
+            setTipo(e.target.value);
+            if (e.target.value !== "Oficina") setBodegaId("");
+          }}
+          onBodegaChange={(e) => setBodegaId(e.target.value)}
+        />
       </Modal>
 
       <Modal
