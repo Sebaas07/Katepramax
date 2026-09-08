@@ -32,7 +32,7 @@ export const TarjetaResumen = memo(({ titulo, icono, color, filas, total }) => (
       ))}
     </div>
     <div className="cont-resumen-card__total">
-      <span>Total semana</span>
+      <span>Total</span>
       <span>{formatCOP(total)}</span>
     </div>
   </div>

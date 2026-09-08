@@ -402,12 +402,13 @@ const asignacionService = (app) => ({
               observacion: `Cobro entrega pedido #${asignacion.pedidoId} (asignación #${id})`,
             });
           } else {
-            // Sin sede (cliente y pedido sin sedeId) no hay dónde registrar
-            // el Ingreso: se deja constancia para que no desaparezca sin
-            // rastro de Contabilidad.
-            console.warn(
-              `[contabilidad] No se registró Ingreso por cobro de la entrega #${id} (pedido #${asignacion.pedidoId}): ` +
-              `no se pudo determinar la sede (cliente y pedido sin sedeId).`,
+            // Todo cobro debe quedar registrado en Contabilidad, así que una
+            // entrega cobrada sin sede asignada no puede confirmarse: se
+            // revierte el estado para no dejar dinero sin contabilizar.
+            throw new AppError(
+              `No se puede confirmar la entrega #${id}: el pedido o su cliente no tienen sede asignada y el cobro ` +
+              `(${efectivoIngreso + cuentasIngreso}) no quedaría registrado en Contabilidad. Asigna una sede antes de confirmar.`,
+              400,
             );
           }
         }
@@ -430,9 +431,13 @@ const asignacionService = (app) => ({
               observacion: `Abono a deuda anterior del cliente (asignación #${id})`,
             });
           } else {
-            console.warn(
-              `[contabilidad] No se registró Ingreso por abono a deuda anterior en la entrega #${id} ` +
-              `(pedido #${asignacion.pedidoId}): no se pudo determinar la sede.`,
+            // Mismo criterio que el cobro: un abono a deuda anterior sin
+            // sede asignada no puede confirmarse, o el abono quedaría fuera
+            // de Contabilidad.
+            throw new AppError(
+              `No se puede confirmar la entrega #${id}: el abono a deuda anterior (${abono}) no quedaría registrado ` +
+              `en Contabilidad porque el pedido o cliente no tienen sede asignada. Asigna una sede antes de confirmar.`,
+              400,
             );
           }
         }

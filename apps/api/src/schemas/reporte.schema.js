@@ -23,7 +23,8 @@ const arqueoSemanalSchema = {
     "semana de negocio de Bogotá (medianoche UTC = día comercial). Incluye los " +
     "bloques por sede (ingresos/egresos/saldo neto), cartera, inventario y el " +
     "detalle del cierre (recaudo, egresos por concepto, ganancia, porDia) para " +
-    "que Cierre Semanal y Arqueo Semanal sean exactamente el mismo reporte. Solo Admin.",
+    "que Cierre Semanal y Arqueo Semanal sean exactamente el mismo reporte. " +
+    "Acceso: Admin, AdminBogota y Oficinista (grupo `gestion`).",
   tags: ["Reportes"], security: [{ bearerAuth: [] }],
   querystring: {
     type: "object",

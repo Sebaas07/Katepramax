@@ -201,12 +201,13 @@ const clienteService = (app) => {
             observacion: `Abono de cliente "${existe.nombre}" (#${id})`,
           });
         } else {
-          // Cliente sin sede y usuario sin sede (Admin sin sede propia):
-          // no hay dónde registrar el Ingreso. Se deja constancia para que
-          // el dinero recibido no desaparezca sin rastro de Contabilidad.
-          console.warn(
-            `[contabilidad] No se registró Ingreso por abono del cliente "${existe.nombre}" (#${id}): ` +
-            `no se pudo determinar la sede.`,
+          // Todo abono es dinero que entra a la caja y debe quedar en
+          // Contabilidad: sin sede no hay dónde registrarlo, así que se
+          // rechaza en lugar de aceptar y dejar el movimiento fuera.
+          throw new AppError(
+            `No se puede registrar el abono del cliente "${existe.nombre}" (#${id}): ` +
+            `el cliente no tiene una sede asignada para reflejarlo en Contabilidad. Asigna una sede al cliente.`,
+            400,
           );
         }
 

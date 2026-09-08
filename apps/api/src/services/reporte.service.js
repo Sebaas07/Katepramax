@@ -11,15 +11,15 @@ const {
 
 function toNum(v) { return Number(v ?? 0); }
 
-// FIX: siempre consulta el nombre real de la sede en BD
 // Reglas de acceso (coherentes con injectSedeFilter en auth.middleware.js):
 //   Admin               → ve todas las sedes, o puede filtrar por una en particular
-//   Bodega / AdminBogota → solo su propia sede, sin excepción
+//   Bodega / Oficinista / AdminBogota → solo su propia sede (usuario.sedeId),
+//   sin excepción. Coherente con el alcance del listado de movimientos de
+//   contabilidad (ingresos/egresos y cierres muestran lo de la propia oficina).
 /**
- * Sedes visibles para un usuario. Las oficinas (tipo Oficina) pertenecen a
- * una bodega (bodegaId); el set se resuelve en el auth middleware
- * (`usuario.sedesOperativas`) para que un Oficinista vea los datos de su
- * oficina y de la bodega que la alimenta, y una Bodega vea sus oficinas.
+ * Sedes visibles para un usuario (para desplegar nombres reales de sede).
+ * Los no-Admin ven únicamente su propia sede (`usuario.sedeId`); un Admin ve
+ * todas las sedes activas o una en particular mediante `sedeIdFiltro`.
  *
  * `soloOficinas` permite restringir el resultado a sedes de tipo "Oficina"
  * (un modo legado que ya no usan los reportes: arqueo y panel incluyen todas
@@ -30,15 +30,14 @@ async function getSedes(prisma, usuario, sedeIdFiltro, soloOficinas = false) {
     soloOficinas ? sedes.filter((s) => s.tipo === "Oficina") : sedes;
 
   if (usuario && usuario.rol !== "Admin") {
-    const sedesIds = Array.isArray(usuario.sedesOperativas)
-      ? usuario.sedesOperativas
-      : [usuario.sedeId];
+    const sedeId = usuario.sedeId;
+    if (sedeId == null) return [];
     const sedes = await prisma.sede.findMany({
-      where: { id: { in: sedesIds } },
+      where: { id: { in: [sedeId] } },
       select: { id: true, nombre: true, tipo: true },
     });
     if (sedes.length > 0) return reducir(sedes);
-    return sedesIds.map((id) => ({ id, nombre: `Sede ${id}` }));
+    return [{ id: sedeId, nombre: `Sede ${sedeId}` }];
   }
 
   if (sedeIdFiltro) {
@@ -52,16 +51,18 @@ async function getSedes(prisma, usuario, sedeIdFiltro, soloOficinas = false) {
   return reducir(sedes);
 }
 
-async function sedeWhere(prisma, usuario, sedeIdFiltro) {
+function sedeWhere(usuario, sedeIdFiltro) {
+  // No-Admin: solo su propia sede, ignorando cualquier filtro externo.
   if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
-    const sedesIds = Array.isArray(usuario.sedesOperativas)
-      ? usuario.sedesOperativas
-      : [usuario.sedeId];
-    // Con una sola sede queda `{ sedeId }` (compatible con el flujo previo);
-    // con varias (bodega + oficinas) se usa `{ sedeId: { in } }`.
-    return sedesIds.length === 1
-      ? { sedeId: sedesIds[0] }
-      : { sedeId: { in: sedesIds } };
+    return { sedeId: usuario.sedeId };
+  }
+  if (sedeIdFiltro != null && sedeIdFiltro !== "") {
+    return { sedeId: Number(sedeIdFiltro) };
+  }
+  return {};
+}
+  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
+    return { sedeId: usuario.sedeId };
   }
   // Admin: acceso total, o filtrado por la familia (bodega + oficinas
   // ligadas) de la sede puntual elegida en el dashboard.

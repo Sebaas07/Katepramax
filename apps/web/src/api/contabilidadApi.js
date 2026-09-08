@@ -32,16 +32,18 @@ const contabilidadApi = {
   },
 
   // Backend: GET /ingresos/resumen-semanal?semana=N → Admin, Bodega
-  obtenerResumenSemanalIngresos: async (semana) => {
-    const r = await clienteApi.get(
-      `/ingresos/resumen-semanal?semana=${semana}`,
-    );
+  obtenerResumenSemanalIngresos: async (semana, sedeId) => {
+    const params = new URLSearchParams({ semana });
+    if (sedeId) params.append("sedeId", sedeId);
+    const r = await clienteApi.get(`/ingresos/resumen-semanal?${params.toString()}`);
     return r.data;
   },
 
   // Backend: GET /ingresos/totales-dia?semana=N → Admin, Bodega
-  obtenerTotalesDiaIngresos: async (semana) => {
-    const r = await clienteApi.get(`/ingresos/totales-dia?semana=${semana}`);
+  obtenerTotalesDiaIngresos: async (semana, sedeId) => {
+    const params = new URLSearchParams({ semana });
+    if (sedeId) params.append("sedeId", sedeId);
+    const r = await clienteApi.get(`/ingresos/totales-dia?${params.toString()}`);
     return r.data;
   },
 
@@ -76,22 +78,28 @@ const contabilidadApi = {
   },
 
   // Backend: GET /egresos/resumen-semanal?semana=N → Admin, Bodega
-  obtenerResumenSemanalEgresos: async (semana) => {
-    const r = await clienteApi.get(`/egresos/resumen-semanal?semana=${semana}`);
+  obtenerResumenSemanalEgresos: async (semana, sedeId) => {
+    const params = new URLSearchParams({ semana });
+    if (sedeId) params.append("sedeId", sedeId);
+    const r = await clienteApi.get(`/egresos/resumen-semanal?${params.toString()}`);
     return r.data;
   },
 
   // Backend: GET /egresos/resumen-concepto?semana=N → Admin, Bodega
-  obtenerResumenConceptoEgresos: async (semana) => {
+  obtenerResumenConceptoEgresos: async (semana, sedeId) => {
+    const params = new URLSearchParams({ semana });
+    if (sedeId) params.append("sedeId", sedeId);
     const r = await clienteApi.get(
-      `/egresos/resumen-concepto?semana=${semana}`,
+      `/egresos/resumen-concepto?${params.toString()}`,
     );
     return r.data;
   },
 
   // Backend: GET /egresos/totales-dia?semana=N → Admin, Bodega
-  obtenerTotalesDiaEgresos: async (semana) => {
-    const r = await clienteApi.get(`/egresos/totales-dia?semana=${semana}`);
+  obtenerTotalesDiaEgresos: async (semana, sedeId) => {
+    const params = new URLSearchParams({ semana });
+    if (sedeId) params.append("sedeId", sedeId);
+    const r = await clienteApi.get(`/egresos/totales-dia?${params.toString()}`);
     return r.data;
   },
 
@@ -156,16 +164,18 @@ const contabilidadApi = {
   },
 
   // Backend: GET /abonos/resumen-proveedor → Admin, Bodega
-  obtenerResumenProveedores: async (semana) => {
-    const r = await clienteApi.get(
-      `/abonos/resumen-proveedor?semana=${semana}`,
-    );
+  obtenerResumenProveedores: async (semana, sedeId) => {
+    const params = new URLSearchParams({ semana });
+    if (sedeId) params.append("sedeId", sedeId);
+    const r = await clienteApi.get(`/abonos/resumen-proveedor?${params.toString()}`);
     return r.data;
   },
 
   // Backend: GET /abonos/resumen-sede?semana=N → Admin, Bodega
-  obtenerResumenSedeAbonos: async (semana) => {
-    const r = await clienteApi.get(`/abonos/resumen-sede?semana=${semana}`);
+  obtenerResumenSedeAbonos: async (semana, sedeId) => {
+    const params = new URLSearchParams({ semana });
+    if (sedeId) params.append("sedeId", sedeId);
+    const r = await clienteApi.get(`/abonos/resumen-sede?${params.toString()}`);
     return r.data;
   },
 

@@ -17,10 +17,10 @@ async function eliminar(request, reply) {
   return reply.send({ mensaje: "Ingreso eliminado" });
 }
 async function resumenSemanal(request, reply) {
-  return reply.send(await svc.resumenPorSede(request.server, Number(request.query.semana), request.user));
+  return reply.send(await svc.resumenPorSede(request.server, Number(request.query.semana), request.user, request.query.sedeId));
 }
 async function totalesDia(request, reply) {
-  return reply.send(await svc.totalesPorDia(request.server, Number(request.query.semana), request.user));
+  return reply.send(await svc.totalesPorDia(request.server, Number(request.query.semana), request.user, request.query.sedeId));
 }
 
 module.exports = { crear, listar, obtenerPorId, editar, eliminar, resumenSemanal, totalesDia };

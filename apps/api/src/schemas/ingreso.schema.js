@@ -48,13 +48,13 @@ const eliminarIngreso = { summary: "Eliminar ingreso", tags: ["Ingresos"], secur
 
 const resumenSemanalIngreso = {
   summary: "Resumen ingresos por sede en una semana", tags: ["Ingresos"], security: [{ bearerAuth: [] }],
-  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer", minimum: 1, maximum: 53 } }, additionalProperties: false },
+  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer", minimum: 1, maximum: 53 }, sedeId: { type: "integer" } }, additionalProperties: false },
   response: { 200: { type: "object", properties: { porSede: { type: "array", items: { type: "object", properties: { sede: { type: "string" }, sedeId: { type: "integer" }, efectivo: { type: "number" }, cuentas: { type: "number" }, total: { type: "number" } } } }, totalGeneral: { type: "object", properties: { efectivo: { type: "number" }, cuentas: { type: "number" }, total: { type: "number" } } } } } },
 };
 
 const totalesDiaIngreso = {
   summary: "Totales de ingresos por día en una semana", tags: ["Ingresos"], security: [{ bearerAuth: [] }],
-  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer" } }, additionalProperties: false },
+  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer" }, sedeId: { type: "integer" } }, additionalProperties: false },
   response: { 200: { type: "array", items: { type: "object", properties: { fecha: { type: "string", format: "date-time" }, efectivo: { type: "number" }, cuentas: { type: "number" }, total: { type: "number" } } } } },
 };
 

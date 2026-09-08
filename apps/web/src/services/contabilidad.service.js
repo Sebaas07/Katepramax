@@ -87,10 +87,11 @@ const contabilidadService = {
     return contabilidadApi.eliminarIngreso(id);
   },
 
-  obtenerResumenSemanalIngresos: async (semana) => {
+  obtenerResumenSemanalIngresos: async (semana, sedeId) => {
     try {
       return await contabilidadApi.obtenerResumenSemanalIngresos(
         normalizarSemana(semana),
+        sedeId || undefined,
       );
     } catch {
       return {
@@ -100,10 +101,11 @@ const contabilidadService = {
     }
   },
 
-  obtenerTotalesDiaIngresos: async (semana) => {
+  obtenerTotalesDiaIngresos: async (semana, sedeId) => {
     try {
       return await contabilidadApi.obtenerTotalesDiaIngresos(
         normalizarSemana(semana),
+        sedeId || undefined,
       );
     } catch {
       return [];
@@ -162,30 +164,33 @@ const contabilidadService = {
     return contabilidadApi.eliminarEgreso(id);
   },
 
-  obtenerResumenSemanalEgresos: async (semana) => {
+  obtenerResumenSemanalEgresos: async (semana, sedeId) => {
     try {
       return await contabilidadApi.obtenerResumenSemanalEgresos(
         normalizarSemana(semana),
+        sedeId || undefined,
       );
     } catch {
       return { porSede: [], totalGeneral: 0 };
     }
   },
 
-  obtenerResumenConceptoEgresos: async (semana) => {
+  obtenerResumenConceptoEgresos: async (semana, sedeId) => {
     try {
       return await contabilidadApi.obtenerResumenConceptoEgresos(
         normalizarSemana(semana),
+        sedeId || undefined,
       );
     } catch {
       return [];
     }
   },
 
-  obtenerTotalesDiaEgresos: async (semana) => {
+  obtenerTotalesDiaEgresos: async (semana, sedeId) => {
     try {
       return await contabilidadApi.obtenerTotalesDiaEgresos(
         normalizarSemana(semana),
+        sedeId || undefined,
       );
     } catch {
       return [];
@@ -284,20 +289,22 @@ const contabilidadService = {
     return contabilidadApi.eliminarPagoProveedor(id);
   },
 
-  obtenerResumenProveedores: async (semana) => {
+  obtenerResumenProveedores: async (semana, sedeId) => {
     try {
       return await contabilidadApi.obtenerResumenProveedores(
         normalizarSemana(semana),
+        sedeId || undefined,
       );
     } catch {
       return [];
     }
   },
 
-  obtenerResumenSedeAbonos: async (semana) => {
+  obtenerResumenSedeAbonos: async (semana, sedeId) => {
     try {
       return await contabilidadApi.obtenerResumenSedeAbonos(
         normalizarSemana(semana),
+        sedeId || undefined,
       );
     } catch {
       return [];

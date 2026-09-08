@@ -82,6 +82,11 @@ const LogsPage = () => {
     return () => window.clearTimeout(id);
   }, [cargarLogs]);
 
+  // Al cambiar cualquier filtro, volver a la primera página
+  const cambiarFiltro = (setter, valor) => {
+    setter(valor);
+    setSkip(0);
+  };
   const logsMapeados = useMemo(
     () =>
       logs.map((l) => ({
@@ -118,10 +123,7 @@ const LogsPage = () => {
           <select
             id="logs-usuario"
             value={filtroUsuarioId}
-            onChange={(e) => {
-              setFiltroUsuarioId(e.target.value);
-              setSkip(0);
-            }}
+            onChange={(e) => cambiarFiltro(setFiltroUsuarioId, e.target.value)}
             className="filter-select"
           >
             <option value="">Todos</option>
@@ -138,10 +140,7 @@ const LogsPage = () => {
           <select
             id="logs-accion"
             value={filtroAccion}
-            onChange={(e) => {
-              setFiltroAccion(e.target.value);
-              setSkip(0);
-            }}
+            onChange={(e) => cambiarFiltro(setFiltroAccion, e.target.value)}
             className="filter-select"
           >
             <option value="">Todas</option>
@@ -159,10 +158,7 @@ const LogsPage = () => {
             id="logs-desde"
             value={filtroFechaInicio}
             max={filtroFechaFin || undefined}
-            onChange={(e) => {
-              setFiltroFechaInicio(e.target.value);
-              setSkip(0);
-            }}
+            onChange={(e) => cambiarFiltro(setFiltroFechaInicio, e.target.value)}
             className="filter-select"
           />
         </div>
@@ -173,10 +169,7 @@ const LogsPage = () => {
             id="logs-hasta"
             value={filtroFechaFin}
             min={filtroFechaInicio || undefined}
-            onChange={(e) => {
-              setFiltroFechaFin(e.target.value);
-              setSkip(0);
-            }}
+            onChange={(e) => cambiarFiltro(setFiltroFechaFin, e.target.value)}
             className="filter-select"
           />
         </div>

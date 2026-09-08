@@ -14,6 +14,10 @@ async function registrar(app, body, usuario) {
   const cuentas = numero(body.cuentas ?? 0, "valor de cuentas");
   if (efectivo <= 0 && cuentas <= 0) throw new AppError("Ingresa al menos un valor en efectivo o cuentas.", 422);
 
+  if (body.sedeId === undefined || body.sedeId === null || String(body.sedeId).trim() === "") {
+    throw new AppError("La sede es obligatoria para registrar un ingreso.", 422);
+  }
+
   let sedeId = Number(body.sedeId);
   if (usuario.rol !== "Admin" && sedeId !== usuario.sedeId) {
     throw new AppError("No puedes registrar ingresos en otra sede.", 403);
@@ -124,12 +128,20 @@ async function borrar(app, id, usuario) {
   return resultado;
 }
 
-async function resumenPorSede(app, semana, usuario) {
-  const where = sedeWhere(usuario);
+// El parámetro `sedeId` solo aplica para Admin (filtro explícito); los demás
+// roles quedan restringidos a su sede por `sedeWhere`, ignorando el query.
+function whereResumen(usuario, sedeId) {
+  return usuario.rol !== "Admin"
+    ? sedeWhere(usuario)
+    : sedeId
+      ? { sedeId: Number(sedeId) }
+      : {};
+}
+
+async function resumenPorSede(app, semana, usuario, sedeId) {
+  const where = whereResumen(usuario, sedeId);
   const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), where.sedeId);
-  const sedes = usuario.rol !== "Admin" && usuario.sedeId != null
-    ? [{ id: usuario.sedeId, nombre: `Sede ${usuario.sedeId}` }]
-    : await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
+  const sedes = await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapa  = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
 
   const porSede = filas.map((f) => ({
@@ -153,8 +165,8 @@ async function resumenPorSede(app, semana, usuario) {
   return { porSede, totalGeneral };
 }
 
-async function totalesPorDia(app, semana, usuario) {
-  const where = sedeWhere(usuario);
+async function totalesPorDia(app, semana, usuario, sedeId) {
+  const where = whereResumen(usuario, sedeId);
   return repo.totalesPorDia(app.prisma, semanaValida(semana), where.sedeId);
 }
 

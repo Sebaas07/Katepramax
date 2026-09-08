@@ -34,6 +34,7 @@ const asignacionMock = {
     id: 1,
     estado: "Asignado",
     observaciones: null,
+    sedeId: 1,
     cliente: { id: 1, nombre: "Juan Pérez", telefono: null },
   },
   entregador: { id: 3, nombreCompleto: "Carlos Entregador", telefono: null },
@@ -410,13 +411,13 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
     prisma.asignacionEntrega.findUnique
       .mockResolvedValueOnce({ ...asignacionMock, estado: "EnRuta" })
       .mockResolvedValueOnce(entregado);
-    prisma.$transaction.mockImplementation(async (fn) => {
-      await fn({
-        asignacionEntrega: { update: vi.fn() },
-        pedido: { update: vi.fn() },
-        cliente: { update: vi.fn() },
-      });
-    });
+    const tx = {
+      asignacionEntrega: { update: vi.fn() },
+      pedido: { update: vi.fn() },
+      cliente: { update: vi.fn() },
+      ingreso: { create: vi.fn() },
+    };
+    prisma.$transaction.mockImplementation(async (fn) => fn(tx));
 
     const res = await app.inject({
       method: "PATCH",
@@ -429,6 +430,18 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
       },
     });
     expect(res.statusCode).toBe(200);
+    expect(tx.ingreso.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          sedeId: 1,
+          efectivo: 50000,
+          cuentas: 0,
+          total: 50000,
+          origen: "entrega",
+          idReferencia: 1,
+        }),
+      }),
+    );
   });
 
   it("debería retornar 200 al confirmar Entregado con metodoPago Mixto", async () => {
@@ -447,6 +460,7 @@ describe("PATCH /api/v1/asignaciones/:id/estado", () => {
       asignacionEntrega: { update: vi.fn() },
       pedido: { update: vi.fn() },
       cliente: { update: vi.fn() },
+      ingreso: { create: vi.fn() },
     };
     prisma.$transaction.mockImplementation(async (fn) => fn(tx));
 

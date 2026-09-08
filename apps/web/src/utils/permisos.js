@@ -54,13 +54,13 @@ export const filtrarPorSede = (filtrosBase = {}) => {
   if (usuario.rol === "Admin") return { ...filtrosBase };
 
   if (usuario.rol === "Bodega" || usuario.rol === "AdminBogota") {
-    const {  ...restoFiltros } = filtrosBase;
+    const { ...restoFiltros } = filtrosBase;
+    delete restoFiltros.sedeId;
     return { ...restoFiltros, sedeId: usuario.sedeId };
   }
 
   return filtrosBase;
 };
-
 /**
  * Verifica si el usuario puede ver datos de una sede específica.
  * Sin export — no se importa en ningún módulo actualmente.

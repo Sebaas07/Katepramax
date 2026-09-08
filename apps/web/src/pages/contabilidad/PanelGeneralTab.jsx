@@ -78,6 +78,33 @@ const PanelGeneralTab = ({
           )}
           subtitulo="Total acumulado por sedes"
         />
+        <TarjetaKpi
+          titulo="Pedidos activos"
+          icono="shopping_cart"
+          color="#ddb7ff"
+          valor={new Intl.NumberFormat("es-CO").format(
+            panelGeneral.pedidosPendientes ?? 0,
+          )}
+          subtitulo="Pendientes o asignados"
+        />
+        <TarjetaKpi
+          titulo="Entregas en ruta"
+          icono="local_shipping"
+          color="#4ade80"
+          valor={new Intl.NumberFormat("es-CO").format(
+            panelGeneral.entregasEnRuta ?? 0,
+          )}
+          subtitulo="Despachos en curso"
+        />
+        <TarjetaKpi
+          titulo="Stock bajo"
+          icono="warning"
+          color="#ffb4ab"
+          valor={new Intl.NumberFormat("es-CO").format(
+            panelGeneral.alertasInventario ?? 0,
+          )}
+          subtitulo="Productos críticos"
+        />
       </div>
 
       <section className="panel-section">

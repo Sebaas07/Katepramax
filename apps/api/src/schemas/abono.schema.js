@@ -109,7 +109,7 @@ const resumenProveedor = {
   querystring: {
     type: "object",
     required: ["semana"],
-    properties: { semana: { type: "integer", minimum: 1, maximum: 53 } },
+    properties: { semana: { type: "integer", minimum: 1, maximum: 53 }, sedeId: { type: "integer" } },
     additionalProperties: false,
   },
   response: {
@@ -135,7 +135,7 @@ const resumenSede = {
   querystring: {
     type: "object",
     required: ["semana"],
-    properties: { semana: { type: "integer", minimum: 1, maximum: 53 } },
+    properties: { semana: { type: "integer", minimum: 1, maximum: 53 }, sedeId: { type: "integer" } },
     additionalProperties: false,
   },
   response: {

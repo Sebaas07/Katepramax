@@ -159,6 +159,7 @@ const ProductosPage = () => {
 
   const [productos, setProductos] = useState([]);
   const [sedes, setSedes] = useState([]);
+  const [, setCargandoSedes] = useState(false);
 
   // Bodegas que el rol puede asignar al crear/editar un producto (Admin ve
   // todas; Bodega solo la suya; Oficinista todas las de su ciudad).

@@ -166,9 +166,17 @@ async function borrar(app, id, usuario) {
   return { mensaje: "Abono eliminado correctamente" };
 }
 
-async function resumenPorProveedor(app, semana, usuario) {
-  const sedeId = await sedeDeuda(app, usuario);
-  const filas = await repo.resumenPorProveedor(app.prisma, semanaValida(semana), sedeId);
+function whereResumen(usuario, sedeId) {
+  return usuario.rol !== "Admin"
+    ? sedeWhere(usuario)
+    : sedeId
+      ? { sedeId: Number(sedeId) }
+      : {};
+}
+
+async function resumenPorProveedor(app, semana, usuario, sedeId) {
+  const where = whereResumen(usuario, sedeId ?? (await sedeDeuda(app, usuario)));
+  const filas = await repo.resumenPorProveedor(app.prisma, semanaValida(semana), where.sedeId);
   const proveedores = await app.prisma.proveedor.findMany({ select: { id: true, nombre: true } });
   const mapa = Object.fromEntries(proveedores.map((p) => [p.id, p.nombre]));
   return filas.map((f) => ({
@@ -179,11 +187,11 @@ async function resumenPorProveedor(app, semana, usuario) {
   }));
 }
 
-async function resumenPorSede(app, semana, usuario) {
-  const sedeId = await sedeDeuda(app, usuario);
-  const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), sedeId);
-  const sedes = usuario.rol !== "Admin" && sedeId != null
-    ? [{ id: sedeId, nombre: (await app.prisma.sede.findUnique({ where: { id: sedeId }, select: { nombre: true } }))?.nombre ?? `Sede ${sedeId}` }]
+async function resumenPorSede(app, semana, usuario, sedeId) {
+  const where = whereResumen(usuario, sedeId ?? (await sedeDeuda(app, usuario)));
+  const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), where.sedeId);
+  const sedes = usuario.rol !== "Admin" && where.sedeId != null
+    ? [{ id: where.sedeId, nombre: (await app.prisma.sede.findUnique({ where: { id: where.sedeId }, select: { nombre: true } }))?.nombre ?? `Sede ${where.sedeId}` }]
     : await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapa  = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
   return filas.map((f) => ({

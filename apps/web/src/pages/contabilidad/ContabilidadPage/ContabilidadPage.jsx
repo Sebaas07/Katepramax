@@ -19,7 +19,7 @@ import {
 // ── Tabs
 import IngresosTab from "../IngresosTab";
 import EgresosTab from "../EgresosTab";
-//import CarteraTab from "../CarteraTab";
+import CarteraTab from "../CarteraTab";
 import ProveedoresTab from "../ProveedoresTab";
 import PanelGeneralTab from "../PanelGeneralTab";
 import CobrosEntregadorTab from "../CobrosEntregadorTab";
@@ -38,7 +38,7 @@ const SEM_ACTUAL = getSemanaISO(new Date());
 const TABS = [
   { key: "ingresos", label: "Ingresos Diarios", icon: "trending_up" },
   { key: "egresos", label: "Egresos Diarios", icon: "trending_down" },
-  //{ key: "cartera", label: "Cartera", icon: "account_balance" },
+  { key: "cartera", label: "Cartera", icon: "account_balance" },
   { key: "proveedores", label: "Proveedores", icon: "payments" },
   { key: "cobros", label: "Cobros por Entregador", icon: "delivery_dining" },
   { key: "cierre-diario", label: "Cierre Diario", icon: "today" },
@@ -50,6 +50,7 @@ const TAB_A_MODAL_TIPO = {
   ingresos: "ingreso",
   egresos: "egreso",
   proveedores: "abono",
+  cartera: "cartera",
 };
 
 const FORM_VACIO = {
@@ -70,10 +71,11 @@ const FORM_VACIO = {
 
 // ─────────────────────────────────────────────────────────────
 const ContabilidadPage = () => {
-  const { usuario, esAdmin, esBodega, esOficinista, isAuthenticated, isSessionChecked } =
+  const { usuario, esAdmin, esBodega, esOficinista, esAdminBogota, isAuthenticated, isSessionChecked } =
     useAuth();
   const sedeIdUsuario = usuario?.sedeId ?? null;
   const puedeRegistrar = esAdmin || esBodega || esOficinista;
+  const puedeRegistrarCartera = esAdmin || esAdminBogota || esOficinista;
 
   // ── Estado de datos ───────────────────────────────────────
   const [tab, setTab] = useState("ingresos");
@@ -81,7 +83,7 @@ const ContabilidadPage = () => {
   const [sedes, setSedes] = useState([]);
   const [ingresos, setIngresos] = useState([]);
   const [egresos, setEgresos] = useState([]);
-  //const [cartera, setCartera] = useState([]);
+  const [cartera, setCartera] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [catalogoProveedores, setCatalogoProveedores] = useState([]);
   const [resumenProv, setResumenProv] = useState([]);
@@ -100,6 +102,8 @@ const ContabilidadPage = () => {
   const [filtroSedeId, setFiltroSedeId] = useState(
     esAdmin ? "" : sedeIdUsuario ? String(sedeIdUsuario) : "",
   );
+  const [vistaMov, setVistaMov] = useState("semana");
+  const [filtroDiaMov, setFiltroDiaMov] = useState(hoyISO());
   const [filtroPanelF, setFiltroPanelFecha] = useState(hoyISO());
   const [fechaInicioCobros, setFechaInicioCobros] = useState(
     () => getRangoSemana(SEM_ACTUAL).inicio,
@@ -158,34 +162,146 @@ const ContabilidadPage = () => {
         // recarga de la tabla tras guardar.
         ...(filtroSedeId ? { sedeId: filtroSedeId } : {}),
       };
+      const esDiaMov = tab !== "cartera" && vistaMov === "dia";
 
       if (tab === "ingresos") {
-        const [lista, resSemanal, totDia] = await Promise.all([
-          contabilidadService.obtenerIngresos(fBase),
-          contabilidadService.obtenerResumenSemanalIngresos(semanaNum),
-          contabilidadService.obtenerTotalesDiaIngresos(semanaNum),
-        ]);
-        setIngresos(lista);
-        setResumenIngSemanal(resSemanal);
-        setTotalesDiaIng(totDia);
+        if (esDiaMov) {
+          const lista = await contabilidadService.obtenerIngresos({
+            fecha: filtroDiaMov || undefined,
+            sedeId: filtroSedeId || undefined,
+          });
+          const ingresosDia = lista ?? [];
+          setIngresos(ingresosDia);
+          const agrupados = new Map();
+          ingresosDia.forEach((i) => {
+            const sId = i.sedeId;
+            const act =
+              agrupados.get(sId) ??
+              {
+                sede: i.sede?.nombre ?? `Sede ${sId}`,
+                sedeId: sId,
+                registros: 0,
+                efectivo: 0,
+                cuentas: 0,
+                total: 0,
+              };
+            act.registros += 1;
+            act.efectivo += Number(i.efectivo ?? 0);
+            act.cuentas += Number(i.cuentas ?? 0);
+            act.total += Number(i.total ?? 0);
+            agrupados.set(sId, act);
+          });
+          const porSede = [...agrupados.values()].filter((p) => p.total > 0);
+          setResumenIngSemanal({
+            porSede,
+            totalGeneral: porSede.reduce(
+              (acc, p) => ({
+                efectivo: acc.efectivo + Number(p.efectivo ?? 0),
+                cuentas: acc.cuentas + Number(p.cuentas ?? 0),
+                total: acc.total + Number(p.total ?? 0),
+              }),
+              { efectivo: 0, cuentas: 0, total: 0 },
+            ),
+          });
+          setTotalesDiaIng([]);
+        } else {
+          const [lista, resSemanal, totDia] = await Promise.all([
+            contabilidadService.obtenerIngresos(fBase),
+            contabilidadService.obtenerResumenSemanalIngresos(
+              semanaNum,
+              filtroSedeId || undefined,
+            ),
+            contabilidadService.obtenerTotalesDiaIngresos(
+              semanaNum,
+              filtroSedeId || undefined,
+            ),
+          ]);
+          setIngresos(lista);
+          setResumenIngSemanal(resSemanal);
+          setTotalesDiaIng(totDia);
+        }
       } else if (tab === "egresos") {
-        const [lista, resSemanal, resConcepto, totDia] = await Promise.all([
-          contabilidadService.obtenerEgresos(fBase),
-          contabilidadService.obtenerResumenSemanalEgresos(semanaNum),
-          contabilidadService.obtenerResumenConceptoEgresos(semanaNum),
-          contabilidadService.obtenerTotalesDiaEgresos(semanaNum),
-        ]);
-        setEgresos(lista);
-        setResumenEgrSemanal(resSemanal);
-        setResumenEgrConcepto(resConcepto);
-        setTotalesDiaEgr(totDia);
+        if (esDiaMov) {
+          const lista = await contabilidadService.obtenerEgresos({
+            fecha: filtroDiaMov || undefined,
+            sedeId: filtroSedeId || undefined,
+          });
+          const egresosDia = lista ?? [];
+          setEgresos(egresosDia);
+          const agrupados = new Map();
+          egresosDia.forEach((e) => {
+            const sId = e.sedeId;
+            const act =
+              agrupados.get(sId) ??
+              {
+                sede: e.sede?.nombre ?? `Sede ${sId}`,
+                sedeId: sId,
+                registros: 0,
+                total: 0,
+              };
+            act.registros += 1;
+            act.total += Number(e.total ?? 0);
+            agrupados.set(sId, act);
+          });
+          setResumenEgrSemanal({
+            porSede: [...agrupados.values()].filter((p) => p.total > 0),
+            totalGeneral: [...agrupados.values()].reduce(
+              (sum, p) => sum + Number(p.total ?? 0),
+              0,
+            ),
+          });
+          const porConceptoMap = new Map();
+          egresosDia.forEach((e) => {
+            const concepto = e.concepto ?? "Sin concepto";
+            const act = porConceptoMap.get(concepto) ?? { total: 0, registros: 0 };
+            act.total += Number(e.total ?? 0);
+            act.registros += 1;
+            porConceptoMap.set(concepto, act);
+          });
+          setResumenEgrConcepto(
+            [...porConceptoMap.entries()]
+              .map(([concepto, v]) => ({
+                concepto,
+                registros: v.registros,
+                total: v.total,
+              }))
+              .sort((a, b) => b.total - a.total),
+          );
+          setTotalesDiaEgr([]);
+        } else {
+          const [lista, resSemanal, resConcepto, totDia] = await Promise.all([
+            contabilidadService.obtenerEgresos(fBase),
+            contabilidadService.obtenerResumenSemanalEgresos(
+              semanaNum,
+              filtroSedeId || undefined,
+            ),
+            contabilidadService.obtenerResumenConceptoEgresos(
+              semanaNum,
+              filtroSedeId || undefined,
+            ),
+            contabilidadService.obtenerTotalesDiaEgresos(
+              semanaNum,
+              filtroSedeId || undefined,
+            ),
+          ]);
+          setEgresos(lista);
+          setResumenEgrSemanal(resSemanal);
+          setResumenEgrConcepto(resConcepto);
+          setTotalesDiaEgr(totDia);
+        }
       } else if (tab === "cartera") {
-        //setCartera(await contabilidadService.obtenerCartera(fBase));
+        setCartera(await contabilidadService.obtenerCartera(fBase));
       } else if (tab === "proveedores") {
         const [lista, resumen, resSede, saldosDeuda] = await Promise.all([
           contabilidadService.listarAbonos(fBase),
-          contabilidadService.obtenerResumenProveedores(semanaNum),
-          contabilidadService.obtenerResumenSedeAbonos(semanaNum),
+          contabilidadService.obtenerResumenProveedores(
+            semanaNum,
+            filtroSedeId || undefined,
+          ),
+          contabilidadService.obtenerResumenSedeAbonos(
+            semanaNum,
+            filtroSedeId || undefined,
+          ),
           contabilidadService.obtenerDeudaProveedores(),
         ]);
         setProveedores(lista);
@@ -209,7 +325,7 @@ const ContabilidadPage = () => {
     } finally {
       setCargando(false);
     }
-  }, [tab, esTabCierre, filtroSemana, filtroSedeId, filtroPanelF, fechaInicioCobros, fechaFinCobros, esAdmin]);
+  }, [tab, esTabCierre, filtroSemana, filtroSedeId, filtroPanelF, filtroDiaMov, vistaMov, fechaInicioCobros, fechaFinCobros, esAdmin]);
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
@@ -497,14 +613,16 @@ const ContabilidadPage = () => {
   }, [eliminarTipo, itemEliminar, cargarDatos]);
 
   const mostrarBotonRegistrar =
-    puedeRegistrar &&
-    ["ingresos", "egresos", "proveedores"].includes(tab);
+    tab === "cartera"
+      ? puedeRegistrarCartera
+      : puedeRegistrar && ["ingresos", "egresos", "proveedores"].includes(tab);
 
   const textoBotonNuevo =
     {
       ingresos: "Nuevo ingreso",
       egresos: "Nuevo egreso",
       proveedores: "Registrar abono",
+      cartera: "Registrar saldo",
     }[tab] ?? "Nuevo";
 
   const subtituloHeader =
@@ -516,7 +634,11 @@ const ContabilidadPage = () => {
           ? "Cierre de caja de la semana"
           : tab === "cobros"
             ? `${formatFecha(fechaInicioCobros)} — ${formatFecha(fechaFinCobros)}`
-            : `Semana ${filtroSemana || SEM_ACTUAL}`;
+            : tab === "ingresos" || tab === "egresos"
+              ? vistaMov === "dia"
+                ? `Día ${formatFecha(filtroDiaMov)}`
+                : `Semana ${filtroSemana || SEM_ACTUAL}`
+              : `Semana ${filtroSemana || SEM_ACTUAL}`;
 
   return (
     <div className="cont-page">
@@ -544,9 +666,60 @@ const ContabilidadPage = () => {
               </select>
             </div>
           )}
-          {tab !== "panel" &&
-            tab !== "cobros" &&
-            !esTabCierre && (
+          {(tab === "ingresos" || tab === "egresos") && (
+            <>
+              <div className="filter-group">
+                <label htmlFor="cont-vista-mov">Vista</label>
+                <div
+                  className="cont-vista-toggle"
+                  role="group"
+                  aria-label="Vista de movimientos"
+                >
+                  <button
+                    type="button"
+                    className={`cont-vista-btn ${vistaMov === "dia" ? "cont-vista-btn--active" : ""}`}
+                    onClick={() => setVistaMov("dia")}
+                  >
+                    Día
+                  </button>
+                  <button
+                    type="button"
+                    className={`cont-vista-btn ${vistaMov === "semana" ? "cont-vista-btn--active" : ""}`}
+                    onClick={() => setVistaMov("semana")}
+                  >
+                    Semana
+                  </button>
+                </div>
+              </div>
+              {vistaMov === "dia" ? (
+                <div className="filter-group">
+                  <label htmlFor="cont-dia-mov">Día</label>
+                  <DatePicker
+                    id="cont-dia-mov"
+                    max={hoyISO()}
+                    value={filtroDiaMov}
+                    onChange={(e) => setFiltroDiaMov(e.target.value)}
+                    className="filter-select"
+                  />
+                </div>
+              ) : (
+                <div className="filter-group">
+                  <label htmlFor="cont-semana">Semana</label>
+                  <input
+                    id="cont-semana"
+                    type="number"
+                    min="1"
+                    max="53"
+                    value={filtroSemana}
+                    onChange={(e) => handleFiltroSemana(e.target.value)}
+                    className="filter-select"
+                    style={{ minWidth: 72 }}
+                  />
+                </div>
+              )}
+            </>
+          )}
+          {(tab === "proveedores" || tab === "cartera") && (
             <div className="filter-group">
               <label htmlFor="cont-semana">Semana</label>
               <input
@@ -647,6 +820,16 @@ const ContabilidadPage = () => {
               resumenSemanal={resumenEgrSemanal}
               resumenConcepto={resumenEgrConcepto}
               totalesDia={totalesDiaEgr}
+            />
+          )}
+
+          {tab === "cartera" && (
+            <CarteraTab
+              cartera={cartera}
+              sedes={sedes}
+              esAdmin={esAdmin}
+              onEditar={abrirEditar}
+              onEliminar={abrirEliminar}
             />
           )}
 
