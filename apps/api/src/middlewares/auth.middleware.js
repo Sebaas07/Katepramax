@@ -46,7 +46,8 @@ const verifyToken = async (request, reply) => {
         const oficinas = (sede.oficinas ?? []).map((o) => o.id);
         sedesOperativas = oficinas.length > 0 ? oficinas : [0];
       } else if (sede.tipo === "Oficina" && sede.bodegaId) {
-        sedesOperativas = [sede.id, sede.bodegaId];
+        const oficinasDeLaBodega = (sede.bodega?.oficinas ?? []).map((o) => o.id);
+        sedesOperativas = [sede.bodegaId, ...oficinasDeLaBodega];
       }
     }
 

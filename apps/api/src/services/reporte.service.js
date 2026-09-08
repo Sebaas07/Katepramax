@@ -311,7 +311,7 @@ async function panelGeneral(app, { fecha, sedeId } = {}, usuario) {
   });
 
   // Entregas en ruta (la sede se filtra vía la relación con Pedido)
-  const pedidoWhere = whereSede.sedeId !== undefined ? { sedeId: whereSede.sedeId } : undefined;
+  const pedidoWhere = Object.keys(whereSede).length > 0 ? whereSede : undefined;
   const entregasEnRuta = await prisma.asignacionEntrega.count({
     where: { estado: "EnRuta", ...(pedidoWhere ? { pedido: pedidoWhere } : {}) },
   });
