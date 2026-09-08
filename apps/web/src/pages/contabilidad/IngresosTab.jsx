@@ -113,19 +113,22 @@ const IngresosTab = ({
   const acciones = useMemo(
     () =>
       esAdmin
-        ? (row) => [
-            {
-              label: "Editar",
-              icon: "edit",
-              onClick: () => onEditar(row, "ingreso"),
-            },
-            {
-              label: "Eliminar",
-              icon: "delete",
-              variante: "danger",
-              onClick: () => onEliminar(row, "ingreso"),
-            },
-          ]
+        ? (row) =>
+            row.origen && row.origen !== "manual"
+              ? []
+              : [
+                  {
+                    label: "Editar",
+                    icon: "edit",
+                    onClick: () => onEditar(row, "ingreso"),
+                  },
+                  {
+                    label: "Eliminar",
+                    icon: "delete",
+                    variante: "danger",
+                    onClick: () => onEliminar(row, "ingreso"),
+                  },
+                ]
         : undefined,
     [esAdmin, onEditar, onEliminar],
   );

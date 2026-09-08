@@ -88,28 +88,17 @@ const contabilidadService = {
   },
 
   obtenerResumenSemanalIngresos: async (semana, sedeId) => {
-    try {
-      return await contabilidadApi.obtenerResumenSemanalIngresos(
-        normalizarSemana(semana),
-        sedeId || undefined,
-      );
-    } catch {
-      return {
-        porSede: [],
-        totalGeneral: { efectivo: 0, cuentas: 0, total: 0 },
-      };
-    }
+    return contabilidadApi.obtenerResumenSemanalIngresos(
+      normalizarSemana(semana),
+      sedeId || undefined,
+    );
   },
 
   obtenerTotalesDiaIngresos: async (semana, sedeId) => {
-    try {
-      return await contabilidadApi.obtenerTotalesDiaIngresos(
-        normalizarSemana(semana),
-        sedeId || undefined,
-      );
-    } catch {
-      return [];
-    }
+    return contabilidadApi.obtenerTotalesDiaIngresos(
+      normalizarSemana(semana),
+      sedeId || undefined,
+    );
   },
 
   // ── EGRESOS ───────────────────────────────────────────────
@@ -165,36 +154,24 @@ const contabilidadService = {
   },
 
   obtenerResumenSemanalEgresos: async (semana, sedeId) => {
-    try {
-      return await contabilidadApi.obtenerResumenSemanalEgresos(
-        normalizarSemana(semana),
-        sedeId || undefined,
-      );
-    } catch {
-      return { porSede: [], totalGeneral: 0 };
-    }
+    return contabilidadApi.obtenerResumenSemanalEgresos(
+      normalizarSemana(semana),
+      sedeId || undefined,
+    );
   },
 
   obtenerResumenConceptoEgresos: async (semana, sedeId) => {
-    try {
-      return await contabilidadApi.obtenerResumenConceptoEgresos(
-        normalizarSemana(semana),
-        sedeId || undefined,
-      );
-    } catch {
-      return [];
-    }
+    return contabilidadApi.obtenerResumenConceptoEgresos(
+      normalizarSemana(semana),
+      sedeId || undefined,
+    );
   },
 
   obtenerTotalesDiaEgresos: async (semana, sedeId) => {
-    try {
-      return await contabilidadApi.obtenerTotalesDiaEgresos(
-        normalizarSemana(semana),
-        sedeId || undefined,
-      );
-    } catch {
-      return [];
-    }
+    return contabilidadApi.obtenerTotalesDiaEgresos(
+      normalizarSemana(semana),
+      sedeId || undefined,
+    );
   },
 
   // ── CARTERA ───────────────────────────────────────────────

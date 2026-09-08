@@ -84,7 +84,10 @@ async function editar(app, id, body, usuario) {
     throw new AppError("No tienes permiso para editar egresos.", 403);
   }
 
-  await obtenerPorId(app, id, usuario);
+  const actual = await obtenerPorId(app, id, usuario);
+  if (actual.origen && actual.origen !== "manual") {
+    throw new AppError("Los egresos automáticos se corrigen desde el módulo que los generó.", 409);
+  }
   const data = {};
   if (body.concepto !== undefined) {
     const concepto = sanitizarTexto(body.concepto, 200);
@@ -108,7 +111,10 @@ async function borrar(app, id, usuario) {
     throw new AppError("No tienes permiso para eliminar egresos.", 403);
   }
 
-  await obtenerPorId(app, id, usuario);
+  const actual = await obtenerPorId(app, id, usuario);
+  if (actual.origen && actual.origen !== "manual") {
+    throw new AppError("Los egresos automáticos no se pueden eliminar desde Contabilidad.", 409);
+  }
   const resultado = await repo.eliminar(app.prisma, id);
   await registrarAccion(
     app,

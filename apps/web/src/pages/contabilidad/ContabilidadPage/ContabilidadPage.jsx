@@ -76,6 +76,7 @@ const ContabilidadPage = () => {
   const sedeIdUsuario = usuario?.sedeId ?? null;
   const puedeRegistrar = esAdmin || esBodega || esOficinista;
   const puedeRegistrarCartera = esAdmin || esAdminBogota || esOficinista;
+  const puedeGestionarMovimientos = esAdmin || esAdminBogota;
 
   // ── Estado de datos ───────────────────────────────────────
   const [tab, setTab] = useState("ingresos");
@@ -802,7 +803,7 @@ const ContabilidadPage = () => {
             <IngresosTab
               ingresos={ingresosMapeados}
               sedes={sedes}
-              esAdmin={esAdmin}
+              esAdmin={puedeGestionarMovimientos}
               onEditar={abrirEditar}
               onEliminar={abrirEliminar}
               resumenSemanal={resumenIngSemanal}
@@ -814,7 +815,7 @@ const ContabilidadPage = () => {
             <EgresosTab
               egresos={egresosMapeados}
               sedes={sedes}
-              esAdmin={esAdmin}
+              esAdmin={puedeGestionarMovimientos}
               onEditar={abrirEditar}
               onEliminar={abrirEliminar}
               resumenSemanal={resumenEgrSemanal}
@@ -827,7 +828,7 @@ const ContabilidadPage = () => {
             <CarteraTab
               cartera={cartera}
               sedes={sedes}
-              esAdmin={esAdmin}
+              esAdmin={puedeGestionarMovimientos}
               onEditar={abrirEditar}
               onEliminar={abrirEliminar}
             />
@@ -838,7 +839,7 @@ const ContabilidadPage = () => {
               proveedores={proveedoresMap}
               resumenProv={resumenProv}
               resumenSede={resumenSedeAbonos}
-              esAdmin={esAdmin}
+              esAdmin={puedeGestionarMovimientos}
               saldosDeuda={deudaProveedores}
               onAbonar={abrirAbono}
               onEditar={abrirEditarProv}

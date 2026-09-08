@@ -127,7 +127,7 @@ async function registrar(app, body, usuario) {
   const registro = await app.prisma.$transaction(async (tx) => {
     const nuevo = await repo.crear(tx, {
       fecha,
-      semana: body.semana,
+      semana: semanaValida(body.semana),
       sedeId,
       productoId: body.productoId,
       cantidadIngresada: delta,
@@ -231,6 +231,13 @@ async function editar(app, id, body, usuario) {
     throw new AppError("No tienes permiso para editar este registro.", 403);
   }
 
+  const egresoCompra = await app.prisma.egreso.findFirst({
+    where: { origen: ORIGENES.COMPRA, idReferencia: id },
+  });
+  if (egresoCompra) {
+    throw new AppError("Esta compra ya está reflejada en Contabilidad y no se puede editar.", 409);
+  }
+
   const cambiaAmount = body.cantidadIngresada !== undefined;
 
   let deltaAjuste = 0;
@@ -313,6 +320,13 @@ async function borrar(app, id, usuario) {
 
   if (usuario.rol !== "Admin" && registro.sedeId !== sedeOperativa(usuario)) {
     throw new AppError("No tienes permiso para eliminar este registro.", 403);
+  }
+
+  const egresoCompra = await app.prisma.egreso.findFirst({
+    where: { origen: ORIGENES.COMPRA, idReferencia: id },
+  });
+  if (egresoCompra) {
+    throw new AppError("Esta compra ya está reflejada en Contabilidad y no se puede eliminar.", 409);
   }
 
   // FIX: validar que revertir el movimiento no deje stock negativo

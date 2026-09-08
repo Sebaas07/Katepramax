@@ -352,6 +352,9 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
   if (!fechaInicio || !fechaFin) {
     throw new AppError("fechaInicio y fechaFin son obligatorios.", 400);
   }
+  if (fechaInicio > fechaFin) {
+    throw new AppError("fechaInicio no puede ser posterior a fechaFin.", 400);
+  }
 
   const { gte: desde, lt: hasta } = rangoDiaBogota(fechaInicio, fechaFin);
 
@@ -370,6 +373,8 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
       montoCobrado: true,
       abonoDeuda: true,
       metodoPago: true,
+      montoEfectivo: true,
+      montoTransferencia: true,
       entregadorId: true,
       entregador: { select: { id: true, nombreCompleto: true } },
       pedido: { select: { valorDomicilio: true } },
@@ -400,6 +405,10 @@ async function cobrosPorEntregador(app, { fechaInicio, fechaFin, sedeId } = {}, 
     fila.valorDomicilio += toNum(a.pedido?.valorDomicilio);
     if (a.metodoPago === "Efectivo") fila.efectivo += monto;
     if (a.metodoPago === "Transferencia") fila.cuentas += monto;
+    if (a.metodoPago === "Mixto") {
+      fila.efectivo += toNum(a.montoEfectivo);
+      fila.cuentas += toNum(a.montoTransferencia);
+    }
   }
 
   const detalle = Array.from(porEntregador.values()).sort((a, b) => b.total - a.total);

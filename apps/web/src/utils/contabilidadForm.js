@@ -10,7 +10,7 @@ const TEXT_FIELDS = ["observacion", "observaciones", "concepto"];
 
 export const normalizarSemana = (valor) => {
   const numero = Number.parseInt(valor, 10);
-  if (Number.isNaN(numero)) return "";
+  if (Number.isNaN(numero)) return String(getSemanaISO(new Date()));
   return String(Math.min(53, Math.max(1, numero)));
 };
 

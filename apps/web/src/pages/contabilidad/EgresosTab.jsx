@@ -118,19 +118,22 @@ const EgresosTab = memo(
     const acciones = useMemo(
       () =>
         esAdmin
-          ? (row) => [
-              {
-                label: "Editar",
-                icon: "edit",
-                onClick: () => onEditar(row, "egreso"),
-              },
-              {
-                label: "Eliminar",
-                icon: "delete",
-                variante: "danger",
-                onClick: () => onEliminar(row, "egreso"),
-              },
-            ]
+            ? (row) =>
+                row.origen && row.origen !== "manual"
+                  ? []
+                  : [
+                      {
+                        label: "Editar",
+                        icon: "edit",
+                        onClick: () => onEditar(row, "egreso"),
+                      },
+                      {
+                        label: "Eliminar",
+                        icon: "delete",
+                        variante: "danger",
+                        onClick: () => onEliminar(row, "egreso"),
+                      },
+                    ]
           : undefined,
       [esAdmin, onEditar, onEliminar],
     );

@@ -329,14 +329,13 @@ const asignacionService = (app) => ({
         throw new AppError("No se pudo determinar el cliente del pedido.", 400);
       }
 
-      if (abono > 0) {
-        const saldoActual = Number(asignacion.pedido?.cliente?.saldoDeuda ?? 0);
-        if (abono > saldoActual) {
-          throw new AppError(
-            `El abono (${abono}) no puede ser mayor al saldo deudor actual del cliente (${saldoActual}).`,
-            400,
-          );
-        }
+      const saldoRegistrado = asignacion.pedido?.cliente?.saldoDeuda;
+      const saldoActual = Number(saldoRegistrado);
+      if (saldoRegistrado !== undefined && saldoRegistrado !== null && monto + abono > saldoActual) {
+        throw new AppError(
+          `El cobro (${monto}) más el abono (${abono}) no puede ser mayor al saldo deudor actual del cliente (${saldoActual}).`,
+          400,
+        );
       }
 
       // Determina cuánto de lo cobrado va como efectivo vs. cuentas/
