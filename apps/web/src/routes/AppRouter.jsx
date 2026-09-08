@@ -61,6 +61,8 @@ const ROLES = {
   ENVIOS: ["Admin", "AdminBogota", "Bodega"],
   // Módulos de gestión solo Admin/AdminBogota
   GESTION: ["Admin", "AdminBogota"],
+  // Clientes: Admin, AdminBogota, Bodega y Oficinista
+  CLIENTES: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
   // Contabilidad: Admin + AdminBogota + Oficinista (oficina registra su cierre)
   CONTABILIDAD: ["Admin", "AdminBogota", "Oficinista"],
   ENTREGADOR: ["Entregador"],
@@ -150,7 +152,7 @@ const AppRouter = () => (
           />
         </Route>
 
-        <Route element={<RequireRole roles={ROLES.GESTION} />}>
+        <Route element={<RequireRole roles={ROLES.CLIENTES} />}>
           <Route path="/clientes" element={<ClientesPage />} />
         </Route>
 

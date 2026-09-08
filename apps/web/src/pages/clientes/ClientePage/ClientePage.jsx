@@ -27,9 +27,9 @@ const FORM_INICIAL = {
 };
 
 const ClientePage = () => {
-  const { esAdmin, esBodega, isAuthenticated, isSessionChecked } = useAuth();
-  const puedeEditar = esAdmin || esBodega;
-  const puedeCrear = esAdmin || esBodega;
+  const { esAdmin, esBodega, esOficinista, isAuthenticated, isSessionChecked } = useAuth();
+  const puedeEditar = esAdmin || esBodega || esOficinista;
+  const puedeCrear = esAdmin || esBodega || esOficinista;
   const puedeDesactivar = esAdmin;
   const puedeAbonar = esAdmin || esBodega;
 

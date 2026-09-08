@@ -60,7 +60,7 @@ const MENU = [
     path:  "/clientes",
     label: "Clientes",
     icon:  "people",
-    roles: ["Admin", "AdminBogota"],
+    roles: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
   },
   {
     path:  "/proveedores",
