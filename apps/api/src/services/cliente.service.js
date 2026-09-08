@@ -17,6 +17,28 @@ function sedeEsPermitida(usuario) {
   );
 }
 
+/**
+ * IDs de la familia de sedes del usuario (bodega + oficinas ligadas).
+ * Admin no se filtra por familia.
+ */
+async function idsFamiliaUsuario(prisma, usuario) {
+  if (!usuario || usuario.rol === "Admin" || usuario.sedeId == null) return null;
+  const familia = await resolverFamiliaSede(prisma, usuario.sedeId);
+  const ids = familia.map((s) => s.id);
+  return ids.length > 0 ? ids : [usuario.sedeId];
+}
+
+/**
+ * true si el cliente es accesible para el usuario (misma familia de sedes).
+ * Clientes sin sede solo los ve Admin.
+ */
+function clienteAccesible(cliente, familiaIds, usuario) {
+  if (usuario.rol === "Admin") return true;
+  if (cliente.sedeId == null) return false;
+  if (!familiaIds || familiaIds.length === 0) return cliente.sedeId === usuario.sedeId;
+  return familiaIds.includes(cliente.sedeId);
+}
+
 const clienteService = (app) => {
   const repo = clienteRepository(app.prisma);
 
@@ -38,7 +60,11 @@ const clienteService = (app) => {
       };
 
       if (usuario.rol !== "Admin" && usuario.sedeId != null) {
-        filtros.sedeId = usuario.sedeId;
+        // Compartir clientes entre la bodega y sus oficinas (misma familia).
+        const ids = await idsFamiliaUsuario(app.prisma, usuario);
+        if (ids && ids.length > 1) filtros.sedeIds = ids;
+        else if (ids && ids.length === 1) filtros.sedeId = ids[0];
+        else filtros.sedeId = usuario.sedeId;
       } else if (usuario.rol === "Admin" && sedeId) {
         const ids = (await resolverFamiliaSede(app.prisma, sedeId)).map((s) => s.id);
         if (ids.length === 1)      filtros.sedeId = ids[0];
@@ -57,11 +83,8 @@ const clienteService = (app) => {
       const cliente = await repo.findById(id);
       if (!cliente) throw new AppError(`Cliente ${id} no encontrado`, 404);
 
-      if (
-        usuario.rol !== "Admin" &&
-        cliente.sedeId != null &&
-        cliente.sedeId !== usuario.sedeId
-      ) {
+      const familiaIds = await idsFamiliaUsuario(app.prisma, usuario);
+      if (!clienteAccesible(cliente, familiaIds, usuario)) {
         throw new AppError("No tienes permiso para ver este cliente.", 403);
       }
 
@@ -74,6 +97,7 @@ const clienteService = (app) => {
       if (limiteCredito !== undefined) campos.limiteCredito = limiteCredito;
       if (saldoDeuda !== undefined) campos.saldoDeuda = saldoDeuda;
       // Si no es Admin, el cliente queda asociado a la sede del usuario que lo crea.
+      // Admin puede omitir sedeId o enviarlo explícitamente.
       if (sedeId !== undefined) campos.sedeId = sedeId;
       else if (usuario && usuario.rol !== "Admin") campos.sedeId = usuario.sedeId;
       const nuevo = await repo.create(campos);
@@ -91,11 +115,8 @@ const clienteService = (app) => {
       const existe = await repo.findById(id);
       if (!existe) throw new AppError(`Cliente ${id} no encontrado`, 404);
 
-      if (
-        usuario.rol !== "Admin" &&
-        existe.sedeId != null &&
-        existe.sedeId !== usuario.sedeId
-      ) {
+      const familiaIds = await idsFamiliaUsuario(app.prisma, usuario);
+      if (!clienteAccesible(existe, familiaIds, usuario)) {
         throw new AppError("No tienes permiso para editar este cliente.", 403);
       }
 
@@ -127,11 +148,8 @@ const clienteService = (app) => {
       const existe = await repo.findById(id);
       if (!existe) throw new AppError(`Cliente ${id} no encontrado`, 404);
 
-      if (
-        usuario.rol !== "Admin" &&
-        existe.sedeId != null &&
-        existe.sedeId !== usuario.sedeId
-      ) {
+      const familiaIds = await idsFamiliaUsuario(app.prisma, usuario);
+      if (!clienteAccesible(existe, familiaIds, usuario)) {
         throw new AppError(
           "No tienes permiso para desactivar este cliente.",
           403,
@@ -151,11 +169,8 @@ const clienteService = (app) => {
       const existe = await repo.findById(id);
       if (!existe) throw new AppError(`Cliente ${id} no encontrado`, 404);
 
-      if (
-        usuario.rol !== "Admin" &&
-        existe.sedeId != null &&
-        existe.sedeId !== usuario.sedeId
-      ) {
+      const familiaIds = await idsFamiliaUsuario(app.prisma, usuario);
+      if (!clienteAccesible(existe, familiaIds, usuario)) {
         throw new AppError(
           "No tienes permiso para abonar a este cliente.",
           403,

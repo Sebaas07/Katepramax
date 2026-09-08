@@ -47,14 +47,15 @@ const envioService = (app) => ({
 
   /**
    * Sede "operativa" de un usuario para el módulo de envíos.
-   * Las oficinas (tipo Oficina) pertenecen a una bodega (bodegaId), así que
-   * su sede operativa es la bodega: ven y confirman los envíos de su bodega.
-   * Se resuelve en el auth middleware y viaja en `usuario.sedesOperativas`;
-   * aquí solo se toma la primera sede cuando aplica.
+   * Los envíos solo se originan/reciben en BODEGAS. Por tanto:
+   * - Oficinas → usan la bodega padre (bodegaId / sedeOperativa del auth).
+   * - Bodega → su propio sedeId (que ya es la bodega).
+   * Nunca devolvemos el id de una oficina: eso hacía que Cartagena (y
+   * cualquier bodega con una sola oficina) no viera los envíos dirigidos a ella.
    */
   sedeOperativa(usuario) {
-    const sedes = usuario?.sedesOperativas;
-    if (Array.isArray(sedes) && sedes.length === 1) return sedes[0];
+    // Preferir el valor ya calculado en auth.middleware (correcto para Bodega/Oficinista).
+    if (usuario?.sedeOperativa != null) return usuario.sedeOperativa;
     if (usuario?.sedeTipo === "Oficina" && usuario?.bodegaId) return usuario.bodegaId;
     return usuario?.sedeId ?? null;
   },
@@ -239,7 +240,7 @@ const envioService = (app) => ({
   /**
    * Lista envíos visibles para el usuario.
    * query: { direccion?: "enviados"|"recibidos"|"todos", estado?, sedeId?, skip?, take? }
-   *  - "enviados"  → envíos que salieron de mi sede (o sede indicada)
+   *  - "enviados"  → envíos que salieron de mi sede (o sede indicada) / creados por mí
    *  - "recibidos" → envíos que llegan a mi sede (o sede indicada)
    *  - "todos" / sin indicar → para Admin: todos; para otros: origen o destino = mi sede
    */
@@ -256,11 +257,14 @@ const envioService = (app) => ({
     if (usuario.rol === "Admin") {
       // Admin general: puede ver todos, o filtrar por dirección/sede
       if (query.direccion === "enviados") {
-        // Solo los que él originó (por creador) o, si se pasa sedeId, de esa sede
         if (query.sedeId) {
           where.sedeOrigenId = Number(query.sedeId);
         } else if (sedeOperativa) {
-          where.sedeOrigenId = sedeOperativa;
+          // Tiene sede: envíos que salieron de su sede O que él creó
+          where.OR = [
+            { sedeOrigenId: sedeOperativa },
+            { creadoPorId: usuario.id },
+          ];
         } else {
           // Sin sede propia: "enviados por mí" = creados por este usuario
           where.creadoPorId = usuario.id;
@@ -321,7 +325,7 @@ const envioService = (app) => ({
     const envio = await this.repo.buscarPorId(id);
     if (!envio) throw new AppError(`Envío ${id} no encontrado.`, 404);
 
-    const sedeOperativa = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
+    const sedeOperativa = this.sedeOperativa(usuario) ?? usuario.sedeId;
     if (
       usuario.rol !== "Admin" &&
       envio.sedeOrigenId !== sedeOperativa &&
@@ -347,7 +351,7 @@ const envioService = (app) => ({
     const envio = await this.repo.buscarPorId(id);
     if (!envio) throw new AppError(`Envío ${id} no encontrado.`, 404);
 
-    const sedeDestino = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
+    const sedeDestino = this.sedeOperativa(usuario) ?? usuario.sedeId;
     if (envio.sedeDestinoId !== sedeDestino) {
       throw new AppError("Solo la sede destino puede confirmar la recepción de este envío.", 403);
     }
@@ -479,7 +483,7 @@ const envioService = (app) => ({
     const envio = await this.repo.buscarPorId(id);
     if (!envio) throw new AppError(`Envío ${id} no encontrado.`, 404);
 
-    const sedeOrigen = (await this.sedeOperativa(usuario)) ?? usuario.sedeId;
+    const sedeOrigen = this.sedeOperativa(usuario) ?? usuario.sedeId;
     if (envio.sedeOrigenId !== sedeOrigen) {
       throw new AppError("Solo la sede que originó el envío puede cancelarlo.", 403);
     }
