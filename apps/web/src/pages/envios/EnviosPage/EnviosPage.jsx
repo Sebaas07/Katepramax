@@ -20,6 +20,22 @@ const lineaVacia = () => ({
   cantidad: "",
 });
 
+/** Resumen legible: "Producto A × 10, Producto B × 5" (máx. 2 líneas + "+N más"). */
+function resumenProductos(detalles) {
+  const lista = Array.isArray(detalles) ? detalles : [];
+  if (lista.length === 0) return "—";
+  const lineas = lista.map((d) => {
+    const nombre =
+      d.producto?.descripcion?.trim() ||
+      d.producto?.sku ||
+      `Producto ${d.productoId}`;
+    const cant = d.cantidadEnviada ?? d.cantidad ?? "?";
+    return `${nombre} × ${cant}`;
+  });
+  if (lineas.length <= 2) return lineas.join(", ");
+  return `${lineas.slice(0, 2).join(", ")} +${lineas.length - 2} más`;
+}
+
 const EnviosPage = () => {
   const { usuario, esAdmin, esBodega, isAuthenticated, isSessionChecked } =
     useAuth();
@@ -164,6 +180,8 @@ const EnviosPage = () => {
       );
       setModalNuevo(false);
       if (tab === "enviados") await cargarEnvios();
+      // Avisa al menú lateral para refrescar el badge de pendientes
+      window.dispatchEvent(new CustomEvent("envios:actualizados"));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -207,6 +225,7 @@ const EnviosPage = () => {
       toast.success("Recepción confirmada. El inventario ya se actualizó.");
       setModalConfirmar(false);
       await cargarEnvios();
+      window.dispatchEvent(new CustomEvent("envios:actualizados"));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -234,7 +253,7 @@ const EnviosPage = () => {
       e.sedeDestino?.nombre ??
       mapaSedes[e.sedeDestinoId] ??
       `Sede ${e.sedeDestinoId}`,
-    productosResumen: `${e.detalles?.length ?? 0} producto(s)`,
+    productosResumen: resumenProductos(e.detalles),
     creadorNombre: e.creador?.nombreCompleto ?? "—",
   }));
 
@@ -257,6 +276,7 @@ const EnviosPage = () => {
       setModalCancelar(false);
       setEnvioCancelar(null);
       await cargarEnvios();
+      window.dispatchEvent(new CustomEvent("envios:actualizados"));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -366,6 +386,7 @@ const EnviosPage = () => {
               "sedeOrigenNombre",
               "sedeDestinoNombre",
               "creadorNombre",
+              "productosResumen",
             ]}
             paginacion
             renderAcciones={renderAcciones}

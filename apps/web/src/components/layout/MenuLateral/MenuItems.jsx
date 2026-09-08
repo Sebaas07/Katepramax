@@ -116,13 +116,19 @@ export default function MenuItems({ cerrar }) {
       });
     };
     cargar();
-    // Refresca cada minuto — es la "notificación" de que llegó un envío nuevo
-    const id = window.setInterval(cargar, 60000);
+    // Refresca cada 30s y al volver a la app / cambiar de ruta
+    const id = window.setInterval(cargar, 30000);
+    const onFocus = () => cargar();
+    const onActualizados = () => cargar();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("envios:actualizados", onActualizados);
     return () => {
       activo = false;
       window.clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("envios:actualizados", onActualizados);
     };
-  }, [isSessionChecked, isAuthenticated, rol]);
+  }, [isSessionChecked, isAuthenticated, rol, location.pathname]);
 
   // Notificación de pedidos pendientes por asignar: cuando una oficina crea
   // un pedido, la Bodega/Oficinista ve el contador aquí para asignar entregador.
