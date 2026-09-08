@@ -42,7 +42,7 @@ const CarteraProveedoresPage = () => {
   const [modalAbonoAbierto, setModalAbonoAbierto] = useState(false);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null);
   const [montoAbono, setMontoAbono] = useState("");
-  const [fechaAbono, setFechaAbono] = useState(hoyISO());
+  const [fechaAbono, setFechaAbono] = useState(() => hoyISO());
   const [comprobanteAbono, setComprobanteAbono] = useState("");
   const [observacionAbono, setObservacionAbono] = useState("");
   const [erroresAbono, setErroresAbono] = useState({});

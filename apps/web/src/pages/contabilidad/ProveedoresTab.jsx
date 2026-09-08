@@ -30,13 +30,15 @@ const COLUMNAS = [
 
 // Backend: GET /abonos/resumen-sede → [{ sede, sedeId, totalPagado }]
 // saldosDeuda: GET /inventario/deuda-proveedores → [{ proveedor, proveedorId, deudaPendiente, totalAbonado, saldoPendiente }]
+const SIN_SALDOS = [];
+
 const ProveedoresTab = memo(
   ({
     proveedores,
     resumenProv,
     resumenSede,
     esAdmin,
-    saldosDeuda = [],
+    saldosDeuda = SIN_SALDOS,
     onAbonar,
     onEditar,
     onEliminar,

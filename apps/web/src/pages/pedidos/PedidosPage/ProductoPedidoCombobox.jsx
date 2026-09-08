@@ -1,5 +1,8 @@
 import { useMemo } from "react";
 
+const formatPrecio = (producto) =>
+  `$${Number(producto.precioVenta ?? producto.precioDetal ?? 0).toLocaleString("es-CO")}`;
+
 /**
  * Dropdown de productos para crear pedido.
  * Muestra [código] nombre + precio, y solo productos de la sede indicada
@@ -36,9 +39,6 @@ export default function ProductoPedidoCombobox({
         )
       : productosSede
   ).slice(0, 10);
-
-  const formatPrecio = (p) =>
-    `$${Number(p.precioVenta ?? p.precioDetal ?? 0).toLocaleString("es-CO")}`;
 
   return (
     <div className="item-field--producto ped-combobox">

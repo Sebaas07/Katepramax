@@ -100,12 +100,12 @@ const ContabilidadPage = () => {
 
   // ── Filtros ───────────────────────────────────────────────
   const [filtroSemana, setFiltroSemana] = useState(String(SEM_ACTUAL));
-  const [filtroSedeId, setFiltroSedeId] = useState(
+  const [filtroSedeId, setFiltroSedeId] = useState(() =>
     esAdmin ? "" : sedeIdUsuario ? String(sedeIdUsuario) : "",
   );
   const [vistaMov, setVistaMov] = useState("semana");
-  const [filtroDiaMov, setFiltroDiaMov] = useState(hoyISO());
-  const [filtroPanelF, setFiltroPanelFecha] = useState(hoyISO());
+  const [filtroDiaMov, setFiltroDiaMov] = useState(() => hoyISO());
+  const [filtroPanelF, setFiltroPanelFecha] = useState(() => hoyISO());
   const [fechaInicioCobros, setFechaInicioCobros] = useState(
     () => getRangoSemana(SEM_ACTUAL).inicio,
   );

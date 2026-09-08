@@ -16,6 +16,19 @@ import "./PedidosPage.css";
 
 const POLLING_INTERVAL_MS = 15000;
 
+const COLUMNAS_PEDIDOS = [
+  { campo: "id", label: "ID", tipo: "texto" },
+  { campo: "cliente", label: "Cliente", tipo: "texto" },
+  { campo: "direccion", label: "Dirección", tipo: "texto" },
+  { campo: "sedeNombre", label: "Oficina", tipo: "texto" },
+  { campo: "totalPedido", label: "Total ($)", tipo: "moneda" },
+  { campo: "estado", label: "Estado", tipo: "estado" },
+  { campo: "creadoEn", label: "Fecha", tipo: "fecha" },
+  { campo: "entregador", label: "Asignado a", tipo: "texto" },
+];
+
+const obtenerAsignacionId = (pedido) => pedido.asignaciones?.[0]?.id ?? null;
+
 const Spinner = () => (
   <div className="ped-spinner-wrap">
     <div className="ped-spinner" />
@@ -309,17 +322,6 @@ const PedidosPage = () => {
     return data;
   }, [pedidosNormalizados, tabActiva, filtroSede, filtroTexto]);
 
-  const columnas = [
-    { campo: "id", label: "ID", tipo: "texto" },
-    { campo: "cliente", label: "Cliente", tipo: "texto" },
-    { campo: "direccion", label: "Dirección", tipo: "texto" },
-    { campo: "sedeNombre", label: "Oficina", tipo: "texto" },
-    { campo: "totalPedido", label: "Total ($)", tipo: "moneda" },
-    { campo: "estado", label: "Estado", tipo: "estado" },
-    { campo: "creadoEn", label: "Fecha", tipo: "fecha" },
-    { campo: "entregador", label: "Asignado a", tipo: "texto" },
-  ];
-
   const handleCambioFormPedido = (e) => {
     const { name, value } = e.target;
     setFormPedido((prev) => ({ ...prev, [name]: value }));
@@ -487,11 +489,6 @@ const PedidosPage = () => {
     } finally {
       setGuardando(false);
     }
-  };
-
-  const obtenerAsignacionId = (pedido) => {
-    const asig = pedido.asignaciones?.[0];
-    return asig?.id ?? null;
   };
 
   const handleMarcarEnRutaPedido = async (pedido) => {
@@ -749,7 +746,7 @@ const PedidosPage = () => {
               />
             </div>
             <TablaGenerica
-              columnas={columnas}
+              columnas={COLUMNAS_PEDIDOS}
               datos={pedidosFiltrados}
               filasPorPagina={10}
               mostrarBuscador={false}

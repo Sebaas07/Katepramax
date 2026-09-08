@@ -3,6 +3,7 @@ import TarjetaKpi from "./TarjetaKpi";
 import { formatCOP, formatFecha } from "@/utils/formatters";
 
 const toNumber = (v) => Number(v ?? 0);
+const FORMATEADOR_NUMERO = new Intl.NumberFormat("es-CO");
 
 // Backend: GET /reportes/panel-general → { fecha, ingresos: { total, efectivo, cuentas, porSede }, egresos: { total, porSede }, cartera, totalStockUnidades }
 const PanelGeneralTab = ({
@@ -73,7 +74,7 @@ const PanelGeneralTab = ({
           titulo="Stock unidades"
           icono="inventory_2"
           color="var(--aged-gold)"
-          valor={new Intl.NumberFormat("es-CO").format(
+          valor={FORMATEADOR_NUMERO.format(
             panelGeneral.totalStockUnidades,
           )}
           subtitulo="Total acumulado por sedes"
@@ -82,7 +83,7 @@ const PanelGeneralTab = ({
           titulo="Pedidos activos"
           icono="shopping_cart"
           color="#ddb7ff"
-          valor={new Intl.NumberFormat("es-CO").format(
+          valor={FORMATEADOR_NUMERO.format(
             panelGeneral.pedidosPendientes ?? 0,
           )}
           subtitulo="Pendientes o asignados"
@@ -91,7 +92,7 @@ const PanelGeneralTab = ({
           titulo="Entregas en ruta"
           icono="local_shipping"
           color="#4ade80"
-          valor={new Intl.NumberFormat("es-CO").format(
+          valor={FORMATEADOR_NUMERO.format(
             panelGeneral.entregasEnRuta ?? 0,
           )}
           subtitulo="Despachos en curso"
@@ -100,7 +101,7 @@ const PanelGeneralTab = ({
           titulo="Stock bajo"
           icono="warning"
           color="#ffb4ab"
-          valor={new Intl.NumberFormat("es-CO").format(
+          valor={FORMATEADOR_NUMERO.format(
             panelGeneral.alertasInventario ?? 0,
           )}
           subtitulo="Productos críticos"

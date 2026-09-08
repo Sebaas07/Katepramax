@@ -32,6 +32,22 @@ const TABS = [
   { key: "fallidos",  label: "Fallidos",          icon: "cancel"          },
 ];
 
+const COLUMNAS_FLUJO = [
+  { campo: "id", label: "#", tipo: "texto" },
+  { campo: "cliente", label: "Cliente", tipo: "texto" },
+  { campo: "estado", label: "Estado", tipo: "estado" },
+  { campo: "entregador", label: "Entregador", tipo: "texto" },
+  { campo: "totalRecibido", label: "Total", tipo: "moneda" },
+  { campo: "creadoEn", label: "Creado", tipo: "fecha" },
+];
+
+const mapearPedido = (pedido) => ({
+  ...pedido,
+  cliente: pedido.cliente?.nombre ?? "—",
+  entregador: pedido.asignaciones?.[0]?.entregador?.nombreCompleto ?? "Sin asignar",
+  estado: pedido.estado,
+});
+
 const DistribucionPage = () => {
    const [tab,       setTab]       = useState("flujo");
   const [pedidos,   setPedidos]   = useState([]);
@@ -77,23 +93,6 @@ const DistribucionPage = () => {
   };
 
   // Mapear campos anidados para la tabla
-  const mapear = (lista) => lista.map((p) => ({
-    ...p,
-    cliente:    p.cliente?.nombre ?? "—",
-    entregador: p.asignaciones?.[0]?.entregador?.nombreCompleto ?? "Sin asignar",
-    estado:     p.estado,
-  }));
-
-  // ── Columnas ───────────────────────────────────────────────
-  const columnasFlujo = [
-    { campo: "id",            label: "#",          tipo: "texto"  },
-    { campo: "cliente",       label: "Cliente",    tipo: "texto"  },
-    { campo: "estado",        label: "Estado",     tipo: "estado" },
-    { campo: "entregador",    label: "Entregador", tipo: "texto"  },
-    { campo: "totalRecibido", label: "Total",      tipo: "moneda" },
-    { campo: "creadoEn",      label: "Creado",     tipo: "fecha"  },
-  ];
-
   // ── Render ─────────────────────────────────────────────────
   return (
     <div className="distribucion-page">
@@ -156,8 +155,8 @@ const DistribucionPage = () => {
           </div>
         ) : (
           <TablaGenerica
-            columnas={columnasFlujo}
-            datos={mapear(pedidosPorTab[tab])}
+            columnas={COLUMNAS_FLUJO}
+            datos={pedidosPorTab[tab].map(mapearPedido)}
             filasPorPagina={10}
             mostrarBuscador
             buscarEnCampos={["cliente", "entregador"]}

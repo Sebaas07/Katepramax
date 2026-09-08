@@ -7,6 +7,13 @@ import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import "./CarteraClientesPage.css";
 
+const COLUMNAS_CARTERA_CLIENTES = [
+  { campo: "nombre", label: "Nombre", tipo: "texto" },
+  { campo: "telefono", label: "Teléfono", tipo: "texto" },
+  { campo: "saldoDeuda", label: "Saldo deuda", tipo: "moneda" },
+  { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda" },
+];
+
 const Spinner = () => (
   <div className="cc-spinner-wrap">
     <div className="cc-spinner" />
@@ -93,13 +100,6 @@ const CarteraClientesPage = () => {
     }
   };
 
-  const columnas = [
-    { campo: "nombre", label: "Nombre", tipo: "texto" },
-    { campo: "telefono", label: "Teléfono", tipo: "texto" },
-    { campo: "saldoDeuda", label: "Saldo deuda", tipo: "moneda" },
-    { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda" },
-  ];
-
   const accionesCliente = (cliente) => {
     const acciones = [];
     if (puedeAbonar && Number(cliente.saldoDeuda) > 0) {
@@ -155,7 +155,7 @@ const CarteraClientesPage = () => {
           </div>
         ) : (
           <TablaGenerica
-            columnas={columnas}
+            columnas={COLUMNAS_CARTERA_CLIENTES}
             datos={clientesConDeuda}
             filasPorPagina={10}
             mostrarBuscador

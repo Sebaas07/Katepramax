@@ -7,6 +7,16 @@ import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import "./ClientePage.css";
 
+const COLUMNAS_CLIENTES = [
+  { campo: "nombre", label: "Nombre", tipo: "texto" },
+  { campo: "telefono", label: "Teléfono", tipo: "texto" },
+  { campo: "sedeNombre", label: "Sede", tipo: "texto" },
+  { campo: "saldoDeuda", label: "Saldo deuda", tipo: "moneda" },
+  { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda" },
+  { campo: "activo", label: "Estado", tipo: "booleano" },
+  { campo: "creadoEn", label: "Registro", tipo: "fecha" },
+];
+
 // ─── Spinner inline ──────────────────────────────────────────
 const Spinner = () => (
   <div className="cli-spinner-wrap">
@@ -193,17 +203,6 @@ const ClientePage = () => {
     }
   };
 
-  // ── Columnas ──────────────────────────────────────────────
-  const columnas = [
-    { campo: "nombre", label: "Nombre", tipo: "texto" },
-    { campo: "telefono", label: "Teléfono", tipo: "texto" },
-    { campo: "sedeNombre", label: "Sede", tipo: "texto" },
-    { campo: "saldoDeuda", label: "Saldo deuda", tipo: "moneda" },
-    { campo: "limiteCredito", label: "Límite crédito", tipo: "moneda" },
-    { campo: "activo", label: "Estado", tipo: "booleano" },
-    { campo: "creadoEn", label: "Registro", tipo: "fecha" },
-  ];
-
   const accionesCliente = (cliente) => {
     const acciones = [];
     if (puedeEditar) {
@@ -288,7 +287,7 @@ const ClientePage = () => {
           <Spinner />
         ) : (
           <TablaGenerica
-            columnas={columnas}
+            columnas={COLUMNAS_CLIENTES}
             datos={clientes.map((c) => ({
               ...c,
               sedeNombre: c.sede?.nombre ?? "Sin asignar",
