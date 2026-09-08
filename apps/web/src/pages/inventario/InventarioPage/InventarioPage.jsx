@@ -10,6 +10,20 @@ import Modal from "@/components/common/Modal/Modal";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
 import "./InventarioPage.css";
 
+const COLUMNAS_MOVIMIENTOS = [
+  { campo: "id", label: "ID", tipo: "texto" },
+  { campo: "fecha", label: "Fecha", tipo: "fecha" },
+  { campo: "semana", label: "Semana", tipo: "texto" },
+  { campo: "producto", label: "Producto", tipo: "texto" },
+  { campo: "sede", label: "Sede", tipo: "texto" },
+  { campo: "cantidadIngresada", label: "Cantidad", tipo: "texto" },
+  { campo: "costoUnitario", label: "Costo Unit.", tipo: "moneda" },
+  { campo: "proveedor", label: "Proveedor", tipo: "texto" },
+  { campo: "deuda", label: "Deuda", tipo: "moneda" },
+  { campo: "nota", label: "Nota", tipo: "texto" },
+  { campo: "creadoEn", label: "Registrado", tipo: "fecha" },
+];
+
 const HOY = new Date().toISOString().split("T")[0];
 
 // ─── Spinner ──────────────────────────────────────────────────
@@ -226,21 +240,6 @@ const InventarioPage = () => {
     }
   };
 
-  // ── Columnas ───────────────────────────────────────────────────
-  const columnasMovimientos = [
-    { campo: "id", label: "ID", tipo: "texto" },
-    { campo: "fecha", label: "Fecha", tipo: "fecha" },
-    { campo: "semana", label: "Semana", tipo: "texto" },
-    { campo: "producto", label: "Producto", tipo: "texto" },
-    { campo: "sede", label: "Sede", tipo: "texto" },
-    { campo: "cantidadIngresada", label: "Cantidad", tipo: "texto" },
-    { campo: "costoUnitario", label: "Costo Unit.", tipo: "moneda" },
-    { campo: "proveedor", label: "Proveedor", tipo: "texto" },
-    { campo: "deuda", label: "Deuda", tipo: "moneda" },
-    { campo: "nota", label: "Nota", tipo: "texto" },
-    { campo: "creadoEn", label: "Registrado", tipo: "fecha" },
-  ];
-
   const movimientosMapeados = useMemo(
     () =>
       movimientos.map((m) => ({
@@ -359,7 +358,7 @@ const InventarioPage = () => {
               </span>
             </div>
             <TablaGenerica
-              columnas={columnasMovimientos}
+              columnas={COLUMNAS_MOVIMIENTOS}
               datos={movimientosMapeados}
               filasPorPagina={15}
               mostrarBuscador

@@ -356,13 +356,15 @@ const SedesPage = () => {
                 className="form-control"
               >
                 <option value="">Seleccione una bodega...</option>
-                {sedes
-                  .filter((s) => s.tipo === "Bodega" && s.activo && s.id !== sedeSel?.id)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nombre}
-                    </option>
-                  ))}
+                {sedes.flatMap((s) =>
+                  s.tipo === "Bodega" && s.activo && s.id !== sedeSel?.id
+                    ? [
+                        <option key={s.id} value={s.id}>
+                          {s.nombre}
+                        </option>,
+                      ]
+                    : [],
+                )}
               </select>
               <span className="form-hint">
                 La oficina verá y despachará los envíos de esta bodega.

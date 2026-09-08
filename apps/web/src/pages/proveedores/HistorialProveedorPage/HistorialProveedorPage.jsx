@@ -9,6 +9,19 @@ import EmptyState from "@/components/common/EmptyState/EmptyState";
 import { formatCOP } from "@/utils/formatters";
 import "./HistorialProveedorPage.css";
 
+const COLUMNAS_HISTORIAL_PROVEEDOR = [
+  { campo: "id", label: "No.", tipo: "texto" },
+  { campo: "fecha", label: "Fecha", tipo: "fecha" },
+  { campo: "producto", label: "Producto", tipo: "texto" },
+  { campo: "sede", label: "Sede", tipo: "texto" },
+  { campo: "cantidadIngresada", label: "Cant.", tipo: "texto" },
+  { campo: "costoUnitario", label: "Costo unit.", tipo: "moneda" },
+  { campo: "total", label: "Total", tipo: "moneda" },
+  { campo: "deuda", label: "Deuda", tipo: "moneda" },
+  { campo: "estado", label: "Estado", tipo: "estado" },
+  { campo: "nota", label: "Nota", tipo: "texto" },
+];
+
 const Spinner = () => (
   <div className="hp-spinner-wrap">
     <div className="hp-spinner" />
@@ -80,19 +93,6 @@ const HistorialProveedorPage = () => {
       })),
     [data],
   );
-
-  const columnas = [
-    { campo: "id", label: "No.", tipo: "texto" },
-    { campo: "fecha", label: "Fecha", tipo: "fecha" },
-    { campo: "producto", label: "Producto", tipo: "texto" },
-    { campo: "sede", label: "Sede", tipo: "texto" },
-    { campo: "cantidadIngresada", label: "Cant.", tipo: "texto" },
-    { campo: "costoUnitario", label: "Costo unit.", tipo: "moneda" },
-    { campo: "total", label: "Total", tipo: "moneda" },
-    { campo: "deuda", label: "Deuda", tipo: "moneda" },
-    { campo: "estado", label: "Estado", tipo: "estado" },
-    { campo: "nota", label: "Nota", tipo: "texto" },
-  ];
 
   const saldoPendiente = toNumber(global?.saldoPendiente);
 
@@ -258,7 +258,7 @@ const HistorialProveedorPage = () => {
             {/* Listado */}
             {filasTabla.length > 0 ? (
               <TablaGenerica
-                columnas={columnas}
+                columnas={COLUMNAS_HISTORIAL_PROVEEDOR}
                 datos={filasTabla}
                 filasPorPagina={10}
                 mostrarBuscador

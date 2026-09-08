@@ -18,6 +18,16 @@ import { formatCOP, formatFecha } from "@/utils/formatters";
 import "./EntregasPage.css";
 
 const POLLING_INTERVAL_MS = 20000;
+const COLUMNAS_ENTREGAS = [
+  { campo: "id", label: "ID", tipo: "texto" },
+  { campo: "cliente", label: "Cliente", tipo: "texto" },
+  { campo: "direccion", label: "Dirección", tipo: "texto" },
+  { campo: "sede", label: "Sede", tipo: "texto" },
+  { campo: "total", label: "Total Pedido ($)", tipo: "moneda" },
+  { campo: "costoRecibido", label: "Costo Recibido ($)", tipo: "moneda" },
+  { campo: "metodoPago", label: "Método de Pago", tipo: "texto" },
+  { campo: "estado", label: "Estado", tipo: "estado" },
+];
 
 const suscribirAnchoPantalla = (callback) => {
   window.addEventListener("resize", callback);
@@ -345,18 +355,6 @@ const EntregasPage = () => {
     }
   };
 
-  // ── Columnas para tabla ──────────────────────────────────────────
-  const columnas = [
-    { campo: "id", label: "ID", tipo: "texto" },
-    { campo: "cliente", label: "Cliente", tipo: "texto" },
-    { campo: "direccion", label: "Dirección", tipo: "texto" },
-    { campo: "sede", label: "Sede", tipo: "texto" },
-    { campo: "total", label: "Total Pedido ($)", tipo: "moneda" },
-    { campo: "costoRecibido", label: "Costo Recibido ($)", tipo: "moneda" },
-    { campo: "metodoPago", label: "Método de Pago", tipo: "texto" },
-    { campo: "estado", label: "Estado", tipo: "estado" },
-  ];
-
   // Mapear datos para tabla
   const entregasMapeadas = useMemo(() => {
     return entregas.map((asig) => {
@@ -500,7 +498,7 @@ const EntregasPage = () => {
           </div>
         ) : (
           <TablaGenerica
-            columnas={columnas}
+            columnas={COLUMNAS_ENTREGAS}
             datos={entregasMapeadas}
             filasPorPagina={10}
             mostrarBuscador={false}

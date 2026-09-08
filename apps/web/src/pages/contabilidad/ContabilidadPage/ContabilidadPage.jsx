@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import contabilidadService from "@/services/contabilidad.service";
@@ -118,7 +118,7 @@ const ContabilidadPage = () => {
   const [modalTipo, setModalTipo] = useState("");
   const [itemEditar, setItemEditar] = useState(null);
   const [itemEliminar, setItemEliminar] = useState(null);
-  const [eliminarTipo, setEliminarTipo] = useState("");
+  const eliminarTipoRef = useRef("");
 
   const [form, setForm] = useState(() => ({
     ...FORM_VACIO,
@@ -501,7 +501,7 @@ const ContabilidadPage = () => {
 
   const abrirEliminar = useCallback((item, tipo) => {
     setItemEliminar(item);
-    setEliminarTipo(tipo);
+    eliminarTipoRef.current = tipo;
   }, []);
 
   const cerrarModal = useCallback(() => {
@@ -593,13 +593,13 @@ const ContabilidadPage = () => {
     if (!itemEliminar) return;
     setCargando(true);
     try {
-      if (eliminarTipo === "ingreso")
+      if (eliminarTipoRef.current === "ingreso")
         await contabilidadService.eliminarIngreso(itemEliminar.id);
-      else if (eliminarTipo === "egreso")
+      else if (eliminarTipoRef.current === "egreso")
         await contabilidadService.eliminarEgreso(itemEliminar.id);
-      else if (eliminarTipo === "cartera")
+      else if (eliminarTipoRef.current === "cartera")
         await contabilidadService.eliminarCartera(itemEliminar.id);
-      else if (eliminarTipo === "abono")
+      else if (eliminarTipoRef.current === "abono")
         await contabilidadService.eliminarPagoProveedor(itemEliminar.id);
       else throw new Error("Tipo de registro no válido.");
       toast.success("Registro eliminado.");
@@ -608,10 +608,10 @@ const ContabilidadPage = () => {
     } finally {
       setCargando(false);
       setItemEliminar(null);
-      setEliminarTipo("");
+      eliminarTipoRef.current = "";
       await cargarDatos();
     }
-  }, [eliminarTipo, itemEliminar, cargarDatos]);
+  }, [itemEliminar, cargarDatos]);
 
   const mostrarBotonRegistrar =
     tab === "cartera"
@@ -908,7 +908,7 @@ const ContabilidadPage = () => {
         isOpen={!!itemEliminar}
         onClose={() => {
           setItemEliminar(null);
-          setEliminarTipo("");
+          eliminarTipoRef.current = "";
         }}
         titulo="Eliminar registro"
         textoBotonConfirmar="Si, eliminar"

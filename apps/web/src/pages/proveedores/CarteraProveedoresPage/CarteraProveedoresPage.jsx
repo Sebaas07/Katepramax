@@ -12,6 +12,13 @@ import Modal from "@/components/common/Modal/Modal";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
 import "./CarteraProveedoresPage.css";
 
+const COLUMNAS_CARTERA_PROVEEDORES = [
+  { campo: "proveedor", label: "Proveedor", tipo: "texto" },
+  { campo: "deudaPendiente", label: "Deuda", tipo: "moneda" },
+  { campo: "totalAbonado", label: "Total abonado", tipo: "moneda" },
+  { campo: "saldoPendiente", label: "Saldo pendiente", tipo: "moneda" },
+];
+
 const hoyISO = () => new Date().toISOString().split("T")[0];
 
 const parseMaybeNumber = (valor) => {
@@ -129,13 +136,6 @@ const CarteraProveedoresPage = () => {
     }
   };
 
-  const columnas = [
-    { campo: "proveedor", label: "Proveedor", tipo: "texto" },
-    { campo: "deudaPendiente", label: "Deuda", tipo: "moneda" },
-    { campo: "totalAbonado", label: "Total abonado", tipo: "moneda" },
-    { campo: "saldoPendiente", label: "Saldo pendiente", tipo: "moneda" },
-  ];
-
   const accionesProveedor = (proveedor) => {
     const acciones = [
       {
@@ -182,7 +182,7 @@ const CarteraProveedoresPage = () => {
           </div>
         ) : (
           <TablaGenerica
-            columnas={columnas}
+            columnas={COLUMNAS_CARTERA_PROVEEDORES}
             datos={proveedoresConDeuda}
             filasPorPagina={10}
             mostrarBuscador

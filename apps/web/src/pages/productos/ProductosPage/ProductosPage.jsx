@@ -183,7 +183,7 @@ const ProductosPage = () => {
   const [modalEditar, setModalEditar] = useState(false);
   const [modalQR, setModalQR] = useState(false);
   const [productoQR, setProductoQR] = useState(null);
-  const [productoSel, setProductoSel] = useState(null);
+  const productoSelRef = useRef(null);
   const [productoConfirmar, setProductoConfirmar] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const qrCanvasRef = useRef(null);
@@ -315,7 +315,7 @@ const ProductosPage = () => {
 
   const abrirModalNuevo = useCallback(() => {
     setForm(resetForm());
-    setProductoSel(null);
+    productoSelRef.current = null;
     setModalNuevo(true);
   }, [resetForm]);
 
@@ -326,7 +326,7 @@ const ProductosPage = () => {
         prod.sedeId ?? sedeIdUsuario ?? "",
         sedes,
       );
-      setProductoSel(producto);
+      productoSelRef.current = producto;
       setForm({
         descripcion: producto.descripcion || producto.nombre,
         departamento: producto.departamento,
@@ -416,7 +416,7 @@ const ProductosPage = () => {
   const handleActualizar = useCallback(async () => {
     setGuardando(true);
     try {
-      await inventarioService.actualizarProducto(productoSel.codigo, {
+      await inventarioService.actualizarProducto(productoSelRef.current.codigo, {
         descripcion: form.descripcion,
         departamento: form.departamento,
         precioCosto: form.precioCosto,
@@ -438,7 +438,7 @@ const ProductosPage = () => {
     } finally {
       setGuardando(false);
     }
-  }, [cargarProductos, form, productoSel, resetForm, porcentajeGanancia]);
+  }, [cargarProductos, form, resetForm, porcentajeGanancia]);
 
   const abrirConfirmToggle = useCallback((prod) => {
     setProductoConfirmar(prod);
@@ -482,7 +482,9 @@ const ProductosPage = () => {
   const departamentos = useMemo(() => {
     const unicos = [
       ...new Set(
-        productosNormalizados.map((p) => p.departamento).filter(Boolean),
+        productosNormalizados.flatMap((p) =>
+          p.departamento ? [p.departamento] : [],
+        ),
       ),
     ];
     return unicos.sort((a, b) => a.localeCompare(b));

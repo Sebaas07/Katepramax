@@ -7,6 +7,15 @@ import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import Modal from "@/components/common/Modal/Modal";
 import "./EnviosPage.css";
 
+const COLUMNAS_ENVIOS = [
+  { campo: "sedeOrigenNombre", label: "Origen", tipo: "texto" },
+  { campo: "sedeDestinoNombre", label: "Destino", tipo: "texto" },
+  { campo: "productosResumen", label: "Productos", tipo: "texto" },
+  { campo: "estado", label: "Estado", tipo: "estado" },
+  { campo: "fechaEnvio", label: "Fecha envío", tipo: "fecha" },
+  { campo: "creadorNombre", label: "Creado por", tipo: "texto" },
+];
+
 const Spinner = ({ texto = "Cargando..." }) => (
   <div className="env-spinner-wrap">
     <div className="env-spinner" />
@@ -105,6 +114,10 @@ const EnviosPage = () => {
     () => sedes.filter((s) => s.tipo === "Bodega"),
     [sedes],
   );
+  const sedesDestinoSeleccionadas = useMemo(
+    () => new Set(formNuevo.sedesDestinoIds),
+    [formNuevo.sedesDestinoIds],
+  );
 
   // ── Modal: nuevo envío ─────────────────────────────────────
   const abrirNuevo = () => {
@@ -154,9 +167,11 @@ const EnviosPage = () => {
       await envioService.crearEnvio({
         sedeOrigenId: formNuevo.sedeOrigenId || undefined,
         sedesDestinoIds: formNuevo.sedesDestinoIds,
-        detalles: formNuevo.detalles
-          .filter((d) => d.productoId && d.cantidad)
-          .map((d) => ({ productoId: d.productoId, cantidad: d.cantidad })),
+        detalles: formNuevo.detalles.flatMap((d) =>
+          d.productoId && d.cantidad
+            ? [{ productoId: d.productoId, cantidad: d.cantidad }]
+            : [],
+        ),
         observaciones: formNuevo.observaciones,
       });
       toast.success(
@@ -213,16 +228,6 @@ const EnviosPage = () => {
       setGuardando(false);
     }
   };
-
-  // ── Tabla ───────────────────────────────────────────────────
-  const columnas = [
-    { campo: "sedeOrigenNombre", label: "Origen", tipo: "texto" },
-    { campo: "sedeDestinoNombre", label: "Destino", tipo: "texto" },
-    { campo: "productosResumen", label: "Productos", tipo: "texto" },
-    { campo: "estado", label: "Estado", tipo: "estado" },
-    { campo: "fechaEnvio", label: "Fecha envío", tipo: "fecha" },
-    { campo: "creadorNombre", label: "Creado por", tipo: "texto" },
-  ];
 
   const datosTabla = envios.map((e) => ({
     ...e,
@@ -358,7 +363,7 @@ const EnviosPage = () => {
           </div>
         ) : (
           <TablaGenerica
-            columnas={columnas}
+            columnas={COLUMNAS_ENVIOS}
             datos={datosTabla}
             filasPorPagina={10}
             mostrarBuscador
@@ -408,18 +413,20 @@ const EnviosPage = () => {
           <div className="form-group">
             <span className="form-label-standalone">Sede(s) destino *</span>
             <div className="env-sedes-checks">
-              {bodegas
-                .filter((s) => String(s.id) !== String(formNuevo.sedeOrigenId))
-                .map((s) => (
-                  <label key={s.id} className="env-sede-check">
-                    <input
-                      type="checkbox"
-                      checked={formNuevo.sedesDestinoIds.includes(s.id)}
-                      onChange={() => toggleSedeDestino(s.id)}
-                    />
-                    {s.nombre}
-                  </label>
-                ))}
+              {bodegas.flatMap((s) =>
+                String(s.id) !== String(formNuevo.sedeOrigenId)
+                  ? [
+                      <label key={s.id} className="env-sede-check">
+                        <input
+                          type="checkbox"
+                          checked={sedesDestinoSeleccionadas.has(s.id)}
+                          onChange={() => toggleSedeDestino(s.id)}
+                        />
+                        {s.nombre}
+                      </label>,
+                    ]
+                  : [],
+              )}
             </div>
             <span className="form-hint">
               El mismo listado se enviará completo a cada sede seleccionada;

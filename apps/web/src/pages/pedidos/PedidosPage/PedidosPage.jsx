@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -99,7 +99,7 @@ const PedidosPage = () => {
   const [modalConfirmarPedidoAbierto, setModalConfirmarPedidoAbierto] =
     useState(false);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
-  const [asignacionAccion, setAsignacionAccion] = useState(null);
+  const asignacionAccionRef = useRef(null);
   const [motivoFalloPedido, setMotivoFalloPedido] = useState("");
   const [modalFacturaAbierto, setModalFacturaAbierto] = useState(false);
   const [facturaSeleccionada, setFacturaSeleccionada] = useState(null);
@@ -512,7 +512,7 @@ const PedidosPage = () => {
       toast.error("Esta entrega no tiene asignación.");
       return;
     }
-    setAsignacionAccion(asigId);
+    asignacionAccionRef.current = asigId;
     setFormConfirmarPedido({
       montoCobrado: "",
       metodoPago: "Efectivo",
@@ -525,7 +525,7 @@ const PedidosPage = () => {
   const handleConfirmarEntregaPedido = async () => {
     setGuardando(true);
     try {
-      await entregaService.confirmarEntrega(asignacionAccion, {
+      await entregaService.confirmarEntrega(asignacionAccionRef.current, {
         montoCobrado: formConfirmarPedido.montoCobrado,
         metodoPago: formConfirmarPedido.metodoPago,
         observaciones: formConfirmarPedido.observaciones,
@@ -547,7 +547,7 @@ const PedidosPage = () => {
       toast.error("Esta entrega no tiene asignación.");
       return;
     }
-    setAsignacionAccion(asigId);
+    asignacionAccionRef.current = asigId;
     setMotivoFalloPedido("");
     setModalFalloPedidoAbierto(true);
   };
@@ -555,7 +555,10 @@ const PedidosPage = () => {
   const handleFalloPedido = async () => {
     setGuardando(true);
     try {
-      await entregaService.registrarFallo(asignacionAccion, motivoFalloPedido);
+      await entregaService.registrarFallo(
+        asignacionAccionRef.current,
+        motivoFalloPedido,
+      );
       toast.success("Fallo registrado. El pedido vuelve a Pendiente.");
       setModalFalloPedidoAbierto(false);
       await cargarDatos();

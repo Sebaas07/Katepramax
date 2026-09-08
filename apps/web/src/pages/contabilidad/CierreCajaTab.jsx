@@ -9,6 +9,8 @@ import { EmptyState, Spinner } from "./ContabilidadUI";
 import CorteCajaTicket from "./CorteCajaTicket";
 import ArqueoSemanalTab from "./ArqueoSemanalTab";
 
+const imprimirPagina = () => window.print();
+
 /**
  * CierreCajaTab
  *
@@ -187,8 +189,6 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
     claveActual,
   ]);
 
-  const handleImprimir = () => window.print();
-
   const tituloBloque = esDiario ? "Cierre diario" : "Cierre semanal";
   const subtituloBloque = esDiario
     ? formatFecha(fechaDia)
@@ -247,7 +247,7 @@ const CierreCajaTab = ({ sedeId, esAdmin, modo = "diario" }) => {
         <button
           type="button"
           className="cont-ganancia-gasto__imprimir"
-          onClick={handleImprimir}
+          onClick={imprimirPagina}
           disabled={!corte}
         >
           <span className="material-symbols-outlined" aria-hidden="true">print</span>

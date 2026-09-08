@@ -101,9 +101,9 @@ const etiquetaSedes = (usuario) => {
   if (usuario.rol === "Entregador" && entregadorSedes.length > 0) {
     const nombres = [
       ...new Set(
-        entregadorSedes
-          .map((es) => es.sede?.nombre)
-          .filter(Boolean),
+        entregadorSedes.flatMap((es) =>
+          es.sede?.nombre ? [es.sede.nombre] : [],
+        ),
       ),
     ];
     if (nombres.length > 0) return nombres.join(", ");
@@ -195,9 +195,14 @@ const UsuariosPage = () => {
   }, [isSessionChecked, isAuthenticated]);
 
   const sedesPorRol = useMemo(() => {
-    const tipos = SEDES_POR_ROL[form.rol] ?? ["Bodega"];
-    return sedes.filter((sede) => tipos.includes(sede.tipo));
+    const tipos = new Set(SEDES_POR_ROL[form.rol] ?? ["Bodega"]);
+    return sedes.filter((sede) => tipos.has(sede.tipo));
   }, [sedes, form.rol]);
+
+  const sedesIdsSeleccionadas = useMemo(
+    () => new Set(form.sedesIds),
+    [form.sedesIds],
+  );
 
   const labelSedeForm =
     form.rol === "Oficinista"
@@ -790,7 +795,7 @@ const UsuariosPage = () => {
               <div className="usr-bodegas-grid">
                 {sedesPorRol.map((sede) => {
                   const idNum = Number(sede.id);
-                  const marcada = form.sedesIds.includes(idNum);
+                  const marcada = sedesIdsSeleccionadas.has(idNum);
                   return (
                     <label
                       key={sede.id}
