@@ -42,60 +42,45 @@ const EntregasPage = lazy(
   () => import("@/pages/entregas/EntregasPage/EntregasPage"),
 );
 const EnviosPage = lazy(() => import("@/pages/envios/EnviosPage/EnviosPage"));
+const AbonosEntregadorPage = lazy(
+  () => import("@/pages/abonos/AbonosEntregadorPage/AbonosEntregadorPage"),
+);
 
 // ── Roles ─────────────────────────────────────────────────────
 const ROLES = {
-  // AdminBogota también gestiona usuarios, sedes y logs
   ADMIN: ["Admin", "AdminBogota"],
-  // Pedidos: Admin + AdminBogota + Oficinista
   PEDIDOS: ["Admin", "AdminBogota", "Oficinista"],
-  // Consulta (inventario) para Bodega/Oficinista + Admin/AdminBogota
   CONSULTA: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
-  // Cartera e historial de proveedores: solo oficina y administradores
   CARTERA_PROVEEDORES: ["Admin", "AdminBogota", "Oficinista"],
-  // Catálogo de productos: todos leen, Bodega además crea/edita
   CATALOGO: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
-  // Distribución/entregas: Admin + AdminBogota + Bodega
   ENTREGAS: ["Admin", "AdminBogota", "Bodega"],
-  // Envíos entre sedes: Admin + AdminBogota + Bodega
   ENVIOS: ["Admin", "AdminBogota", "Bodega"],
-  // Módulos de gestión solo Admin/AdminBogota
   GESTION: ["Admin", "AdminBogota"],
-  // Clientes: Admin, AdminBogota, Bodega y Oficinista
   CLIENTES: ["Admin", "AdminBogota", "Bodega", "Oficinista"],
-  // Contabilidad: Admin + AdminBogota + Oficinista (oficina registra su cierre)
   CONTABILIDAD: ["Admin", "AdminBogota", "Oficinista"],
   ENTREGADOR: ["Entregador"],
 };
 
-// ── Redirección desde raíz según rol ─────────────────────────
 const RootRedirect = () => {
   const { isAuthenticated, isSessionChecked, usuario } = useAuth();
   if (!isSessionChecked) return <AuthLoading />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  // Dashboard visible para todos; solo Entregador va directo a sus entregas
   const dest = usuario?.rol === "Entregador" ? "/entregas" : "/dashboard";
   return <Navigate to={dest} replace />;
 };
 
-// ── Router ────────────────────────────────────────────────────
 const AppRouter = () => (
   <Routes>
     <Route path="/" element={<RootRedirect />} />
 
-    {/* Pública */}
     <Route element={<PublicRoute />}>
       <Route path="/login" element={<LoginPage />} />
     </Route>
 
-    {/* Pública sin restricción de sesión: la valida el QR de la factura.
-     * El segmento es el tokenFactura (UUID), no el id secuencial. */}
     <Route path="/factura/:token" element={<FacturaValidacionPage />} />
 
-    {/* Protegidas */}
     <Route element={<RequireAuth />}>
       <Route element={<MainLayout />}>
-        {/* Todos los roles autenticados */}
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/acceso-denegado" element={<AccesoDenegadoPage />} />
 
@@ -109,20 +94,25 @@ const AppRouter = () => (
               </Suspense>
             }
           />
+          <Route
+            path="/abonos"
+            element={
+              <Suspense fallback={<AuthLoading />}>
+                <AbonosEntregadorPage />
+              </Suspense>
+            }
+          />
         </Route>
 
-        {/* Pedidos: Admin + AdminBogota + Oficinista */}
         <Route element={<RequireRole roles={ROLES.PEDIDOS} />}>
           <Route path="/pedidos" element={<PedidosPage />} />
         </Route>
 
-        {/* Consulta sin escritura (Bodega/Oficinista lee inventario y proveedores) */}
         <Route element={<RequireRole roles={ROLES.CONSULTA} />}>
           <Route path="/inventario" element={<InventarioPage />} />{" "}
           <Route path="/proveedores" element={<ProveedoresPage />} />
         </Route>
 
-        {/* Cartera e historial de proveedores: Bodega no tiene acceso */}
         <Route element={<RequireRole roles={ROLES.CARTERA_PROVEEDORES} />}>
           <Route path="/proveedores/cartera" element={<CarteraProveedoresPage />} />
           <Route
@@ -131,12 +121,10 @@ const AppRouter = () => (
           />
         </Route>
 
-        {/* Distribución / entregas: Admin, AdminBogota, Oficinista y Bodega */}
         <Route element={<RequireRole roles={ROLES.ENTREGAS} />}>
           <Route path="/distribucion" element={<DistribucionPage />} />
         </Route>
 
-        {/* Gestión de oficina: catálogo, clientes, envíos y contabilidad */}
         <Route element={<RequireRole roles={ROLES.CATALOGO} />}>
           <Route path="/productos" element={<ProductosPage />} />
         </Route>
@@ -156,17 +144,14 @@ const AppRouter = () => (
           <Route path="/clientes" element={<ClientesPage />} />
         </Route>
 
-        {/* Contabilidad: Admin + AdminBogota + Oficinista (cierre de su sede propia) */}
         <Route element={<RequireRole roles={ROLES.CONTABILIDAD} />}>
           <Route path="/contabilidad" element={<ContabilidadPage />} />
         </Route>
 
-        {/* Cartera: solo Admin + AdminBogota */}
         <Route element={<RequireRole roles={ROLES.GESTION} />}>
           <Route path="/clientes/cartera" element={<CarteraClientesPage />} />
         </Route>
 
-        {/* Solo Admin */}
         <Route element={<RequireRole roles={ROLES.ADMIN} />}>
           <Route
             path="/admin/usuarios"

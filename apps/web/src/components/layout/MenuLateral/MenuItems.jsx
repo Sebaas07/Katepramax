@@ -6,11 +6,6 @@ import pedidosService from "@/services/pedidos.service";
 import SidebarLink from "./SidebarLink";
 import "./MenuItems.css";
 
-/**
- * MENU — Definición centralizada.
- * Cada ítem declara los roles que lo pueden ver.
- * Si se agrega un rol nuevo, solo hay que actualizar aquí.
- */
 const MENU = [
   {
     path:  "/dashboard",
@@ -22,6 +17,12 @@ const MENU = [
     path:  "/entregas",
     label: "Mis Entregas",
     icon:  "local_shipping",
+    roles: ["Entregador"],
+  },
+  {
+    path:  "/abonos",
+    label: "Abonos",
+    icon:  "payments",
     roles: ["Entregador"],
   },
   {
@@ -74,7 +75,6 @@ const MENU = [
     icon:  "account_balance",
     roles: ["Admin", "AdminBogota", "Oficinista"],
   },
-  // Sección Admin — visible también para AdminBogota
   {
     path:  "/admin/usuarios",
     label: "Usuarios",
@@ -116,7 +116,6 @@ export default function MenuItems({ cerrar }) {
       });
     };
     cargar();
-    // Refresca cada 30s y al volver a la app / cambiar de ruta
     const id = window.setInterval(cargar, 30000);
     const onFocus = () => cargar();
     const onActualizados = () => cargar();
@@ -130,8 +129,6 @@ export default function MenuItems({ cerrar }) {
     };
   }, [isSessionChecked, isAuthenticated, rol, location.pathname]);
 
-  // Notificación de pedidos pendientes por asignar: cuando una oficina crea
-  // un pedido, la Bodega/Oficinista ve el contador aquí para asignar entregador.
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
     if (!["Admin", "AdminBogota", "Oficinista", "Bodega"].includes(rol)) return;
@@ -151,8 +148,6 @@ export default function MenuItems({ cerrar }) {
   }, [isSessionChecked, isAuthenticated, rol]);
 
   const menuFiltrado = MENU.filter((item) => item.roles.includes(rol));
-
-  // Separar sección admin del resto para mostrar un divisor
   const menuGeneral = menuFiltrado.filter((i) => i.seccion !== "admin");
   const menuAdmin   = menuFiltrado.filter((i) => i.seccion === "admin");
 
@@ -194,7 +189,6 @@ export default function MenuItems({ cerrar }) {
         </>
       )}
 
-      {/* Badge Bodega Principal solo para AdminBogota */}
       {esAdminBogota && (
         <div className="menu-items__bogota-badge">
           <span className="material-symbols-outlined">verified</span>
