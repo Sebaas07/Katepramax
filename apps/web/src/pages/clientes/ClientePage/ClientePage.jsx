@@ -79,8 +79,6 @@ const ClientePage = () => {
         console.error("Error al cargar sedes:", err);
         setSedes([]);
       } finally {
-        setSedes([]);
-      } finally {
         setCargandoSedes(false);
       }
     };

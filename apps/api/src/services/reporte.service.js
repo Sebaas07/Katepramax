@@ -51,16 +51,8 @@ async function getSedes(prisma, usuario, sedeIdFiltro, soloOficinas = false) {
   return reducir(sedes);
 }
 
-function sedeWhere(usuario, sedeIdFiltro) {
+async function sedeWhere(prisma, usuario, sedeIdFiltro) {
   // No-Admin: solo su propia sede, ignorando cualquier filtro externo.
-  if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
-    return { sedeId: usuario.sedeId };
-  }
-  if (sedeIdFiltro != null && sedeIdFiltro !== "") {
-    return { sedeId: Number(sedeIdFiltro) };
-  }
-  return {};
-}
   if (usuario && usuario.rol !== "Admin" && usuario.sedeId != null) {
     return { sedeId: usuario.sedeId };
   }
