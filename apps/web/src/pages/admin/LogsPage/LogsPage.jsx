@@ -5,7 +5,6 @@ import usuarioService from "@/services/usuario.service";
 import TablaGenerica from "@/components/common/TablaGenerica/TablaGenerica";
 import EmptyState from "@/components/common/EmptyState/EmptyState";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
-import { formatFecha } from "@/utils/formatters";
 import "./LogsPage.css";
 
 const TAKE = 50;
@@ -81,9 +80,10 @@ const LogsPage = () => {
   }, [cargarLogs]);
 
   // Al cambiar cualquier filtro, volver a la primera página
-  useEffect(() => {
+  const cambiarFiltro = (setter, valor) => {
+    setter(valor);
     setSkip(0);
-  }, [filtroUsuarioId, filtroAccion, filtroFechaInicio, filtroFechaFin]);
+  };
 
   const logsMapeados = useMemo(
     () =>
@@ -121,7 +121,7 @@ const LogsPage = () => {
           <select
             id="logs-usuario"
             value={filtroUsuarioId}
-            onChange={(e) => setFiltroUsuarioId(e.target.value)}
+            onChange={(e) => cambiarFiltro(setFiltroUsuarioId, e.target.value)}
             className="filter-select"
           >
             <option value="">Todos</option>
@@ -138,7 +138,7 @@ const LogsPage = () => {
           <select
             id="logs-accion"
             value={filtroAccion}
-            onChange={(e) => setFiltroAccion(e.target.value)}
+            onChange={(e) => cambiarFiltro(setFiltroAccion, e.target.value)}
             className="filter-select"
           >
             <option value="">Todas</option>
@@ -154,7 +154,7 @@ const LogsPage = () => {
             id="logs-desde"
             value={filtroFechaInicio}
             max={filtroFechaFin || undefined}
-            onChange={(e) => setFiltroFechaInicio(e.target.value)}
+            onChange={(e) => cambiarFiltro(setFiltroFechaInicio, e.target.value)}
             className="filter-select"
           />
         </div>
@@ -165,7 +165,7 @@ const LogsPage = () => {
             id="logs-hasta"
             value={filtroFechaFin}
             min={filtroFechaInicio || undefined}
-            onChange={(e) => setFiltroFechaFin(e.target.value)}
+            onChange={(e) => cambiarFiltro(setFiltroFechaFin, e.target.value)}
             className="filter-select"
           />
         </div>

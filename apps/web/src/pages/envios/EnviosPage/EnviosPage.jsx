@@ -78,6 +78,7 @@ const EnviosPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void cargarEnvios();
   }, [cargarEnvios, isSessionChecked, isAuthenticated]);
 

@@ -11,6 +11,10 @@ async function registrar(app, body, usuario) {
   const concepto = sanitizarTexto(body.concepto, 200);
   if (!concepto) throw new AppError("El concepto es obligatorio.", 422);
 
+  if (body.sedeId === undefined || body.sedeId === null || String(body.sedeId).trim() === "") {
+    throw new AppError("La sede es obligatoria para registrar un egreso.", 422);
+  }
+
   let sedeId = Number(body.sedeId);
   if (usuario.rol !== "Admin" && sedeId !== usuario.sedeId) {
     throw new AppError("No puedes registrar egresos en otra sede.", 403);
@@ -112,12 +116,20 @@ async function borrar(app, id, usuario) {
   return resultado;
 }
 
-async function resumenPorSede(app, semana, usuario) {
-  const where = sedeWhere(usuario);
+// El parámetro `sedeId` solo aplica para Admin (filtro explícito); los demás
+// roles quedan restringidos a su sede por `sedeWhere`, ignorando el query.
+function whereResumen(usuario, sedeId) {
+  return usuario.rol !== "Admin"
+    ? sedeWhere(usuario)
+    : sedeId
+      ? { sedeId: Number(sedeId) }
+      : {};
+}
+
+async function resumenPorSede(app, semana, usuario, sedeId) {
+  const where = whereResumen(usuario, sedeId);
   const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), where.sedeId);
-  const sedes = usuario.rol !== "Admin" && usuario.sedeId != null
-    ? [{ id: usuario.sedeId, nombre: `Sede ${usuario.sedeId}` }]
-    : await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
+  const sedes = await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapa  = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
   const porSede = filas.map((f) => ({
     sede:      mapa[f.sedeId] ?? `Sede ${f.sedeId}`,
@@ -129,14 +141,14 @@ async function resumenPorSede(app, semana, usuario) {
   return { porSede, totalGeneral };
 }
 
-async function resumenPorConcepto(app, semana, usuario) {
-  const where = sedeWhere(usuario);
+async function resumenPorConcepto(app, semana, usuario, sedeId) {
+  const where = whereResumen(usuario, sedeId);
   const filas = await repo.resumenPorConcepto(app.prisma, semanaValida(semana), where.sedeId);
   return filas.map((f) => ({ concepto: f.concepto, registros: f._count.id, total: Number(f._sum.total) }));
 }
 
-async function totalesPorDia(app, semana, usuario) {
-  const where = sedeWhere(usuario);
+async function totalesPorDia(app, semana, usuario, sedeId) {
+  const where = whereResumen(usuario, sedeId);
   return repo.totalesPorDia(app.prisma, semanaValida(semana), where.sedeId);
 }
 

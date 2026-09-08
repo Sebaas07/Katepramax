@@ -156,8 +156,18 @@ async function borrar(app, id, usuario) {
   return { mensaje: "Abono eliminado correctamente" };
 }
 
-async function resumenPorProveedor(app, semana, usuario) {
-  const where = sedeWhere(usuario);
+// El parámetro `sedeId` solo aplica para Admin (filtro explícito); los demás
+// roles quedan restringidos a su sede por `sedeWhere`, ignorando el query.
+function whereResumen(usuario, sedeId) {
+  return usuario.rol !== "Admin"
+    ? sedeWhere(usuario)
+    : sedeId
+      ? { sedeId: Number(sedeId) }
+      : {};
+}
+
+async function resumenPorProveedor(app, semana, usuario, sedeId) {
+  const where = whereResumen(usuario, sedeId);
   const filas = await repo.resumenPorProveedor(app.prisma, semanaValida(semana), where.sedeId);
   const proveedores = await app.prisma.proveedor.findMany({ select: { id: true, nombre: true } });
   const mapa = Object.fromEntries(proveedores.map((p) => [p.id, p.nombre]));
@@ -169,12 +179,10 @@ async function resumenPorProveedor(app, semana, usuario) {
   }));
 }
 
-async function resumenPorSede(app, semana, usuario) {
-  const where = sedeWhere(usuario);
+async function resumenPorSede(app, semana, usuario, sedeId) {
+  const where = whereResumen(usuario, sedeId);
   const filas = await repo.resumenPorSede(app.prisma, semanaValida(semana), where.sedeId);
-  const sedes = usuario.rol !== "Admin" && usuario.sedeId != null
-    ? [{ id: usuario.sedeId, nombre: `Sede ${usuario.sedeId}` }]
-    : await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
+  const sedes = await app.prisma.sede.findMany({ select: { id: true, nombre: true } });
   const mapa  = Object.fromEntries(sedes.map((s) => [s.id, s.nombre]));
   return filas.map((f) => ({
     sede:        mapa[f.sedeId] ?? `Sede ${f.sedeId}`,

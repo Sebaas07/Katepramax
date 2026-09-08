@@ -44,7 +44,6 @@ const IngresosTab = ({
   onEditar,
   onEliminar,
   resumenSemanal,
-  totalesDia,
 }) => {
   const usaResumenBackend = Boolean(resumenSemanal?.porSede);
 
@@ -158,20 +157,6 @@ const IngresosTab = ({
           />
         </div>
       )}
-      {/* {totalesDia?.length > 0 && (
-        <div className="cont-tabla-wrap">
-          <TablaGenerica
-            columnas={[
-              { campo: "fecha", label: "Fecha", tipo: "fecha" },
-              { campo: "efectivo", label: "Efectivo", tipo: "moneda" },
-              { campo: "cuentas", label: "Cuentas", tipo: "moneda" },
-              { campo: "total", label: "Total", tipo: "moneda" },
-            ]}
-            datos={totalesDia}
-            filasPorPagina={7}
-          />
-        </div>
-      )} */}
       <div className="cont-tabla-wrap">
         <TablaGenerica
           columnas={COLUMNAS}

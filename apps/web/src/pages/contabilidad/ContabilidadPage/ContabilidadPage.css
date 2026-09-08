@@ -317,6 +317,43 @@
   color: var(--on-surface);
 }
 
+/* Conmutador Día / Semana de movimientos */
+.cont-vista-toggle {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
+  gap: 2px;
+}
+
+.cont-vista-btn {
+  padding: 0.45rem 1.1rem;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius-md) - 2px);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--on-surface-variant);
+  transition: all var(--transition-fast);
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.cont-vista-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--on-surface);
+}
+
+.cont-vista-btn--active {
+  background: var(--surface-container-highest);
+  color: var(--secondary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
 /* ─── Botones ────────────────────────────────────────────────*/
 .btn-primary {
   background: var(--secondary);

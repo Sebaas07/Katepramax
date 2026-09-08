@@ -75,11 +75,6 @@ const CeldaOrigen = memo(({ origen }) => {
   );
 });
 
-const COLUMNAS_DIA = [
-  { campo: "fecha", label: "Fecha", tipo: "fecha" },
-  { campo: "total", label: "Total", tipo: "moneda" },
-];
-
 const COLUMNAS_CONCEPTO = [
   { campo: "concepto", label: "Concepto", tipo: "texto" },
   { campo: "registros", label: "Registros", tipo: "texto" },
@@ -98,7 +93,6 @@ const EgresosTab = memo(
     onEliminar,
     resumenSemanal,
     resumenConcepto,
-    totalesDia,
   }) => {
     const usaResumenBackend = Boolean(resumenSemanal?.porSede);
 
@@ -161,19 +155,6 @@ const EgresosTab = memo(
             />
           </div>
         )}
-
-        {/* 
-        {totalesDia?.length > 0 && (
-          <div className="cont-tabla-wrap">
-            <h4 className="cont-subtitulo">Totales por día</h4>
-            <TablaGenerica
-              columnas={COLUMNAS_DIA}
-              datos={totalesDia}
-              filasPorPagina={7}
-            />
-          </div>
-        )}
-          */}
 
         <div className="cont-tabla-wrap">
           <TablaGenerica

@@ -75,7 +75,7 @@ const ClientePage = () => {
       try {
         const data = await inventarioService.obtenerSedes();
         setSedes(Array.isArray(data) ? data : []);
-      } catch (err) {
+      } catch {
         setSedes([]);
       } finally {
         setCargandoSedes(false);

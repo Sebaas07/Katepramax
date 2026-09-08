@@ -43,6 +43,7 @@ const CarteraClientesPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarClientes();
   }, [isSessionChecked, isAuthenticated, cargarClientes]);
 

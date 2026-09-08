@@ -20,6 +20,12 @@ const CarteraTab = memo(({ cartera, sedes, esAdmin, onEditar, onEliminar }) => {
       return { sede: s.nombre, valor: regs[0]?.saldoDia ?? 0 };
     }), [cartera, sedes]);
 
+  const filasTabla = useMemo(() =>
+    cartera.map((c) => ({
+      ...c,
+      sede: c.sede?.nombre ?? `Sede ${c.sedeId}`,
+    })), [cartera]);
+
   const totalCartera = useMemo(
     () => resumenSedes.reduce((s, r) => s + Number(r.valor ?? 0), 0),
     [resumenSedes]
@@ -50,7 +56,7 @@ const CarteraTab = memo(({ cartera, sedes, esAdmin, onEditar, onEliminar }) => {
       <div className="cont-tabla-wrap">
         <TablaGenerica
           columnas={COLUMNAS}
-          datos={cartera}
+          datos={filasTabla}
           filasPorPagina={10}
           mostrarBuscador
           buscarEnCampos={["sede"]}

@@ -120,6 +120,7 @@ const InventarioPage = () => {
 
   useEffect(() => {
     if (!isSessionChecked || !isAuthenticated) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void cargarSedes();
     void cargarProductos();
     // Catálogo de proveedores para el selector del modal de entradas

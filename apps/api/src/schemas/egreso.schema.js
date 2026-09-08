@@ -61,19 +61,19 @@ const eliminarEgreso = { summary: "Eliminar egreso",        tags: ["Egresos"], s
 
 const resumenSemanalEgreso = {
   summary: "Resumen egresos por sede en una semana", tags: ["Egresos"], security: [{ bearerAuth: [] }],
-  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer", minimum: 1, maximum: 53 } }, additionalProperties: false },
+  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer", minimum: 1, maximum: 53 }, sedeId: { type: "integer" } }, additionalProperties: false },
   response: { 200: { type: "object", properties: { porSede: { type: "array", items: { type: "object", properties: { sede: { type: "string" }, sedeId: { type: "integer" }, registros: { type: "integer" }, total: { type: "number" } } } }, totalGeneral: { type: "number" } } } },
 };
 
 const resumenConcepto = {
   summary: "Egresos agrupados por concepto en una semana", tags: ["Egresos"], security: [{ bearerAuth: [] }],
-  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer" } }, additionalProperties: false },
+  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer" }, sedeId: { type: "integer" } }, additionalProperties: false },
   response: { 200: { type: "array", items: { type: "object", properties: { concepto: { type: "string" }, registros: { type: "integer" }, total: { type: "number" } } } } },
 };
 
 const totalesDiaEgreso = {
   summary: "Totales de egresos por día", tags: ["Egresos"], security: [{ bearerAuth: [] }],
-  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer" } }, additionalProperties: false },
+  querystring: { type: "object", required: ["semana"], properties: { semana: { type: "integer" }, sedeId: { type: "integer" } }, additionalProperties: false },
   response: { 200: { type: "array", items: { type: "object", properties: { fecha: { type: "string", format: "date-time" }, total: { type: "number" } } } } },
 };
 
