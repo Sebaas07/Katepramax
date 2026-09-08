@@ -117,13 +117,15 @@ describe("GET /api/v1/usuarios", () => {
 // ── GET /api/v1/usuarios/entregadores ─────────────────────────────────────────
 
 describe("GET /api/v1/usuarios/entregadores", () => {
-  it("debería retornar 403 si el rol es Oficinista (no asigna)", async () => {
+  it("debería retornar 200 si el rol es Oficinista", async () => {
     const sesionOficinistaMock = {
       ...sesionAdminMock,
       id: 13,
       usuario: { ...sesionAdminMock.usuario, rol: "Oficinista", bodegaId: 5 },
     };
     prisma.sesion.findFirst.mockResolvedValue(sesionOficinistaMock);
+    prisma.sede.findUnique.mockResolvedValue({ id: 5, tipo: "Oficina", bodegaId: 5 });
+    prisma.usuario.findMany.mockResolvedValue([]);
 
     const tokenOficinista = app.jwt.sign({ sesionId: 13 }, { expiresIn: "15m" });
     const res = await app.inject({
@@ -132,7 +134,7 @@ describe("GET /api/v1/usuarios/entregadores", () => {
       headers: { authorization: `Bearer ${tokenOficinista}` },
     });
 
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(200);
   });
 
   it("debería filtrar entregadores por la bodega del usuario Bodega", async () => {

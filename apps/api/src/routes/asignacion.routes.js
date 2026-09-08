@@ -9,8 +9,8 @@ const {
 
 async function asignacionRoutes(app) {
 
-  // Crear asignación — Admin, AdminBogota y Bodega
-  // (Bodega/Admin asignan el pedido a un entregador desde la bodega; Oficinista NO)
+  // Crear asignación — Admin, AdminBogota, Bodega y Oficinista
+  // (Oficinista asigna pedidos a entregadores de su bodega operativa)
   app.post("/asignaciones", {
     schema:        schemas.crearAsignacion,
     preValidation: asignarEntregador.preValidation,
