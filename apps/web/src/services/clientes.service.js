@@ -4,22 +4,22 @@ import { tieneAccesoTotal, obtenerSedeUsuario } from "@/utils/permisos";
 /**
  * clientes.service.js — Katepramax
  * Lógica de negocio del lado cliente para el módulo de clientes.
- * Alineado con el schema Prisma real: nombre, telefono, limiteCredito, saldoDeuda, activo.
- * No incluye "identificacion" ni "email" — esos campos no existen en el modelo.
  * Reglas de sede:
  * - Admin: acceso total (no filtra por sede)
- * - Bodega/AdminBogota: solo su sede
+ * - Bodega/AdminBogota/Oficinista: el backend aplica familia de sedes
+ * - Entregador: el backend filtra por sedes asignadas + solo con deuda
  */
 const clientesService = {
   obtenerClientes: async (filtros = {}) => {
     try {
       const f = { ...filtros };
-      // Si no es Admin, filtrar por sede automáticamente
-      if (!tieneAccesoTotal()) {
-        const sedeIdUsuario = obtenerSedeUsuario();
-        if (sedeIdUsuario) {
-          f.sedeId = sedeIdUsuario;
-        }
+      // No forzar sedeId en el cliente: el backend resuelve familia / sedes del entregador.
+      // Solo Admin puede pedir sedeId explícito; para el resto el API ignora o restringe.
+      if (!tieneAccesoTotal() && f.sedeId == null) {
+        // Mantener compatibilidad: si alguien pasa sede en UI admin, ok.
+        // Para no-Admin sin sede en filtros, no inyectamos sedeId del usuario aquí
+        // para no romper el filtro de familia del backend (Bogotá + oficinas).
+        void obtenerSedeUsuario;
       }
       const clientes = await clientesApi.obtenerClientes(f);
       return clientes;
@@ -41,12 +41,9 @@ const clientesService = {
 
   crearCliente: async (clienteData) => {
     try {
-      // Validación alineada con el schema real
       if (!clienteData.nombre || !clienteData.nombre.trim()) {
         throw new Error("El nombre del cliente es obligatorio.");
       }
-      // El backend solo acepta estos campos en la creación
-      // ("activo" no aplica: todo cliente nuevo nace activo).
       const payload = {
         nombre: clienteData.nombre,
         telefono: clienteData.telefono || undefined,
