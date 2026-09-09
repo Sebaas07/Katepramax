@@ -9,11 +9,6 @@ const sesionRepository = (prisma) => {
     crypto.createHash("sha256").update(token).digest("hex");
 
   return {
-    /**
-     * Crea una nueva sesión y devuelve el refreshToken en texto plano
-     * (solo se retorna una vez, luego solo existe el hash).
-     * El refresh token vence tras 15 minutos de inactividad.
-     */
     crear: async ({ usuarioId, ip, userAgent, minutosExpiracion = 15 }) => {
       const refreshToken = crypto.randomBytes(40).toString("hex");
       const refreshHash = hashToken(refreshToken);
@@ -28,10 +23,6 @@ const sesionRepository = (prisma) => {
       return { sesionId: sesion.id, refreshToken };
     },
 
-    /**
-     * Busca una sesión activa por el hash del refreshToken.
-     * Incluye el usuario completo para validar activo y rol desde BD.
-     */
     findByRefreshToken: async (refreshToken) => {
       const refreshHash = hashToken(refreshToken);
       return prisma.sesion.findFirst({
@@ -48,7 +39,6 @@ const sesionRepository = (prisma) => {
       });
     },
 
-    /** Busca sesión por ID incluyendo usuario (para el middleware). */
     findById: async (id) =>
       prisma.sesion.findFirst({
         where: { id, activa: true, expiraEn: { gt: new Date() } },
@@ -60,6 +50,7 @@ const sesionRepository = (prisma) => {
               activo: true,
               sedeId: true,
               usuario: true,
+              nombreCompleto: true,
               sede: {
                 select: {
                   id: true,
@@ -76,7 +67,6 @@ const sesionRepository = (prisma) => {
         },
       }),
 
-    /** Rota el refresh token (invalida el anterior, crea uno nuevo). */
     rotar: async (sesionId, ip, userAgent, minutosExpiracion = 15) => {
       const refreshToken = crypto.randomBytes(40).toString("hex");
       const refreshHash = hashToken(refreshToken);
@@ -92,7 +82,6 @@ const sesionRepository = (prisma) => {
       return refreshToken;
     },
 
-    /** Revoca una sesión específica (logout). */
     revocar: async (id, usuarioId) =>
       prisma.sesion.updateMany({
         where: {
@@ -108,20 +97,18 @@ const sesionRepository = (prisma) => {
       return prisma.sesion.update({ where: { id }, data: { expiraEn } });
     },
 
-    /** Revoca TODAS las sesiones de un usuario (cambio de clave, etc). */
     revocarTodas: async (usuarioId) =>
       prisma.sesion.updateMany({
         where: { usuarioId, activa: true },
         data: { activa: false },
       }),
 
-    /** Limpieza de sesiones expiradas (para un cron job). */
     limpiarExpiradas: async () =>
       prisma.sesion.deleteMany({
         where: {
           OR: [
             { expiraEn: { lt: new Date() } },
-            { activa: false }, // Opcional: borrar las ya revocadas
+            { activa: false },
           ],
         },
       }),

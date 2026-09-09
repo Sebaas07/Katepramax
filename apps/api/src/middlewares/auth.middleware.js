@@ -1,13 +1,6 @@
 const sesionRepository = require("../repositories/sesion.repository");
 const AppError = require("../errors/AppError");
 
-/**
- * auth.middleware.js
- * Centraliza autenticación + RBAC + filtro de sede.
- * Todas las rutas protegidas pasan por aquí antes de llegar al controlador.
- */
-
-// ── 1. Verificar JWT y sesión en BD ───────────────────────────
 const verifyToken = async (request, reply) => {
   try {
     await request.jwtVerify();
@@ -36,7 +29,6 @@ const verifyToken = async (request, reply) => {
       });
     }
 
-    // Sobreescribir con datos REALES de la BD — nunca confiar en el payload del JWT
     const sede = sesion.usuario.sede ?? null;
     let sedesOperativas = [sesion.usuario.sedeId];
     if (sede) {
@@ -58,6 +50,7 @@ const verifyToken = async (request, reply) => {
     request.user = {
       id:             sesion.usuario.id,
       usuario:        sesion.usuario.usuario,
+      nombreCompleto: sesion.usuario.nombreCompleto ?? null,
       rol:            sesion.usuario.rol,
       sedeId:         sesion.usuario.sedeId,
       sedeTipo:       sede?.tipo ?? null,
@@ -74,7 +67,6 @@ const verifyToken = async (request, reply) => {
   }
 };
 
-// ── 2. RBAC ───────────────────────────────────────────────────
 const requireRole = (roles) => {
   const permitidos = new Set(roles);
   return async (request) => {
@@ -84,7 +76,6 @@ const requireRole = (roles) => {
   };
 };
 
-// ── 3. Filtro de sede centralizado ────────────────────────────
 const injectSedeFilter = async (request) => {
   const { rol, sedeId, bodegaId } = request.user ?? {};
   if (rol === "Admin") {
@@ -100,7 +91,6 @@ const injectSedeFilter = async (request) => {
   }
 };
 
-// ── Grupos de protección (usados en routes) ───────────────────
 module.exports = {
   verifyToken,
   requireRole,
@@ -181,7 +171,6 @@ module.exports = {
     ],
   },
 
-  /** Listar clientes con deuda y registrar abonos (incluye Entregador). */
   carteraClientesAbono: {
     preValidation: [
       verifyToken,
