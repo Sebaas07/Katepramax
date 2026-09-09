@@ -67,6 +67,20 @@ function clienteAccesible(cliente, familiaIds, usuario) {
   return familiaIds.includes(cliente.sedeId);
 }
 
+/** Texto legible de quién registró el abono (para Contabilidad). */
+function etiquetaQuienAbona(usuario) {
+  const nombre =
+    (usuario?.nombreCompleto && String(usuario.nombreCompleto).trim()) ||
+    usuario?.usuario ||
+    `id ${usuario?.id ?? "?"}`;
+  if (usuario?.rol === "Entregador") return `Entregador: ${nombre}`;
+  if (usuario?.rol === "Oficinista") return `Oficinista: ${nombre}`;
+  if (usuario?.rol === "Bodega") return `Bodega: ${nombre}`;
+  if (usuario?.rol === "AdminBogota") return `AdminBogota: ${nombre}`;
+  if (usuario?.rol === "Admin") return `Admin: ${nombre}`;
+  return nombre;
+}
+
 const clienteService = (app) => {
   const repo = clienteRepository(app.prisma);
 
@@ -163,8 +177,6 @@ const clienteService = (app) => {
       }
 
       const campos = {};
-      // saldoDeuda se permite en edición para ajustes manuales de cartera
-      // (además de los cambios automáticos por pedidos/abonos).
       const permitidos = [
         "nombre",
         "telefono",
@@ -231,8 +243,6 @@ const clienteService = (app) => {
         );
       }
 
-      // Contabilidad: el ingreso va a la sede del cliente (caja de esa familia).
-      // Oficinista/Bodega de la misma familia lo verán al listar por familia.
       const sedeAbono = existe.sedeId;
       if (sedeAbono == null) {
         throw new AppError(
@@ -243,6 +253,8 @@ const clienteService = (app) => {
       }
 
       const fechaAbono = new Date();
+      const quien = etiquetaQuienAbona(usuario);
+      const obs = `Abono de cliente "${existe.nombre}" (#${id}) — ${quien}`;
 
       const transaccion = await app.prisma.$transaction(async (tx) => {
         const clienteActualizado = await tx.cliente.update({
@@ -250,11 +262,6 @@ const clienteService = (app) => {
           data: { saldoDeuda: { decrement: valorAbono } },
           include: { sede: { select: { id: true, nombre: true } } },
         });
-
-        const obs =
-          usuario.rol === "Entregador"
-            ? `Abono de cliente "${existe.nombre}" (#${id}) cobrado por entregador`
-            : `Abono de cliente "${existe.nombre}" (#${id})`;
 
         const ingreso = await ingresoRepo.crear(tx, {
           fecha: inicioDiaLocal(fechaAbono),
@@ -275,8 +282,7 @@ const clienteService = (app) => {
         app,
         usuario.id,
         "ABONAR_CLIENTE",
-        `Registró un abono de ${valorAbono} al cliente "${existe.nombre}" (#${id})` +
-          (usuario.rol === "Entregador" ? " (entregador)." : "."),
+        `Registró un abono de ${valorAbono} al cliente "${existe.nombre}" (#${id}) (${quien}).`,
       );
       return transaccion.clienteActualizado;
     },
