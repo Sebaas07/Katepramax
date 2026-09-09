@@ -4,11 +4,9 @@
 const { prisma } = require("./__mocks__/prisma");
 const clienteService = require("../src/services/cliente.service");
 
-const adminMock = { rol: "Admin", sedeId: null };
+const adminMock = { rol: "Admin", sedeId: null, id: 1, usuario: "admin" };
 const appMock = { prisma };
 const svc = clienteService(appMock);
-
-// ── Datar de prueba ───────────────────────────────────────────────────────────
 
 const clienteMock = {
   id: 1,
@@ -18,8 +16,6 @@ const clienteMock = {
   limiteCredito: 0,
   creadoEn: new Date(),
 };
-
-// ── listar ────────────────────────────────────────────────────────────────────
 
 describe("clienteService.listar", () => {
   it("debería llamar findAll con los parámetros por defecto", async () => {
@@ -81,9 +77,30 @@ describe("clienteService.listar", () => {
     const callWhere = prisma.cliente.findMany.mock.calls[0][0].where;
     expect(callWhere.sedeId).toEqual({ in: [4, 5] });
   });
-});
 
-// ── obtenerPorId ──────────────────────────────────────────────────────────────
+  it("Entregador lista solo clientes con deuda de sus sedes", async () => {
+    const entregador = {
+      id: 9,
+      rol: "Entregador",
+      sedeId: 4,
+      usuario: "repartidor",
+      nombreCompleto: "Carlos Rodríguez",
+    };
+    prisma.entregadorSede.findMany.mockResolvedValue([{ sedeId: 4 }]);
+    prisma.sede.findUnique.mockResolvedValue({
+      id: 4, nombre: "Bogotá", tipo: "Bodega", bodegaId: null,
+      oficinas: [{ id: 5, nombre: "Bogotá Centro", tipo: "Oficina" }],
+    });
+    prisma.cliente.findMany.mockResolvedValue([]);
+
+    await svc.listar({}, entregador);
+
+    const callWhere = prisma.cliente.findMany.mock.calls[0][0].where;
+    expect(callWhere.saldoDeuda).toEqual({ gt: 0 });
+    expect(callWhere.activo).toBe(true);
+    expect(callWhere.sedeId).toEqual({ in: [4, 5] });
+  });
+});
 
 describe("clienteService.obtenerPorId", () => {
   it("debería retornar el cliente si existe", async () => {
@@ -105,8 +122,6 @@ describe("clienteService.obtenerPorId", () => {
   });
 });
 
-// ── crear ─────────────────────────────────────────────────────────────────────
-
 describe("clienteService.crear", () => {
   it("debería crear el cliente solo con nombre y telefono", async () => {
     prisma.cliente.create.mockResolvedValue(clienteMock);
@@ -122,9 +137,13 @@ describe("clienteService.crear", () => {
       include: { sede: { select: { id: true, nombre: true } } },
     });
   });
-});
 
-// ── actualizar ────────────────────────────────────────────────────────────────
+  it("Entregador no puede crear clientes", async () => {
+    await expect(
+      svc.crear({ nombre: "X" }, { rol: "Entregador", id: 9, sedeId: 1 }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+});
 
 describe("clienteService.actualizar", () => {
   it("debería lanzar AppError 404 si el cliente no existe", async () => {
@@ -164,9 +183,20 @@ describe("clienteService.actualizar", () => {
     const callData = prisma.cliente.update.mock.calls[0][0].data;
     expect(callData.limiteCredito).toBe(500000);
   });
-});
 
-// ── desactivar ────────────────────────────────────────────────────────────────
+  it("debería permitir actualizar saldoDeuda", async () => {
+    prisma.cliente.findUnique.mockResolvedValue(clienteMock);
+    prisma.cliente.update.mockResolvedValue({
+      ...clienteMock,
+      saldoDeuda: 250000,
+    });
+
+    await svc.actualizar(1, { saldoDeuda: 250000 }, adminMock);
+
+    const callData = prisma.cliente.update.mock.calls[0][0].data;
+    expect(callData.saldoDeuda).toBe(250000);
+  });
+});
 
 describe("clienteService.desactivar", () => {
   it("debería lanzar AppError 404 si el cliente no existe", async () => {
@@ -190,8 +220,6 @@ describe("clienteService.desactivar", () => {
     expect(result.mensaje).toMatch(/desactivado/i);
   });
 });
-
-// ── abonar ────────────────────────────────────────────────────────────────────
 
 describe("clienteService.abonar", () => {
   it("debería lanzar AppError 404 si el cliente no existe", async () => {
@@ -225,6 +253,42 @@ describe("clienteService.abonar", () => {
         efectivo: 50000,
         cuentas: 0,
         total: 50000,
+        observacion: expect.stringMatching(/Admin:/),
+      }),
+      include: expect.anything(),
+    });
+  });
+
+  it("debería registrar observación con Entregador y nombre", async () => {
+    const entregador = {
+      id: 9,
+      rol: "Entregador",
+      sedeId: 1,
+      usuario: "repa",
+      nombreCompleto: "Carlos Rodríguez",
+    };
+    prisma.entregadorSede.findMany.mockResolvedValue([{ sedeId: 1 }]);
+    prisma.sede.findUnique.mockResolvedValue({
+      id: 1, nombre: "Sede 1", tipo: "Bodega", bodegaId: null, oficinas: [],
+    });
+    prisma.cliente.findUnique.mockResolvedValue({
+      ...clienteMock,
+      sedeId: 1,
+      saldoDeuda: 100000,
+    });
+    prisma.cliente.update.mockResolvedValue({
+      ...clienteMock,
+      sedeId: 1,
+      saldoDeuda: 80000,
+    });
+    prisma.ingreso.create.mockResolvedValue({});
+
+    await svc.abonar(1, 20000, entregador);
+
+    expect(prisma.ingreso.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        origen: "abono-cliente",
+        observacion: expect.stringContaining("Entregador: Carlos Rodríguez"),
       }),
       include: expect.anything(),
     });
